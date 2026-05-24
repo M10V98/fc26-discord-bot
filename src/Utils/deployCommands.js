@@ -7,17 +7,24 @@ require("dotenv").config({
 const { REST, Routes } = require("discord.js");
 
 async function deployCommands() {
-    const token = process.env.TOKEN;
+    const token =
+        process.env.TOKEN ||
+        process.env.DISCORD_TOKEN ||
+        process.env.BOT_TOKEN;
     const clientId = process.env.CLIENT_ID;
     const guildId = process.env.GUILD_ID;
 
     console.log("ENV CHECK:");
     console.log("TOKEN:", !!token);
+    console.log("DISCORD_TOKEN:", !!process.env.DISCORD_TOKEN);
+    console.log("BOT_TOKEN:", !!process.env.BOT_TOKEN);
     console.log("CLIENT_ID:", !!clientId);
     console.log("GUILD_ID:", !!guildId);
 
     if (!token || !clientId) {
-        throw new Error("Missing TOKEN or CLIENT_ID in .env");
+        throw new Error(
+            "Missing TOKEN/DISCORD_TOKEN/BOT_TOKEN or CLIENT_ID in .env"
+        );
     }
 
     const commands = [];
@@ -71,11 +78,27 @@ async function deployCommands() {
 }
 
 if (require.main === module) {
-    deployCommands().catch(err => {
-        console.error("Deployment failed:");
-        console.error(err);
-        process.exit(1);
-    });
+    deployCommands()
+        .catch(err => {
+            console.error("Deployment failed:");
+
+            if (err.status === 401) {
+                console.error(
+                    "Discord rejected the bot token. Check that your local .env token is current and belongs to the same application as CLIENT_ID."
+                );
+            }
+
+            console.error(err);
+            process.exitCode = 1;
+        })
+        .finally(async () => {
+            try {
+                const db = require("./db");
+                await db.close();
+            } catch (err) {
+                // Ignore cleanup errors; deployment already reported the useful result.
+            }
+        });
 }
 
 module.exports = {
