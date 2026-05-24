@@ -7,19 +7,14 @@ const {
     getLevelFromXP
 } = require("../Utils/xpSystem");
 
-async function processMatchXP(match, guildId) {
+async function processMatchXP(match, guildId, options = {}) {
 
     const exists = await db.get(
         `SELECT * FROM processed_matches WHERE match_id = ?`,
         [match.id]
     );
 
-    if (exists) return;
-
-    await db.run(
-        `INSERT INTO processed_matches (match_id) VALUES (?)`,
-        [match.id]
-    );
+    if (exists && !options.force) return false;
 
     const clubs = match.match_data?.clubs || {};
     const entries = Object.entries(clubs);
@@ -71,6 +66,7 @@ async function processMatchXP(match, guildId) {
         await db.run(`
             INSERT OR REPLACE INTO players (
                 player_name,
+                guild_id,
                 xp,
                 level,
                 matches,
@@ -93,8 +89,9 @@ async function processMatchXP(match, guildId) {
                 position
             )
             VALUES (
-                ?, ?, ?,
+                ?, ?, ?, ?,
                 COALESCE(?,0)+1,
+                COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
@@ -115,6 +112,7 @@ async function processMatchXP(match, guildId) {
         `,
         [
             name,
+            guildId,
             totalXP,
             level,
 
@@ -169,6 +167,13 @@ async function processMatchXP(match, guildId) {
             p.pos || "Unknown"
         ]);
     }
+
+    await db.run(
+        `INSERT OR IGNORE INTO processed_matches (match_id) VALUES (?)`,
+        [match.id]
+    );
+
+    return true;
 }
 
 module.exports = {
