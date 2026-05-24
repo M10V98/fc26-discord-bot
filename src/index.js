@@ -12,6 +12,11 @@ const {
 
 const db = require("./Utils/db");
 
+const discordToken =
+    process.env.TOKEN ||
+    process.env.DISCORD_TOKEN ||
+    process.env.BOT_TOKEN;
+
 const {
     startAutoMode
 } = require("./Services/syncMatches");
@@ -32,6 +37,15 @@ client.commands = new Collection();
 
 console.log("ENV CHECK:");
 console.log("TOKEN:", !!process.env.TOKEN);
+console.log("DISCORD_TOKEN:", !!process.env.DISCORD_TOKEN);
+console.log("BOT_TOKEN:", !!process.env.BOT_TOKEN);
+
+if (!discordToken) {
+    console.error(
+        "Missing Discord bot token. Set TOKEN, DISCORD_TOKEN, or BOT_TOKEN in Railway Variables."
+    );
+    process.exit(1);
+}
 
 
 
@@ -318,4 +332,4 @@ client.on(
 // LOGIN
 // =========================
 
-client.login(process.env.TOKEN);
+client.login(discordToken);
