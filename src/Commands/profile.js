@@ -6,7 +6,8 @@ const {
 const db = require("../Utils/db");
 
 const {
-    getXPForNextLevel
+    getLevelFromXP,
+    getTotalXPForLevel
 } = require("../Utils/xpSystem");
 
 module.exports = {
@@ -45,8 +46,11 @@ module.exports = {
             );
         }
 
+        const currentLevel =
+            getLevelFromXP(player.xp || 0);
+
         const nextLevelXP =
-            getXPForNextLevel(player.level);
+            getTotalXPForLevel(currentLevel + 1);
 
         const avgRating =
             (
@@ -66,7 +70,7 @@ module.exports = {
             .addFields(
                 {
                     name: "Level",
-                    value: `${player.level}`,
+                    value: `${currentLevel}`,
                     inline: true
                 },
 

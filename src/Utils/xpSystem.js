@@ -1,3 +1,6 @@
+const BASE_LEVEL_XP = 12500;
+const LEVEL_GROWTH = Math.sqrt(1.35);
+
 function calculateXP(stats) {
 
     let xp = 0;
@@ -29,7 +32,7 @@ function calculateXP(stats) {
 function getLevelFromXP(xp) {
 
     let level = 1;
-    let required = 25000;
+    let required = BASE_LEVEL_XP;
 
     while (xp >= required) {
 
@@ -38,7 +41,7 @@ function getLevelFromXP(xp) {
         level++;
 
         required =
-            Math.floor(required * 1.35);
+            Math.floor(required * LEVEL_GROWTH);
     }
 
     return level;
@@ -46,19 +49,36 @@ function getLevelFromXP(xp) {
 
 function getXPForNextLevel(level) {
 
-    let xp = 25000;
+    let xp = BASE_LEVEL_XP;
 
     for (let i = 1; i < level; i++) {
 
         xp =
-            Math.floor(xp * 1.35);
+            Math.floor(xp * LEVEL_GROWTH);
     }
 
     return xp;
 }
 
+function getTotalXPForLevel(level) {
+
+    let total = 0;
+    let required = BASE_LEVEL_XP;
+
+    for (let i = 1; i < level; i++) {
+
+        total += required;
+
+        required =
+            Math.floor(required * LEVEL_GROWTH);
+    }
+
+    return total;
+}
+
 module.exports = {
     calculateXP,
     getLevelFromXP,
-    getXPForNextLevel
+    getXPForNextLevel,
+    getTotalXPForLevel
 };
