@@ -4,6 +4,7 @@ const {
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const archetypes = require("../Utils/archetypes");
 
 const {
     getLevelFromXP,
@@ -29,7 +30,7 @@ module.exports = {
 
         if (!linked) {
             return interaction.editReply(
-                "❌ Use /claim first."
+                "Use /claim first."
             );
         }
 
@@ -42,7 +43,7 @@ module.exports = {
 
         if (!player) {
             return interaction.editReply(
-                "❌ No profile found."
+                "No profile found."
             );
         }
 
@@ -58,14 +59,23 @@ module.exports = {
                 Math.max(player.matches, 1)
             ).toFixed(2);
 
+        const archetype =
+            archetypes[player.archetype] ||
+            player.archetype ||
+            "Unknown";
+
+        const position =
+            player.position &&
+            String(player.position).toLowerCase() !== "null"
+                ? player.position
+                : archetype;
+
         const embed = new EmbedBuilder()
             .setColor("#ffaa00")
-            .setTitle(
-                `🔥 ${player.player_name}`
-            )
+            .setTitle(player.player_name)
             .setDescription(
-                `📍 ${player.position}\n` +
-                `🧠 ${player.archetype}`
+                `Position: ${position}\n` +
+                `Archetype: ${archetype}`
             )
             .addFields(
                 {
@@ -73,32 +83,26 @@ module.exports = {
                     value: `${currentLevel}`,
                     inline: true
                 },
-
                 {
                     name: "XP",
-                    value:
-                        `${player.xp} / ${nextLevelXP}`,
+                    value: `${player.xp} / ${nextLevelXP}`,
                     inline: true
                 },
-
                 {
                     name: "Matches",
                     value: `${player.matches}`,
                     inline: true
                 },
-
                 {
                     name: "Goals",
                     value: `${player.goals}`,
                     inline: true
                 },
-
                 {
                     name: "Assists",
                     value: `${player.assists}`,
                     inline: true
                 },
-
                 {
                     name: "Avg Rating",
                     value: `${avgRating}`,
