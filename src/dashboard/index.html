@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FC26 Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+        }
+
+        h1 {
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🏆 FC26 Club Dashboard</h1>
+
+<div class="card">
+    <h2>📊 Leaderboard</h2>
+    <div id="leaderboard"></div>
+</div>
+
+<div class="card">
+    <h2>⚽ Recent Matches</h2>
+    <div id="matches"></div>
+</div>
+
+<script>
+async function loadLeaderboard() {
+    const res = await fetch("/api/leaderboard");
+    const data = await res.json();
+
+    document.getElementById("leaderboard").innerHTML =
+        data.map(p =>
+            `<div>${p.name} - ${p.xp} XP (${p.level})</div>`
+        ).join("");
+}
+
+async function loadMatches() {
+    const res = await fetch("/api/matches");
+    const data = await res.json();
+
+    document.getElementById("matches").innerHTML =
+        data.map(m =>
+            `<div>Match ${m.id} - ${m.club_name}</div>`
+        ).join("");
+}
+
+loadLeaderboard();
+loadMatches();
+</script>
+
+</body>
+</html>

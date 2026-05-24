@@ -1,0 +1,83 @@
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config({
+    path: path.resolve(__dirname, "../../.env")
+});
+
+const { REST, Routes } = require("discord.js");
+
+async function deployCommands() {
+    const token = process.env.TOKEN;
+    const clientId = process.env.CLIENT_ID;
+    const guildId = process.env.GUILD_ID;
+
+    console.log("ENV CHECK:");
+    console.log("TOKEN:", !!token);
+    console.log("CLIENT_ID:", !!clientId);
+    console.log("GUILD_ID:", !!guildId);
+
+    if (!token || !clientId) {
+        throw new Error("Missing TOKEN or CLIENT_ID in .env");
+    }
+
+    const commands = [];
+    const commandsPath = path.join(__dirname, "../Commands");
+    const commandFiles =
+        fs.readdirSync(commandsPath)
+            .filter(file => file.endsWith(".js"));
+
+    console.log(`Found ${commandFiles.length} command files.`);
+
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file);
+
+        try {
+            const command = require(filePath);
+
+            if (!command?.data) {
+                console.log(`Skipped invalid command: ${file}`);
+                continue;
+            }
+
+            commands.push(command.data.toJSON());
+            console.log(`Loaded command: ${command.data.name}`);
+
+        } catch (err) {
+            console.log(`Failed to load command: ${file}`);
+            console.error(err);
+        }
+    }
+
+    const rest = new REST({ version: "10" }).setToken(token);
+
+    console.log("Deploying slash commands...");
+
+    if (guildId) {
+        await rest.put(
+            Routes.applicationGuildCommands(clientId, guildId),
+            { body: commands }
+        );
+
+        console.log("Commands deployed to guild.");
+        return;
+    }
+
+    await rest.put(
+        Routes.applicationCommands(clientId),
+        { body: commands }
+    );
+
+    console.log("Commands deployed globally.");
+}
+
+if (require.main === module) {
+    deployCommands().catch(err => {
+        console.error("Deployment failed:");
+        console.error(err);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    deployCommands
+};
