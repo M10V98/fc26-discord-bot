@@ -1,6 +1,7 @@
 const { getMatches: getCache, setMatches } = require("../Utils/cache");
 
 const BASE_URL = "https://api.ourproclub.app/api/match/history";
+const REQUEST_TIMEOUT_MS = 15000;
 
 // -------------------------
 // FETCH FROM REAL API
@@ -8,27 +9,59 @@ const BASE_URL = "https://api.ourproclub.app/api/match/history";
 async function fetchMatchesFromEA(clubId) {
 
     const url = `${BASE_URL}?clubId=${clubId}&limit=500`;
+    const controller = new AbortController();
+    const timeout =
+        setTimeout(
+            () => controller.abort(),
+            REQUEST_TIMEOUT_MS
+        );
 
-    const res = await fetch(url);
+    try {
 
-    if (!res.ok) {
-        throw new Error(`EA API error: ${res.status}`);
+        const res =
+            await fetch(
+                url,
+                {
+                    signal: controller.signal
+                }
+            );
+
+        if (!res.ok) {
+            throw new Error(`EA API error: ${res.status}`);
+        }
+
+        return await res.json();
+
+    } catch (err) {
+
+        if (err.name === "AbortError") {
+            throw new Error(
+                `EA API timed out after ${REQUEST_TIMEOUT_MS}ms`
+            );
+        }
+
+        throw err;
+
+    } finally {
+
+        clearTimeout(timeout);
     }
-
-    return await res.json();
 }
 
 // -------------------------
 // MAIN WITH CACHE
 // -------------------------
-async function getMatches(clubId) {
+async function getMatches(clubId, options = {}) {
 
-    const cached = getCache();
+    const cached = options.forceRefresh
+        ? null
+        : getCache(clubId);
+
     if (cached) return cached;
 
     const data = await fetchMatchesFromEA(clubId);
 
-    setMatches(data);
+    setMatches(clubId, data);
 
     return data;
 }

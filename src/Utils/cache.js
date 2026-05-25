@@ -1,19 +1,27 @@
 const cache = {
-    matches: { data: null, expires: 0 },
+    matches: new Map(),
     leaderboard: { data: null, expires: 0 }
 };
 
 // -------------------------
 // MATCH CACHE (5 min)
 // -------------------------
-function getMatches() {
-    if (Date.now() > cache.matches.expires) return null;
-    return cache.matches.data;
+function getMatches(clubId) {
+    const entry = cache.matches.get(String(clubId));
+
+    if (!entry || Date.now() > entry.expires) return null;
+
+    return entry.data;
 }
 
-function setMatches(data) {
-    cache.matches.data = data;
-    cache.matches.expires = Date.now() + 5 * 60 * 1000;
+function setMatches(clubId, data) {
+    cache.matches.set(
+        String(clubId),
+        {
+            data,
+            expires: Date.now() + 5 * 60 * 1000
+        }
+    );
 }
 
 // -------------------------

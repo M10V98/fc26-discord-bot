@@ -1,5 +1,8 @@
 const {
+    ActionRowBuilder,
     AttachmentBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     EmbedBuilder
 } = require("discord.js");
 
@@ -22,77 +25,55 @@ const {
 
 const activeGuilds = new Map();
 
-async function syncGuild(guildId, channel) {
+const CHECK_INTERVAL_MS = 60 * 1000;
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 
-    try {
+function buildStopButtonRow(guildId) {
 
-        const row = await db.get(
-            `SELECT club_id FROM clubs WHERE guild_id = ?`,
-            [guildId]
+    return new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(`automode_stop:${guildId}`)
+                .setLabel("Stop AutoMode")
+                .setStyle(ButtonStyle.Danger)
         );
+}
 
-        if (!row) return;
+function getResult(home, away) {
 
-        const matches =
-            await eaApi.getMatches(row.club_id);
+    return Number(home.goals) > Number(away.goals)
+        ? "Win"
+        : Number(home.goals) < Number(away.goals)
+        ? "Loss"
+        : "Draw";
+}
 
-        if (!matches?.length) return;
+function buildFallbackEmbed(match) {
 
-        const latestMatch = matches[0];
+    const clubs = match.match_data?.clubs || {};
+    const teams = Object.entries(clubs);
 
-        const processed =
-            await db.get(
-                `SELECT * FROM processed_matches
-                 WHERE match_id = ?`,
-                [latestMatch.id]
-            );
+    if (teams.length < 2) {
+        return null;
+    }
 
-        if (processed) return;
+    const home = {
+        clubId: teams[0][0],
+        ...teams[0][1]
+    };
 
-        await processMatchXP(
-            latestMatch,
-            guildId
-        );
+    const away = {
+        clubId: teams[1][0],
+        ...teams[1][1]
+    };
 
-        const clubs =
-            latestMatch.match_data?.clubs || {};
-
-        const teams =
-            Object.entries(clubs);
-
-        if (teams.length < 2) return;
-
-        const home = {
-            clubId: teams[0][0],
-            ...teams[0][1]
-        };
-
-        const away = {
-            clubId: teams[1][0],
-            ...teams[1][1]
-        };
-
-        const scoreboard =
-            formatScoreboard(home, away);
-
-        const result =
-            Number(home.goals) >
-            Number(away.goals)
-            ? "✅ Win"
-            : Number(home.goals) <
-              Number(away.goals)
-            ? "❌ Loss"
-            : "🤝 Draw";
-
-        const playerLines =
-            Object.entries(
-                latestMatch.player_data || {}
-            )
+    const playerLines =
+        Object.entries(match.player_data || {})
             .map(([name, p]) => {
 
                 const archetype =
-                    archetypes[p.archetypeid]
-                    || "Unknown";
+                    archetypes[p.archetypeid] ||
+                    "Unknown";
 
                 const cleanSheet =
                     p.cleansheetsdef === "1" ||
@@ -100,93 +81,283 @@ async function syncGuild(guildId, channel) {
 
                 const mom =
                     p.mom === "1"
-                    ? "🏅 "
-                    : "";
+                        ? "MOTM "
+                        : "";
 
                 return (
                     `${mom}**${name}** (${archetype})\n` +
-                    `⭐ ${p.rating} | ⚽ ${p.goals} | 🅰️ ${p.assists}\n` +
-                    `🎯 ${p.passesmade}/${p.passattempts} passes\n` +
-                    `🛡️ ${p.tacklesmade}/${p.tackleattempts} tackles\n` +
-                    `🧠 ${p.interceptions} interceptions\n` +
-                    `🔄 ${p.dribbles} dribbles\n` +
-                    `🥅 ${cleanSheet ? "Clean Sheet" : "No CS"}`
+                    `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists}\n` +
+                    `${p.passesmade}/${p.passattempts} passes\n` +
+                    `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
+                    `${p.interceptions} interceptions\n` +
+                    `${p.dribbles} dribbles\n` +
+                    `${cleanSheet ? "Clean Sheet" : "No CS"}`
                 );
-
             });
 
-        const embed = new EmbedBuilder()
-            .setColor("#00ff99")
-            .setTitle(
-                `📊 ${latestMatch.match_type}`
-            )
-            .setDescription(
-                `${scoreboard}\n\n${result}`
-            )
-            .addFields({
-                name: "Player Performances",
-                value:
-                    playerLines.join("\n\n")
-                    .slice(0, 1024)
-            })
-            .setFooter({
-                text:
-                    `Match ID: ${latestMatch.id}`
-            })
-            .setTimestamp();
+    return new EmbedBuilder()
+        .setColor("#00ff99")
+        .setTitle(`${match.match_type}`)
+        .setDescription(
+            `${formatScoreboard(home, away)}\n\n${getResult(home, away)}`
+        )
+        .addFields({
+            name: "Player Performances",
+            value:
+                playerLines.join("\n\n").slice(0, 1024) ||
+                "No player stats found."
+        })
+        .setFooter({
+            text: `Match ID: ${match.id}`
+        })
+        .setTimestamp();
+}
 
-        const infographic =
-            await generateMatchInfographic(latestMatch);
+async function ensureMatchProcessed(match, guildId) {
 
-        if (infographic) {
+    const processed =
+        await db.get(
+            `SELECT * FROM processed_matches
+             WHERE match_id = ?`,
+            [match.id]
+        );
 
-            const attachment =
-                new AttachmentBuilder(
-                    infographic,
-                    {
-                        name:
-                            `match-${latestMatch.id}.png`
-                    }
-                );
+    if (processed) {
+        return false;
+    }
 
-            await channel.send({
-                files: [attachment]
-            });
+    await processMatchXP(match, guildId);
 
-        } else {
+    return true;
+}
 
-            await channel.send({
-                embeds: [embed]
-            });
+async function sendMatchPost(guildId, channel, match) {
+
+    const infographic =
+        await generateMatchInfographic(match);
+
+    const components = [
+        buildStopButtonRow(guildId)
+    ];
+
+    if (infographic) {
+
+        const attachment =
+            new AttachmentBuilder(
+                infographic,
+                {
+                    name: `match-${match.id}.png`
+                }
+        );
+
+        await channel.send({
+            files: [attachment],
+            components
+        });
+
+        return;
+    }
+
+    const embed = buildFallbackEmbed(match);
+
+    await channel.send({
+        content: embed
+            ? undefined
+            : `Match ID: ${match.id}`,
+        embeds: embed ? [embed] : [],
+        components
+    });
+}
+
+async function updateAutoModeState(guildId, fields) {
+
+    const sets = [];
+    const values = [];
+
+    for (const [key, value] of Object.entries(fields)) {
+        sets.push(`${key} = ?`);
+        values.push(value);
+    }
+
+    if (!sets.length) {
+        return;
+    }
+
+    values.push(guildId);
+
+    await db.run(
+        `UPDATE automode
+         SET ${sets.join(", ")}
+         WHERE guild_id = ?`,
+        values
+    );
+}
+
+async function stopAutoMode(guildId, options = {}) {
+
+    const existing = activeGuilds.get(guildId);
+
+    if (existing) {
+        clearInterval(existing.interval);
+        activeGuilds.delete(guildId);
+    }
+
+    await db.run(
+        `DELETE FROM automode
+         WHERE guild_id = ?`,
+        [guildId]
+    );
+
+    if (options.channel && options.reason) {
+        await options.channel.send({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor("Red")
+                    .setTitle("AutoMode Stopped")
+                    .setDescription(options.reason)
+            ]
+        });
+    }
+}
+
+async function syncGuild(guildId, channel, options = {}) {
+
+    try {
+
+        const row = await db.get(
+            `
+            SELECT automode.*, clubs.club_id
+            FROM automode
+            JOIN clubs ON clubs.guild_id = automode.guild_id
+            WHERE automode.guild_id = ?
+            `,
+            [guildId]
+        );
+
+        if (!row) {
+            console.log(
+                `AutoMode skipped for ${guildId}: no linked club or automode row`
+            );
+            return {
+                status: "no_club"
+            };
         }
 
-        console.log(
-            `✅ Synced match ${latestMatch.id}`
+        const now = Date.now();
+        const lastActivityAt =
+            Number(row.last_activity_at || row.started_at || now);
+
+        if (
+            !options.forcePostLatest &&
+            now - lastActivityAt >= INACTIVITY_LIMIT_MS
+        ) {
+            await stopAutoMode(guildId, {
+                channel,
+                reason:
+                    "Stopped automatically after 30 minutes with no new match from the backend."
+            });
+            return {
+                status: "stopped_inactive"
+            };
+        }
+
+        const matches =
+            await eaApi.getMatches(
+                row.club_id,
+                { forceRefresh: true }
+            );
+
+        if (!matches?.length) {
+            console.log(
+                `AutoMode skipped for ${guildId}: backend returned no matches for club ${row.club_id}`
+            );
+            return {
+                status: "no_matches"
+            };
+        }
+
+        const latestMatch = matches[0];
+        const latestMatchId = String(latestMatch.id);
+        const lastPostedMatchId =
+            row.last_match_id
+                ? String(row.last_match_id)
+                : null;
+
+        const shouldPost =
+            options.forcePostLatest ||
+            latestMatchId !== lastPostedMatchId;
+
+        if (!shouldPost) {
+            return {
+                status: "not_new",
+                matchId: latestMatchId
+            };
+        }
+
+        await ensureMatchProcessed(
+            latestMatch,
+            guildId
         );
+
+        await sendMatchPost(
+            guildId,
+            channel,
+            latestMatch
+        );
+
+        await updateAutoModeState(
+            guildId,
+            {
+                last_match_id: latestMatchId,
+                last_activity_at: now
+            }
+        );
+
+        console.log(
+            `Synced match ${latestMatch.id}`
+        );
+
+        return {
+            status: "posted",
+            matchId: latestMatchId
+        };
 
     } catch (err) {
 
         console.error(
-            "❌ sync error:",
+            "sync error:",
             err
         );
+
+        return {
+            status: "error",
+            error: err
+        };
     }
 }
 
 function startAutoMode(
     guildId,
-    channel
+    channel,
+    options = {}
 ) {
 
-    if (activeGuilds.has(guildId)) {
-        return;
+    const existing = activeGuilds.get(guildId);
+
+    if (existing) {
+        clearInterval(existing.interval);
     }
 
     console.log(
-        `🔥 AutoMode started for ${guildId}`
+        `AutoMode started for ${guildId}`
     );
 
-    syncGuild(guildId, channel);
+    const firstSync =
+        syncGuild(
+        guildId,
+        channel,
+        { forcePostLatest: Boolean(options.postLatest) }
+    );
 
     const interval = setInterval(() => {
 
@@ -195,14 +366,21 @@ function startAutoMode(
             channel
         );
 
-    }, 60 * 1000);
+    }, CHECK_INTERVAL_MS);
 
     activeGuilds.set(
         guildId,
-        interval
+        {
+            interval,
+            channelId: channel.id
+        }
     );
+
+    return firstSync;
 }
 
 module.exports = {
-    startAutoMode
+    buildStopButtonRow,
+    startAutoMode,
+    stopAutoMode
 };

@@ -18,12 +18,17 @@ const discordToken =
     process.env.BOT_TOKEN;
 
 const {
-    startAutoMode
+    startAutoMode,
+    stopAutoMode
 } = require("./Services/syncMatches");
 
 const {
     maybeReplyToFootballChat
 } = require("./Services/footballAiResponder");
+
+const {
+    startAutoStatsSync
+} = require("./Services/autoStatsSync");
 
 const client = new Client({
     intents: [
@@ -116,6 +121,8 @@ client.once(
 
         await db.init();
 
+        startAutoStatsSync();
+
         // =========================
         // START AUTOMODE FOR SAVED GUILDS
         // =========================
@@ -147,7 +154,8 @@ client.once(
 
                     startAutoMode(
                         row.guild_id,
-                        channel
+                        channel,
+                        { postLatest: false }
                     );
 
                     console.log(
@@ -268,6 +276,44 @@ client.on(
                 console.log(
                     `✅ ${interaction.user.tag} claimed ${playerName}`
                 );
+            }
+
+            // =========================
+            // AUTOMODE STOP BUTTON
+            // =========================
+
+            if (
+                interaction.isButton()
+            ) {
+
+                if (
+                    !interaction.customId.startsWith(
+                        "automode_stop:"
+                    )
+                ) return;
+
+                const guildId =
+                    interaction.customId.split(":")[1];
+
+                if (
+                    guildId !== interaction.guild.id
+                ) {
+                    return interaction.reply({
+                        content:
+                            "That AutoMode button belongs to another server.",
+                        ephemeral: true
+                    });
+                }
+
+                await stopAutoMode(
+                    guildId
+                );
+
+                await interaction.reply({
+                    content:
+                        "AutoMode stopped.",
+                    ephemeral: true
+                });
             }
 
         } catch (err) {

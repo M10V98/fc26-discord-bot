@@ -5,6 +5,10 @@ const {
 
 const db = require("../Utils/db");
 
+const {
+    syncGuildStats
+} = require("../Services/autoStatsSync");
+
 module.exports = {
 
     data: new SlashCommandBuilder()
@@ -19,9 +23,9 @@ module.exports = {
 
     async execute(interaction) {
 
-       await interaction.deferReply({
-    flags: MessageFlags.Ephemeral
-});
+        await interaction.deferReply({
+            flags: MessageFlags.Ephemeral
+        });
 
         try {
 
@@ -42,19 +46,28 @@ module.exports = {
                 ]
             );
 
+            const syncResult =
+                await syncGuildStats(
+                    interaction.guild.id,
+                    clubId,
+                    {
+                        forceRefresh: true
+                    }
+                );
+
             await interaction.editReply(
-                `✅ Club linked: ${clubId}`
+                `Club linked: ${clubId}\nSynced ${syncResult.processed} recent match${syncResult.processed === 1 ? "" : "es"} automatically.`
             );
 
         } catch (err) {
 
             console.error(
-                "❌ linkclub error:",
+                "linkclub error:",
                 err
             );
 
             await interaction.editReply(
-                "❌ Failed to link club."
+                "Failed to link club."
             );
         }
     }
