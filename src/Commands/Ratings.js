@@ -17,7 +17,8 @@ module.exports = {
 
         const players =
             await db.all(
-                `SELECT * FROM players`
+                `SELECT * FROM players WHERE guild_id = ?`,
+                [interaction.guild.id]
             );
 
         const sorted =

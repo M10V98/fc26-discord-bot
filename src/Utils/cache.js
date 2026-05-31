@@ -1,45 +1,61 @@
-const cache = {
-    matches: new Map(),
-    leaderboard: { data: null, expires: 0 }
-};
+// =========================
+// GENERIC KEYED TTL CACHE
+// =========================
 
-// -------------------------
-// MATCH CACHE (5 min)
-// -------------------------
-function getMatches(clubId) {
-    const entry = cache.matches.get(String(clubId));
+const store = new Map();
 
-    if (!entry || Date.now() > entry.expires) return null;
+function get(key) {
+
+    const entry = store.get(key);
+
+    if (!entry) return null;
+
+    if (Date.now() > entry.expires) {
+
+        store.delete(key);
+
+        return null;
+    }
 
     return entry.data;
 }
 
-function setMatches(clubId, data) {
-    cache.matches.set(
-        String(clubId),
+function set(key, data, ttlMs) {
+
+    store.set(
+        key,
         {
             data,
-            expires: Date.now() + 5 * 60 * 1000
+            expires: Date.now() + Math.max(0, ttlMs || 0)
         }
     );
 }
 
-// -------------------------
-// LEADERBOARD CACHE (1 min)
-// -------------------------
+function del(key) {
+    store.delete(key);
+}
+
+function clear() {
+    store.clear();
+}
+
+// =========================
+// LEGACY HELPERS (kept for backwards-compat with leaderboard.js etc.)
+// =========================
+
 function getLeaderboard() {
-    if (Date.now() > cache.leaderboard.expires) return null;
-    return cache.leaderboard.data;
+    return get("leaderboard");
 }
 
 function setLeaderboard(data) {
-    cache.leaderboard.data = data;
-    cache.leaderboard.expires = Date.now() + 60 * 1000;
+    set("leaderboard", data, 60 * 1000);
 }
 
 module.exports = {
-    getMatches,
-    setMatches,
+    get,
+    set,
+    del,
+    clear,
     getLeaderboard,
     setLeaderboard
 };

@@ -12,7 +12,8 @@ const db = require("../Utils/db");
 const archetypes = require("../Utils/archetypes");
 
 const {
-    formatScoreboard
+    formatScoreboard,
+    getClubName
 } = require("../Utils/scoreboard");
 
 const {
@@ -48,28 +49,34 @@ function getResult(home, away) {
         : "Draw";
 }
 
-function buildFallbackEmbed(match) {
+function buildFallbackEmbed(match, ourClubId) {
 
-    const clubs = match.match_data?.clubs || {};
-    const teams = Object.entries(clubs);
+    const clubsObj = match.clubs || {};
+    const clubIds = Object.keys(clubsObj);
 
-    if (teams.length < 2) {
+    if (clubIds.length < 2) {
         return null;
     }
 
+    const ourId = String(ourClubId || clubIds[0]);
+    const oppId = clubIds.find(id => id !== ourId) || clubIds[1];
+
     const home = {
-        clubId: teams[0][0],
-        ...teams[0][1]
+        clubId: ourId,
+        ...clubsObj[ourId]
     };
 
     const away = {
-        clubId: teams[1][0],
-        ...teams[1][1]
+        clubId: oppId,
+        ...clubsObj[oppId]
     };
 
+    const ourPlayers =
+        match.players?.[ourId] || {};
+
     const playerLines =
-        Object.entries(match.player_data || {})
-            .map(([name, p]) => {
+        Object.values(ourPlayers)
+            .map(p => {
 
                 const archetype =
                     archetypes[p.archetypeid] ||
@@ -85,19 +92,17 @@ function buildFallbackEmbed(match) {
                         : "";
 
                 return (
-                    `${mom}**${name}** (${archetype})\n` +
+                    `${mom}**${p.playername}** (${archetype})\n` +
                     `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists}\n` +
                     `${p.passesmade}/${p.passattempts} passes\n` +
                     `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
-                    `${p.interceptions} interceptions\n` +
-                    `${p.dribbles} dribbles\n` +
                     `${cleanSheet ? "Clean Sheet" : "No CS"}`
                 );
             });
 
     return new EmbedBuilder()
         .setColor("#00ff99")
-        .setTitle(`${match.match_type}`)
+        .setTitle(getClubName(home) + " vs " + getClubName(away))
         .setDescription(
             `${formatScoreboard(home, away)}\n\n${getResult(home, away)}`
         )
@@ -108,33 +113,43 @@ function buildFallbackEmbed(match) {
                 "No player stats found."
         })
         .setFooter({
-            text: `Match ID: ${match.id}`
+            text: `Match ID: ${match.matchId}`
         })
-        .setTimestamp();
+        .setTimestamp(
+            match.timestamp
+                ? new Date(Number(match.timestamp) * 1000)
+                : null
+        );
 }
 
-async function ensureMatchProcessed(match, guildId) {
+async function ensureMatchProcessed(match, guildId, clubId) {
 
     const processed =
         await db.get(
             `SELECT * FROM processed_matches
              WHERE match_id = ?`,
-            [match.id]
+            [match.matchId]
         );
 
     if (processed) {
         return false;
     }
 
-    await processMatchXP(match, guildId);
+    await processMatchXP(match, guildId, { clubId });
 
     return true;
 }
 
-async function sendMatchPost(guildId, channel, match) {
+async function sendMatchPost(guildId, channel, match, clubId) {
 
-    const infographic =
-        await generateMatchInfographic(match);
+    let infographic = null;
+
+    try {
+        infographic =
+            await generateMatchInfographic(match, clubId);
+    } catch (err) {
+        console.error("infographic error:", err.message);
+    }
 
     const components = [
         buildStopButtonRow(guildId)
@@ -146,7 +161,7 @@ async function sendMatchPost(guildId, channel, match) {
             new AttachmentBuilder(
                 infographic,
                 {
-                    name: `match-${match.id}.png`
+                    name: `match-${match.matchId}.png`
                 }
         );
 
@@ -158,12 +173,12 @@ async function sendMatchPost(guildId, channel, match) {
         return;
     }
 
-    const embed = buildFallbackEmbed(match);
+    const embed = buildFallbackEmbed(match, clubId);
 
     await channel.send({
         content: embed
             ? undefined
-            : `Match ID: ${match.id}`,
+            : `Match ID: ${match.matchId}`,
         embeds: embed ? [embed] : [],
         components
     });
@@ -254,7 +269,7 @@ async function syncGuild(guildId, channel, options = {}) {
             await stopAutoMode(guildId, {
                 channel,
                 reason:
-                    "Stopped automatically after 30 minutes with no new match from the backend."
+                    "Stopped automatically after 30 minutes with no new match from EA."
             });
             return {
                 status: "stopped_inactive"
@@ -262,14 +277,17 @@ async function syncGuild(guildId, channel, options = {}) {
         }
 
         const matches =
-            await eaApi.getMatches(
+            await eaApi.getRecentMatches(
                 row.club_id,
-                { forceRefresh: true }
+                {
+                    forceRefresh: true,
+                    limit: 1
+                }
             );
 
         if (!matches?.length) {
             console.log(
-                `AutoMode skipped for ${guildId}: backend returned no matches for club ${row.club_id}`
+                `AutoMode skipped for ${guildId}: EA returned no matches for club ${row.club_id}`
             );
             return {
                 status: "no_matches"
@@ -277,7 +295,7 @@ async function syncGuild(guildId, channel, options = {}) {
         }
 
         const latestMatch = matches[0];
-        const latestMatchId = String(latestMatch.id);
+        const latestMatchId = String(latestMatch.matchId);
         const lastPostedMatchId =
             row.last_match_id
                 ? String(row.last_match_id)
@@ -296,13 +314,15 @@ async function syncGuild(guildId, channel, options = {}) {
 
         await ensureMatchProcessed(
             latestMatch,
-            guildId
+            guildId,
+            row.club_id
         );
 
         await sendMatchPost(
             guildId,
             channel,
-            latestMatch
+            latestMatch,
+            row.club_id
         );
 
         await updateAutoModeState(
@@ -314,7 +334,7 @@ async function syncGuild(guildId, channel, options = {}) {
         );
 
         console.log(
-            `Synced match ${latestMatch.id}`
+            `Synced match ${latestMatchId}`
         );
 
         return {

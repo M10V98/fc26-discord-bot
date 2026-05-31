@@ -56,7 +56,10 @@ module.exports = {
                 false;
 
             const matches =
-                await eaApi.getMatches(club.club_id);
+                await eaApi.getRecentMatches(
+                    club.club_id,
+                    { limit }
+                );
 
             if (!matches?.length) {
                 return interaction.editReply(
@@ -68,12 +71,12 @@ module.exports = {
 
             for (const match of matches.slice(0, limit).reverse()) {
                 const didProcess = await processMatchXP(
-                    {
-                        ...match,
-                        club_id: club.club_id
-                    },
+                    match,
                     interaction.guild.id,
-                    { force }
+                    {
+                        clubId: club.club_id,
+                        force
+                    }
                 );
 
                 if (didProcess) {

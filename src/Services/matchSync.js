@@ -9,18 +9,22 @@ async function syncMatches() {
     const clubId = db.get("clubs")?.default;
     if (!clubId) return;
 
-    const matches = await eaApi.getMatches(clubId);
+    const matches =
+        await eaApi.getRecentMatches(
+            clubId,
+            { limit: 25 }
+        );
 
     if (!matches?.length) return;
 
     for (const match of matches.reverse()) {
 
-        if (lastMatchId && match.id <= lastMatchId) continue;
+        if (lastMatchId && match.matchId === lastMatchId) continue;
 
-        processMatchXP(match, clubId);
+        processMatchXP(match, "default", { clubId });
     }
 
-    lastMatchId = matches[0].id;
+    lastMatchId = matches[0].matchId;
 }
 
 function startMatchSync() {

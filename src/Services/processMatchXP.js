@@ -9,9 +9,21 @@ const {
 
 const processingMatches = new Set();
 
+// =========================
+// PROCESS MATCH XP
+// =========================
+//
+// Expects EA Pro Clubs match shape:
+//   match.matchId, match.timestamp, match.clubs, match.players
+// "ourClubId" must be passed in - it's the guild's linked club id.
+
 async function processMatchXP(match, guildId, options = {}) {
 
-    const matchId = String(match.id);
+    const matchId = String(match.matchId);
+
+    if (!matchId || matchId === "undefined") {
+        return false;
+    }
 
     if (processingMatches.has(matchId)) {
         return false;
@@ -23,27 +35,39 @@ async function processMatchXP(match, guildId, options = {}) {
 
         const exists = await db.get(
             `SELECT * FROM processed_matches WHERE match_id = ?`,
-            [match.id]
+            [matchId]
         );
 
         if (exists && !options.force) return false;
 
-        const clubs = match.match_data?.clubs || {};
-        const entries = Object.entries(clubs);
+        const ourClubId =
+            String(
+                options.clubId ||
+                match.club_id ||
+                ""
+            );
 
-        const ourClub = entries.find(
-            ([id]) => id === String(match.club_id)
-        );
+        if (!ourClubId) {
+            return false;
+        }
 
-        const oppClub = entries.find(
-            ([id]) => id !== String(match.club_id)
-        );
+        const ourClub =
+            match.clubs?.[ourClubId];
 
-        const won =
-            Number(ourClub?.[1]?.goals || 0) >
-            Number(oppClub?.[1]?.goals || 0);
+        const oppClubEntry =
+            Object.entries(match.clubs || {})
+                .find(([id]) => id !== ourClubId);
 
-        for (const [name, p] of Object.entries(match.player_data || {})) {
+        const oppClub = oppClubEntry?.[1];
+
+        const ourGoals = Number(ourClub?.goals || 0);
+        const oppGoals = Number(oppClub?.goals || 0);
+        const won = ourGoals > oppGoals;
+
+        const ourPlayers =
+            match.players?.[ourClubId] || {};
+
+        for (const [playerId, p] of Object.entries(ourPlayers)) {
 
             const cleanSheet =
                 p.cleansheetsdef === "1" ||
@@ -52,12 +76,12 @@ async function processMatchXP(match, guildId, options = {}) {
             const xp = calculateXP({
                 goals: Number(p.goals),
                 assists: Number(p.assists),
-                secondAssists: Number(p.secondAssists),
+                secondAssists: 0,
                 tackles: Number(p.tacklesmade),
-                interceptions: Number(p.interceptions),
+                interceptions: 0,
                 saves: Number(p.saves),
                 passes: Number(p.passesmade),
-                dribbles: Number(p.dribbles),
+                dribbles: 0,
                 cleanSheet,
                 motm: p.mom === "1",
                 rating: Number(p.rating),
@@ -65,8 +89,15 @@ async function processMatchXP(match, guildId, options = {}) {
             });
 
             const existing = await db.get(
-                `SELECT * FROM players WHERE player_name = ?`,
-                [name]
+                `
+                SELECT * FROM players
+                WHERE guild_id = ?
+                AND player_id = ?
+                `,
+                [
+                    guildId,
+                    playerId
+                ]
             );
 
             const totalXP =
@@ -77,6 +108,7 @@ async function processMatchXP(match, guildId, options = {}) {
 
             await db.run(`
             INSERT OR REPLACE INTO players (
+                player_id,
                 player_name,
                 guild_id,
                 xp,
@@ -101,7 +133,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 position
             )
             VALUES (
-                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
                 COALESCE(?,0)+1,
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
@@ -117,50 +149,51 @@ async function processMatchXP(match, guildId, options = {}) {
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
-                COALESCE(?,0)+?,
+                ?,
                 ?,
                 ?
             )
         `,
             [
-                name,
+                playerId,
+                p.playername || existing?.player_name || playerId,
                 guildId,
                 totalXP,
                 level,
 
                 existing?.matches,
                 existing?.goals,
-                Number(p.goals),
+                Number(p.goals || 0),
 
                 existing?.assists,
-                Number(p.assists),
+                Number(p.assists || 0),
 
                 existing?.second_assists,
-                Number(p.secondAssists),
+                0,
 
                 existing?.shots,
-                Number(p.shots),
+                Number(p.shots || 0),
 
                 existing?.passes,
-                Number(p.passesmade),
+                Number(p.passesmade || 0),
 
                 existing?.pass_attempts,
-                Number(p.passattempts),
+                Number(p.passattempts || 0),
 
                 existing?.tackles,
-                Number(p.tacklesmade),
+                Number(p.tacklesmade || 0),
 
                 existing?.tackle_attempts,
-                Number(p.tackleattempts),
+                Number(p.tackleattempts || 0),
 
                 existing?.interceptions,
-                Number(p.interceptions),
+                0,
 
                 existing?.dribbles,
-                Number(p.dribbles),
+                0,
 
                 existing?.saves,
-                Number(p.saves),
+                Number(p.saves || 0),
 
                 existing?.clean_sheets,
                 cleanSheet ? 1 : 0,
@@ -172,7 +205,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 p.redcards === "1" ? 1 : 0,
 
                 (existing?.total_rating || 0) +
-                Number(p.rating),
+                Number(p.rating || 0),
 
                 archetypes[p.archetypeid] || "Unknown",
 
@@ -182,7 +215,7 @@ async function processMatchXP(match, guildId, options = {}) {
 
         await db.run(
             `INSERT OR IGNORE INTO processed_matches (match_id) VALUES (?)`,
-            [match.id]
+            [matchId]
         );
 
         return true;

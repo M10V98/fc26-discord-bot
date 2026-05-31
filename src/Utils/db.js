@@ -45,13 +45,17 @@ const initStatements = [
     `,
     `
     CREATE TABLE IF NOT EXISTS linked_players (
-        discord_id TEXT PRIMARY KEY,
-        player_name TEXT UNIQUE
+        discord_id TEXT,
+        guild_id TEXT,
+        player_id TEXT,
+        player_name TEXT,
+        PRIMARY KEY (guild_id, discord_id)
     )
     `,
     `
     CREATE TABLE IF NOT EXISTS players (
-        player_name TEXT PRIMARY KEY,
+        player_id TEXT,
+        player_name TEXT,
         guild_id TEXT,
         position TEXT,
         archetype TEXT,
@@ -72,7 +76,8 @@ const initStatements = [
         clean_sheets INTEGER DEFAULT 0,
         motm INTEGER DEFAULT 0,
         red_cards INTEGER DEFAULT 0,
-        total_rating REAL DEFAULT 0
+        total_rating REAL DEFAULT 0,
+        PRIMARY KEY (guild_id, player_id)
     )
     `,
     `
@@ -100,6 +105,12 @@ const initStatements = [
         result TEXT,
         match_type TEXT,
         match_date TEXT
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS schema_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT
     )
     `
 ];
@@ -161,6 +172,8 @@ async function init() {
         await run(statement);
     }
 
+    await migrateLinkedPlayersTable();
+
     await ensureColumn(
         "automode",
         "last_match_id",
@@ -177,6 +190,154 @@ async function init() {
         "automode",
         "last_activity_at",
         "INTEGER"
+    );
+
+    // Schema migration: linked_players gains guild_id + player_id.
+    await ensureColumn(
+        "linked_players",
+        "guild_id",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "linked_players",
+        "player_id",
+        "TEXT"
+    );
+
+    // Schema migration: players gains player_id (one-time fresh start).
+    await runOnce(
+        "players_reset_v2",
+        async () => {
+
+            await run(`DROP TABLE IF EXISTS players`);
+
+            await run(`
+                CREATE TABLE players (
+                    player_id TEXT PRIMARY KEY,
+                    player_name TEXT,
+                    guild_id TEXT,
+                    position TEXT,
+                    archetype TEXT,
+                    xp INTEGER DEFAULT 0,
+                    level INTEGER DEFAULT 1,
+                    matches INTEGER DEFAULT 0,
+                    goals INTEGER DEFAULT 0,
+                    assists INTEGER DEFAULT 0,
+                    second_assists INTEGER DEFAULT 0,
+                    shots INTEGER DEFAULT 0,
+                    saves INTEGER DEFAULT 0,
+                    passes INTEGER DEFAULT 0,
+                    pass_attempts INTEGER DEFAULT 0,
+                    tackles INTEGER DEFAULT 0,
+                    tackle_attempts INTEGER DEFAULT 0,
+                    interceptions INTEGER DEFAULT 0,
+                    dribbles INTEGER DEFAULT 0,
+                    clean_sheets INTEGER DEFAULT 0,
+                    motm INTEGER DEFAULT 0,
+                    red_cards INTEGER DEFAULT 0,
+                    total_rating REAL DEFAULT 0
+                )
+            `);
+
+            await run(
+                `DELETE FROM processed_matches`
+            );
+
+            console.log(
+                "Schema migration: players table reset to playerId-keyed schema."
+            );
+        }
+    );
+
+    await runOnce(
+        "players_reset_v3",
+        async () => {
+
+            await run(`DROP TABLE IF EXISTS players`);
+
+            await run(`
+                CREATE TABLE players (
+                    player_id TEXT,
+                    player_name TEXT,
+                    guild_id TEXT,
+                    position TEXT,
+                    archetype TEXT,
+                    xp INTEGER DEFAULT 0,
+                    level INTEGER DEFAULT 1,
+                    matches INTEGER DEFAULT 0,
+                    goals INTEGER DEFAULT 0,
+                    assists INTEGER DEFAULT 0,
+                    second_assists INTEGER DEFAULT 0,
+                    shots INTEGER DEFAULT 0,
+                    saves INTEGER DEFAULT 0,
+                    passes INTEGER DEFAULT 0,
+                    pass_attempts INTEGER DEFAULT 0,
+                    tackles INTEGER DEFAULT 0,
+                    tackle_attempts INTEGER DEFAULT 0,
+                    interceptions INTEGER DEFAULT 0,
+                    dribbles INTEGER DEFAULT 0,
+                    clean_sheets INTEGER DEFAULT 0,
+                    motm INTEGER DEFAULT 0,
+                    red_cards INTEGER DEFAULT 0,
+                    total_rating REAL DEFAULT 0,
+                    PRIMARY KEY (guild_id, player_id)
+                )
+            `);
+
+            await run(
+                `DELETE FROM processed_matches`
+            );
+
+            console.log(
+                "Schema migration: players table reset to guild-scoped playerId schema."
+            );
+        }
+    );
+}
+
+async function migrateLinkedPlayersTable() {
+
+    const columns =
+        await all(`PRAGMA table_info(linked_players)`);
+
+    const discordColumn =
+        columns.find(row => row.name === "discord_id");
+
+    const needsCompositeKey =
+        discordColumn && Number(discordColumn.pk) === 1;
+
+    if (!needsCompositeKey) {
+        return;
+    }
+
+    await run(`
+        CREATE TABLE IF NOT EXISTS linked_players_new (
+            discord_id TEXT,
+            guild_id TEXT,
+            player_id TEXT,
+            player_name TEXT,
+            PRIMARY KEY (guild_id, discord_id)
+        )
+    `);
+
+    await run(`
+        INSERT OR IGNORE INTO linked_players_new
+        (discord_id, guild_id, player_id, player_name)
+        SELECT
+            discord_id,
+            COALESCE(guild_id, 'legacy'),
+            player_id,
+            player_name
+        FROM linked_players
+    `);
+
+    await run(`DROP TABLE linked_players`);
+
+    await run(`ALTER TABLE linked_players_new RENAME TO linked_players`);
+
+    console.log(
+        "Schema migration: linked_players now uses guild-scoped claims."
     );
 }
 
@@ -195,6 +356,27 @@ async function ensureColumn(table, column, definition) {
     await run(
         `ALTER TABLE ${table}
          ADD COLUMN ${column} ${definition}`
+    );
+}
+
+async function runOnce(key, fn) {
+
+    const existing =
+        await get(
+            `SELECT value FROM schema_meta WHERE key = ?`,
+            [key]
+        );
+
+    if (existing) {
+        return;
+    }
+
+    await fn();
+
+    await run(
+        `INSERT OR REPLACE INTO schema_meta (key, value)
+         VALUES (?, ?)`,
+        [key, String(Date.now())]
     );
 }
 

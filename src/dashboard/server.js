@@ -45,9 +45,13 @@ app.get("/api/matches", async (req, res) => {
             return res.json([]);
         }
 
-        const matches = await eaApi.getMatches(clubId);
+        const matches =
+            await eaApi.getRecentMatches(
+                clubId,
+                { limit: 10 }
+            );
 
-        res.json(matches.slice(0, 10));
+        res.json(matches);
 
     } catch (err) {
         res.status(500).json({ error: "Failed to load matches" });

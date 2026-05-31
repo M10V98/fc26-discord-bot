@@ -24,8 +24,12 @@ module.exports = {
         const linked =
             await db.get(
                 `SELECT * FROM linked_players
-                 WHERE discord_id = ?`,
-                [interaction.user.id]
+                 WHERE guild_id = ?
+                 AND discord_id = ?`,
+                [
+                    interaction.guild.id,
+                    interaction.user.id
+                ]
             );
 
         if (!linked) {
@@ -37,8 +41,16 @@ module.exports = {
         const player =
             await db.get(
                 `SELECT * FROM players
-                 WHERE player_name = ?`,
-                [linked.player_name]
+                 WHERE guild_id = ?
+                 AND (
+                    player_id = ?
+                    OR player_name = ?
+                 )`,
+                [
+                    interaction.guild.id,
+                    linked.player_id,
+                    linked.player_name
+                ]
             );
 
         if (!player) {

@@ -1,90 +1,69 @@
-const eaApi = require('./eaApi');
+const eaApi = require("./eaApi");
 
 const activeTrackers = new Map();
 
 module.exports = function startTracker(client) {
-
     setInterval(async () => {
-
         for (const [guildId, tracker] of activeTrackers) {
-
             try {
+                const matches =
+                    await eaApi.getRecentMatches(
+                        tracker.clubId,
+                        { limit: 1 }
+                    );
 
-                const matches = await eaApi.getMatches(
-                    tracker.clubId
-                );
-
-                if (!matches || matches.length === 0)
-                    continue;
+                if (!matches?.length) continue;
 
                 const latest = matches[0];
 
-                if (latest.id === tracker.lastMatchId)
+                if (latest.matchId === tracker.lastMatchId) {
                     continue;
+                }
 
-                tracker.lastMatchId = latest.id;
+                tracker.lastMatchId = latest.matchId;
 
                 const channel =
-                    await client.channels.fetch(
-                        tracker.channelId
-                    );
+                    await client.channels.fetch(tracker.channelId);
 
                 if (!channel) continue;
 
-                const clubs =
-                    latest.match_data?.clubs || {};
+                const clubId = String(tracker.clubId);
+                const clubs = latest.clubs || {};
+                const opponentId =
+                    Object.keys(clubs).find(id => id !== clubId);
 
-                const teams =
-                    Object.values(clubs);
-
-                if (teams.length < 2)
+                if (!clubs[clubId] || !clubs[opponentId]) {
                     continue;
+                }
 
-                const home = teams[0];
-                const away = teams[1];
+                const ourClub = clubs[clubId];
+                const opponent = clubs[opponentId];
 
-                let playerText = '';
-
-                Object.entries(
-                    latest.player_data || {}
-                ).forEach(([name, stats]) => {
-
-                    playerText +=
-                        `\n**${name}** | ⚽ ${stats.goals} | 🅰️ ${stats.assists} | ⭐ ${stats.rating}`;
-                });
+                const playerText =
+                    Object.values(latest.players?.[clubId] || {})
+                        .map(stats =>
+                            `**${stats.playername}** | Goals ${stats.goals || 0} | Assists ${stats.assists || 0} | Rating ${stats.rating || "0.0"}`
+                        )
+                        .join("\n");
 
                 await channel.send({
-
                     embeds: [
                         {
                             color: 0x00ff00,
-                            title: '📢 New Match Found',
+                            title: "New Match Found",
                             description:
-                                `**${home.clubName} ${home.goals} - ${away.goals} ${away.clubName}**\n${playerText}`,
+                                `**${ourClub.details?.name || "Club"} ${ourClub.goals || 0} - ${opponent.goals || 0} ${opponent.details?.name || "Opponent"}**\n${playerText}`,
                             timestamp: new Date()
                         }
                     ]
                 });
-
             } catch (err) {
-
-                console.error(
-                    'Match Tracker Error:',
-                    err
-                );
+                console.error("Match Tracker Error:", err);
             }
-
         }
+    }, 300000);
 
-    }, 300000); // 5 minutes
-
-
-    client.startAutoMode = (
-        guildId,
-        channelId,
-        clubId
-    ) => {
-
+    client.startAutoMode = (guildId, channelId, clubId) => {
         activeTrackers.set(guildId, {
             channelId,
             clubId,
@@ -92,9 +71,7 @@ module.exports = function startTracker(client) {
         });
     };
 
-
     client.stopAutoMode = guildId => {
-
         activeTrackers.delete(guildId);
     };
 };

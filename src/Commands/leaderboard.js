@@ -15,9 +15,11 @@ module.exports = {
             `
             SELECT player_name, xp
             FROM players
+            WHERE guild_id = ?
             ORDER BY xp DESC
             LIMIT 10
-            `
+            `,
+            [interaction.guild.id]
         );
 
         if (players.length === 0) {

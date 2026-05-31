@@ -18,9 +18,12 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         DEFAULT_LIMIT;
 
     const matches =
-        await eaApi.getMatches(
+        await eaApi.getRecentMatches(
             clubId,
-            { forceRefresh: Boolean(options.forceRefresh) }
+            {
+                forceRefresh: Boolean(options.forceRefresh),
+                limit
+            }
         );
 
     if (!matches?.length) {
@@ -31,20 +34,23 @@ async function syncGuildStats(guildId, clubId, options = {}) {
     }
 
     let processed = 0;
-    const recentMatches =
-        matches
-            .slice(0, limit)
-            .reverse();
 
-    for (const match of recentMatches) {
+    await backfillLinkedPlayerIds(
+        guildId,
+        clubId,
+        matches
+    );
+
+    // Replay oldest -> newest so XP accumulates in the right order.
+    const ordered = matches.slice().reverse();
+
+    for (const match of ordered) {
         const didProcess =
             await processMatchXP(
-                {
-                    ...match,
-                    club_id: clubId
-                },
+                match,
                 guildId,
                 {
+                    clubId,
                     force: Boolean(options.force)
                 }
             );
@@ -55,9 +61,65 @@ async function syncGuildStats(guildId, clubId, options = {}) {
     }
 
     return {
-        checked: recentMatches.length,
+        checked: ordered.length,
         processed
     };
+}
+
+async function backfillLinkedPlayerIds(guildId, clubId, matches) {
+
+    const legacyLinks =
+        await db.all(
+            `
+            SELECT *
+            FROM linked_players
+            WHERE guild_id = ?
+            AND (player_id IS NULL OR player_id = '')
+            AND player_name IS NOT NULL
+            `,
+            [guildId]
+        );
+
+    if (!legacyLinks.length) {
+        return;
+    }
+
+    const idByName = new Map();
+    const ourClubId = String(clubId);
+
+    for (const match of matches) {
+        const players =
+            match.players?.[ourClubId] || {};
+
+        for (const [playerId, player] of Object.entries(players)) {
+            if (player.playername && !idByName.has(player.playername)) {
+                idByName.set(player.playername, playerId);
+            }
+        }
+    }
+
+    for (const link of legacyLinks) {
+        const playerId =
+            idByName.get(link.player_name);
+
+        if (!playerId) {
+            continue;
+        }
+
+        await db.run(
+            `
+            UPDATE linked_players
+            SET player_id = ?
+            WHERE guild_id = ?
+            AND discord_id = ?
+            `,
+            [
+                playerId,
+                guildId,
+                link.discord_id
+            ]
+        );
+    }
 }
 
 async function syncAllLinkedClubs(options = {}) {

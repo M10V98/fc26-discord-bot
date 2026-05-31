@@ -19,13 +19,18 @@ async function run() {
         );
 
     const matches =
-        await eaApi.getMatches(
-            club.club_id
+        await eaApi.getRecentMatches(
+            club.club_id,
+            { limit: 100 }
         );
 
     for (const match of matches.reverse()) {
 
-        await processMatch(match);
+        await processMatch(
+            match,
+            club.guild_id || "default",
+            club.club_id
+        );
     }
 
     console.log(

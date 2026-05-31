@@ -10,16 +10,12 @@ const {
     getCrestUrl
 } = require("../Services/crests");
 
-function toNumber(value) {
-    return Number(value || 0);
-}
-
-function fmt(value, digits = 0) {
-    const number = toNumber(value);
+function valueOf(value, digits = 0) {
+    const number = Number(value || 0);
     return digits > 0 ? number.toFixed(digits) : String(number);
 }
 
-async function getLinkedPlayer(guildId, discordId) {
+async function linkedPlayer(guildId, discordId) {
     return db.get(
         `
         SELECT * FROM linked_players
@@ -30,7 +26,7 @@ async function getLinkedPlayer(guildId, discordId) {
     );
 }
 
-async function autocompleteLinkedPlayers(interaction) {
+async function autocomplete(interaction) {
     const focused =
         interaction.options.getFocused().toLowerCase();
 
@@ -47,7 +43,7 @@ async function autocompleteLinkedPlayers(interaction) {
             [interaction.guild.id]
         );
 
-    const choices =
+    await interaction.respond(
         rows
             .filter(row =>
                 row.player_name.toLowerCase().includes(focused)
@@ -56,15 +52,14 @@ async function autocompleteLinkedPlayers(interaction) {
             .map(row => ({
                 name: row.player_name,
                 value: row.player_name
-            }));
-
-    await interaction.respond(choices);
+            }))
+    );
 }
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("playerstats")
-        .setDescription("View current member stats")
+        .setName("career")
+        .setDescription("View all-time EA career stats")
         .addUserOption(option =>
             option
                 .setName("user")
@@ -77,9 +72,7 @@ module.exports = {
                 .setAutocomplete(true)
         ),
 
-    async autocomplete(interaction) {
-        await autocompleteLinkedPlayers(interaction);
-    },
+    autocomplete,
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -100,14 +93,12 @@ module.exports = {
             const user =
                 interaction.options.getUser("user");
 
-            const playerOption =
+            let playerName =
                 interaction.options.getString("player");
-
-            let playerName = playerOption;
 
             if (!playerName) {
                 const linked =
-                    await getLinkedPlayer(
+                    await linkedPlayer(
                         interaction.guild.id,
                         user?.id || interaction.user.id
                     );
@@ -123,14 +114,14 @@ module.exports = {
                 playerName = linked.player_name;
             }
 
-            const [members, crestUrl] =
+            const [career, crestUrl] =
                 await Promise.all([
-                    eaApi.getMembersStats(club.club_id),
+                    eaApi.getMembersCareer(club.club_id),
                     getCrestUrl(club.club_id)
                 ]);
 
             const player =
-                (members?.members || [])
+                (career?.members || [])
                     .find(member =>
                         String(member.name).toLowerCase() ===
                         String(playerName).toLowerCase()
@@ -138,42 +129,28 @@ module.exports = {
 
             if (!player) {
                 return interaction.editReply(
-                    "No current member stats found for that player."
+                    "No career stats found for that player."
                 );
             }
 
-            const games = toNumber(player.gamesPlayed);
-            const goals = toNumber(player.goals);
-            const assists = toNumber(player.assists);
-            const goalRatio =
-                games > 0 ? (goals / games).toFixed(2) : "0.00";
-
             const embed =
                 new EmbedBuilder()
-                    .setColor("#00ff99")
-                    .setTitle(`${player.name} - Member Stats`)
+                    .setColor("#6cdb7f")
+                    .setTitle(`${player.name} - Career Stats`)
                     .addFields(
-                        { name: "Games", value: fmt(player.gamesPlayed), inline: true },
-                        { name: "Goals", value: fmt(player.goals), inline: true },
-                        { name: "Assists", value: fmt(player.assists), inline: true },
-                        { name: "Goals/Game", value: goalRatio, inline: true },
-                        { name: "Avg Rating", value: fmt(player.ratingAve, 2), inline: true },
-                        { name: "MOTM", value: fmt(player.manOfTheMatch), inline: true },
-                        { name: "Passes", value: fmt(player.passesMade), inline: true },
-                        { name: "Pass %", value: `${fmt(player.passSuccessRate, 1)}%`, inline: true },
-                        { name: "Tackles", value: fmt(player.tacklesMade), inline: true },
-                        { name: "Tackle %", value: `${fmt(player.tackleSuccessRate, 1)}%`, inline: true },
-                        { name: "Shot %", value: `${fmt(player.shotSuccessRate, 1)}%`, inline: true },
-                        { name: "Red Cards", value: fmt(player.redCards), inline: true },
-                        { name: "CS Def", value: fmt(player.cleanSheetsDef), inline: true },
-                        { name: "CS GK", value: fmt(player.cleanSheetsGK), inline: true }
+                        { name: "Games", value: valueOf(player.gamesPlayed), inline: true },
+                        { name: "Goals", value: valueOf(player.goals), inline: true },
+                        { name: "Assists", value: valueOf(player.assists), inline: true },
+                        { name: "MOTM", value: valueOf(player.manOfTheMatch), inline: true },
+                        { name: "Avg Rating", value: valueOf(player.ratingAve, 2), inline: true }
                     );
 
             const description =
                 [
-                    player.proName ? `Pro: ${player.proName}` : null,
-                    player.proPos ? `Position: ${player.proPos}` : null,
-                    player.proOverall ? `Overall: ${player.proOverall}` : null
+                    player.favoritePosition
+                        ? `Favorite position: ${player.favoritePosition}`
+                        : null,
+                    player.proPos ? `Current position: ${player.proPos}` : null
                 ].filter(Boolean).join("\n");
 
             if (description) {
@@ -188,10 +165,10 @@ module.exports = {
                 embeds: [embed]
             });
         } catch (err) {
-            console.error("playerstats error:", err);
+            console.error("career error:", err);
 
             await interaction.editReply(
-                "Failed to load player stats."
+                "Failed to load career stats."
             );
         }
     }

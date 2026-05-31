@@ -6,6 +6,10 @@ const {
 const eaApi =
     require("../Services/eaApi");
 
+const {
+    getCrestUrl
+} = require("../Services/crests");
+
 const db =
     require("../Utils/db");
 
@@ -16,13 +20,18 @@ const {
     formatScoreboard
 } = require("../Utils/scoreboard");
 
+function formatMatchType(value) {
+
+    return String(value || "Match")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 module.exports = {
 
     data: new SlashCommandBuilder()
         .setName("matches")
-        .setDescription(
-            "Show recent matches"
-        ),
+        .setDescription("Show recent matches"),
 
     async execute(interaction) {
 
@@ -30,191 +39,125 @@ module.exports = {
 
         try {
 
-            // =========================
-            // GET CLUB
-            // =========================
-
             const club =
                 await db.get(
-                    `
-                    SELECT * FROM clubs
-                    WHERE guild_id = ?
-                    `,
+                    `SELECT * FROM clubs WHERE guild_id = ?`,
                     [interaction.guild.id]
                 );
 
             if (!club) {
-
                 return interaction.editReply(
                     "❌ No club linked. Use /linkclub"
                 );
             }
 
-            // =========================
-            // FETCH MATCHES
-            // =========================
+            const [matches, crestUrl] =
+                await Promise.all([
+                    eaApi.getRecentMatches(club.club_id, { limit: 5 }),
+                    getCrestUrl(club.club_id)
+                ]);
 
-            const matches =
-                await eaApi.getMatches(
-                    club.club_id
-                );
-
-            if (
-                !matches ||
-                matches.length === 0
-            ) {
-
+            if (!matches?.length) {
                 return interaction.editReply(
                     "❌ No matches found."
                 );
             }
 
-            // =========================
-            // EMBED
-            // =========================
-
             const embed =
                 new EmbedBuilder()
-                .setColor("#00b0f4")
-                .setTitle(
-                    "📊 Recent Matches"
-                )
-                .setDescription(
-                    `Showing latest ${Math.min(matches.length, 5)} matches`
-                );
+                    .setColor("#00b0f4")
+                    .setTitle("📊 Recent Matches")
+                    .setDescription(
+                        `Showing latest ${matches.length} matches (league + playoff + friendly)`
+                    );
 
-            // =========================
-            // BUILD MATCH BLOCKS
-            // =========================
+            if (crestUrl) {
+                embed.setThumbnail(crestUrl);
+            }
 
-            matches
-                .slice(0, 5)
-                .forEach(match => {
+            const ourId = String(club.club_id);
 
-                    const clubs =
-                        match.match_data?.clubs || {};
+            for (const match of matches) {
 
-                    const teams =
-                        Object.entries(clubs);
+                const clubsObj = match.clubs || {};
+                const ids = Object.keys(clubsObj);
 
-                    if (
-                        teams.length < 2
-                    ) return;
+                if (ids.length < 2) continue;
 
-                    const home =
-                        {
-                            clubId: teams[0][0],
-                            ...teams[0][1]
-                        };
+                const oppId = ids.find(id => id !== ourId) || ids[1];
 
-                    const away =
-                        {
-                            clubId: teams[1][0],
-                            ...teams[1][1]
-                        };
+                const home = {
+                    clubId: ourId,
+                    ...clubsObj[ourId]
+                };
 
-                    const matchType =
-                        match.match_type ||
-                        "Unknown";
+                const away = {
+                    clubId: oppId,
+                    ...clubsObj[oppId]
+                };
 
-                    const date =
-                        new Date(
-                            match.match_date * 1000
+                const matchType =
+                    formatMatchType(home.matchType || away.matchType);
+
+                const date =
+                    match.timestamp
+                        ? new Date(Number(match.timestamp) * 1000).toLocaleString()
+                        : "Unknown";
+
+                const dnf =
+                    home.winnerByDnf === "1" ||
+                    away.winnerByDnf === "1"
+                        ? "\n⚠️ DNF Win"
+                        : "";
+
+                const scoreboard =
+                    formatScoreboard(home, away);
+
+                const ourPlayers =
+                    match.players?.[ourId] || {};
+
+                const playerLines =
+                    Object.values(ourPlayers)
+                        .sort(
+                            (a, b) =>
+                                Number(b.rating || 0) - Number(a.rating || 0)
                         )
-                        .toLocaleString();
-
-                    const dnf =
-                        home.winnerByDnf === "1" ||
-                        away.winnerByDnf === "1"
-                            ? "\n⚠️ DNF Win"
-                            : "";
-
-                    const scoreboard =
-                        formatScoreboard(home, away);
-
-                    // =========================
-                    // PLAYER LINES
-                    // =========================
-
-                    const playerLines =
-                        Object.entries(
-                            match.player_data || {}
-                        )
-                        .map(([name, player]) => {
+                        .slice(0, 11)
+                        .map(p => {
 
                             const archetype =
-                                archetypes[
-                                    player.archetypeid
-                                ] || "Unknown";
-
-                            const rating =
-                                player.rating || "0.0";
-
-                            const goals =
-                                player.goals || 0;
-
-                            const assists =
-                                player.assists || 0;
-
-                            const passes =
-                                player.passesmade || 0;
-
-                            const attempts =
-                                player.passattempts || 0;
-
-                            const tackles =
-                                player.tacklesmade || 0;
-
-                            const interceptions =
-                                player.interceptions || 0;
-
-                            const dribbles =
-                                player.dribbles || 0;
-
-                            const saves =
-                                player.saves || 0;
-
-                            const shots =
-                                player.shots || 0;
+                                archetypes[p.archetypeid] || "Unknown";
 
                             const cleanSheet =
-                                player.cleansheetsdef === "1" ||
-                                player.cleansheetsgk === "1";
+                                p.cleansheetsdef === "1" ||
+                                p.cleansheetsgk === "1";
 
                             const redCard =
-                                player.redcards === "1";
+                                p.redcards === "1";
 
                             const mom =
-                                player.mom === "1"
-                                    ? "🏅 "
-                                    : "";
+                                p.mom === "1" ? "🏅 " : "";
 
                             return (
-                                `${mom}**${name}** (${archetype})\n` +
-                                `⭐ ${rating} | ⚽ ${goals} | 🅰️ ${assists} | 🥅 ${saves}\n` +
-                                `🎯 ${passes}/${attempts} passes\n` +
-                                `🛡️ ${tackles} tackles | 🧠 ${interceptions} interceptions\n` +
-                                `🔄 ${dribbles} dribbles | 🎯 ${shots} shots\n` +
-                                `${cleanSheet ? "🥅 Clean Sheet" : ""} ${redCard ? "🟥 Red Card" : ""}`
+                                `${mom}**${p.playername}** (${archetype})\n` +
+                                `⭐ ${p.rating || "0.0"} | ⚽ ${p.goals || 0} | 🅰️ ${p.assists || 0} | 🥅 ${p.saves || 0}\n` +
+                                `🎯 ${p.passesmade || 0}/${p.passattempts || 0} passes\n` +
+                                `🛡️ ${p.tacklesmade || 0}/${p.tackleattempts || 0} tackles\n` +
+                                `${cleanSheet ? "🥅 Clean Sheet " : ""}${redCard ? "🟥 Red Card" : ""}`.trim()
                             );
-
                         })
                         .join("\n\n");
 
-                    // =========================
-                    // ADD MATCH FIELD
-                    // =========================
-
-                    embed.addFields({
-                        name:
-                            scoreboard,
-
-                        value:
+                embed.addFields({
+                    name: scoreboard,
+                    value:
+                        (
                             `📅 ${date}\n` +
                             `🎮 ${matchType}${dnf}\n\n` +
                             playerLines
-                    });
+                        ).slice(0, 1024)
                 });
+            }
 
             await interaction.editReply({
                 embeds: [embed]
@@ -222,10 +165,7 @@ module.exports = {
 
         } catch (err) {
 
-            console.error(
-                "❌ matches error:",
-                err
-            );
+            console.error("matches error:", err);
 
             await interaction.editReply(
                 "❌ Failed to load matches."

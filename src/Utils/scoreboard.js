@@ -1,11 +1,16 @@
+function getClubName(club) {
+    return club?.details?.name || "Unknown";
+}
+
 function formatScoreboard(home, away) {
 
     return (
-        `**${home.clubName}**  ${home.goals} - ` +
-        `${away.goals}  **${away.clubName}**`
+        `**${getClubName(home)}**  ${home.goals || 0} - ` +
+        `${away.goals || 0}  **${getClubName(away)}**`
     );
 }
 
 module.exports = {
-    formatScoreboard
+    formatScoreboard,
+    getClubName
 };

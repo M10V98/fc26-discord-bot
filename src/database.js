@@ -1,20 +1,13 @@
-const axios = require("axios");
-
-const BASE_URL = "https://api.ourproclub.app/api";
+const eaApi = require("./Services/eaApi");
 
 async function getMatchHistory(clubId, limit = 5) {
     try {
-        const response = await axios.get(`${BASE_URL}/match/history`, {
-            params: {
-                clubId,
-                limit
-            }
-        });
-
-        return response.data;
-
+        return await eaApi.getRecentMatches(
+            clubId,
+            { limit }
+        );
     } catch (err) {
-        console.error("EA API ERROR:", err.response?.data || err.message);
+        console.error("EA API ERROR:", err.message);
         return [];
     }
 }

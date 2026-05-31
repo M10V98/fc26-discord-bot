@@ -27,10 +27,6 @@ module.exports = {
 
         try {
 
-            // =========================
-            // GET CLUB
-            // =========================
-
             const club =
                 await db.get(
                     `
@@ -48,72 +44,75 @@ module.exports = {
             }
 
             // =========================
-            // GET MATCHES
+            // GET MEMBERS (current season roster)
             // =========================
 
-            const matches =
-                await eaApi.getMatches(
-                    club.club_id
-                );
+            const members =
+                await eaApi.getMembersStats(club.club_id);
 
-            if (
-                !matches ||
-                matches.length === 0
-            ) {
+            const list =
+                Array.isArray(members?.members)
+                    ? members.members
+                    : [];
 
+            if (list.length === 0) {
                 return interaction.editReply(
-                    "❌ No matches found."
+                    "❌ No members found for this club."
                 );
             }
 
-            // =========================
-            // GET PLAYER NAMES
-            // =========================
+            // Resolve playerIds via the latest match data so the
+            // dropdown stores stable IDs (members API only has names).
+            const matches =
+                await eaApi.getRecentMatches(
+                    club.club_id,
+                    { limit: 25 }
+                );
 
-            const names =
-                new Set();
+            const idByName = new Map();
 
-            matches.forEach(match => {
+            for (const match of matches) {
 
-                Object.keys(
-                    match.player_data || {}
-                ).forEach(name => {
+                const players =
+                    match.players?.[String(club.club_id)] || {};
 
-                    names.add(name);
-                });
-            });
+                for (const [pid, p] of Object.entries(players)) {
+
+                    if (p.playername && !idByName.has(p.playername)) {
+                        idByName.set(p.playername, pid);
+                    }
+                }
+            }
 
             const options =
-                [...names]
-                .slice(0, 25)
-                .map(name => ({
-                    label: name,
-                    value: name
-                }));
+                list
+                    .slice(0, 25)
+                    .map(m => {
 
-            // =========================
-            // MENU
-            // =========================
+                        const pid = idByName.get(m.name) || "";
+
+                        return {
+                            label: m.name.slice(0, 100),
+                            description:
+                                `${m.proName || ""} - ${m.favoritePosition || ""}`
+                                    .slice(0, 100),
+                            // value carries playerId|name so the handler can persist both.
+                            value: `${pid}|${m.name}`.slice(0, 100)
+                        };
+                    });
 
             const menu =
                 new StringSelectMenuBuilder()
-                .setCustomId(
-                    "claim_player"
-                )
-                .setPlaceholder(
-                    "Select your player"
-                )
-                .addOptions(options);
+                    .setCustomId("claim_player")
+                    .setPlaceholder("Select your player")
+                    .addOptions(options);
 
             const row =
                 new ActionRowBuilder()
-                .addComponents(menu);
+                    .addComponents(menu);
 
             await interaction.editReply({
-
-                content:
-                    "Select your player:",
-
+                content: "Select your player:",
                 components: [row]
             });
 

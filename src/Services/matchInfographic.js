@@ -40,6 +40,10 @@ const sharp = require("sharp");
 
 const archetypes = require("../Utils/archetypes");
 
+const {
+    buildCrestUrl
+} = require("./crests");
+
 const TEMPLATE_PATH = path.join(
     __dirname,
     "../assets/automode-infographic.png"
@@ -47,28 +51,7 @@ const TEMPLATE_PATH = path.join(
 
 const WIDTH = 1920;
 const HEIGHT = 1080;
-const BADGE_SIZE = 74;
-
-const BADGE_KEYS = [
-    "badge",
-    "badgeUrl",
-    "badgeURL",
-    "clubBadge",
-    "clubBadgeUrl",
-    "clubBadgeURL",
-    "clubLogo",
-    "clubLogoUrl",
-    "clubLogoURL",
-    "crest",
-    "crestUrl",
-    "crestURL",
-    "logo",
-    "logoUrl",
-    "logoURL",
-    "icon",
-    "iconUrl",
-    "iconURL"
-];
+const BADGE_SIZE = 84;
 
 let fontCss;
 
@@ -187,7 +170,7 @@ function titleCase(value) {
 
 function formatDate(timestamp) {
 
-    return new Date(timestamp * 1000)
+    return new Date(Number(timestamp) * 1000)
         .toLocaleDateString("en-GB", {
             weekday: "long",
             day: "numeric",
@@ -229,7 +212,7 @@ function buildRows(players) {
             toNumber(b.rating) - toNumber(a.rating)
         )
         .slice(0, 11)
-        .map(([name, player]) => {
+        .map(([, player]) => {
 
             const passes =
                 `${player.passesmade || 0} / ${player.passattempts || 0} ` +
@@ -244,18 +227,17 @@ function buildRows(players) {
             ].filter(Boolean);
 
             return {
-                name,
+                name: player.playername || "Player",
                 badges: badges.join(" "),
-                position: `${titleCase(player.pos || "Player")} ${archetypes[player.archetypeid] || ""}`.trim(),
+                position:
+                    `${titleCase(player.pos || "Player")} ` +
+                    `${archetypes[player.archetypeid] || ""}`.trim(),
                 rating: player.rating || "0.0",
                 goals: player.goals || "0",
                 shots: player.shots || "0",
                 assists: player.assists || "0",
-                secondAssists: player.secondAssists || "0",
-                dribbles: player.dribbles || "0",
                 passes,
                 tackles,
-                interceptions: player.interceptions || "0",
                 saves: player.saves || "-"
             };
         });
@@ -289,42 +271,50 @@ function rowText(x, y, value, width, options = {}) {
     );
 }
 
-function buildSvg(match, home, away) {
+function buildSvg(match, ourClubId, home, away) {
 
-    const players = match.player_data || {};
+    const players =
+        match.players?.[ourClubId] || {};
+
     const rows = buildRows(players);
     const minutes = getMinutesPlayed(players);
     const trackedCount = Object.keys(players).length;
 
-    const homeName = home.clubName || "Home";
-    const awayName = away.clubName || "Away";
+    const homeName = home.details?.name || "Home";
+    const awayName = away.details?.name || "Away";
+
     const trackedClub =
-        String(home.clubId) === String(match.club_id)
+        String(home.clubId) === String(ourClubId)
             ? home
             : away;
 
+    const trackedName =
+        trackedClub.details?.name || "Club";
+
+    const matchType =
+        match.clubs?.[ourClubId]?.matchType ||
+        home.matchType ||
+        "Match";
+
     const meta = [
-        formatMatchType(match.match_type),
-        formatDate(match.match_date),
+        formatMatchType(matchType),
+        formatDate(match.timestamp),
         minutes ? `${minutes} minutes played` : null
     ].filter(Boolean).join(" \u2022 ");
 
     const playerNote =
-        `${trackedClub.clubName} had ${trackedCount} tracked player${trackedCount === 1 ? "" : "s"}`;
+        `${trackedName} had ${trackedCount} tracked player${trackedCount === 1 ? "" : "s"}`;
 
     const columns = [
         ["Player", 120, 300],
         ["Position", 378, 260],
-        ["MR", 676, 70],
-        ["GLS", 782, 70],
-        ["SHT", 878, 70],
-        ["AST", 986, 70],
-        ["2AST", 1090, 80],
-        ["DRI", 1194, 70],
-        ["PAS", 1306, 150],
-        ["TKL", 1490, 150],
-        ["INT", 1642, 70],
-        ["SVS", 1748, 70]
+        ["MR", 696, 70],
+        ["GLS", 802, 70],
+        ["SHT", 898, 70],
+        ["AST", 1006, 70],
+        ["PAS", 1140, 150],
+        ["TKL", 1340, 150],
+        ["SVS", 1540, 70]
     ];
 
     const header = [
@@ -332,15 +322,16 @@ function buildSvg(match, home, away) {
         `<rect y="0" width="${WIDTH}" height="230" fill="rgba(0,0,0,0.68)"/>`,
         `<rect y="830" width="${WIDTH}" height="250" fill="rgba(0,0,0,0.58)"/>`,
         `<rect x="92" y="248" width="1736" height="64" rx="8" fill="rgba(0,0,0,0.78)"/>`,
-        text(690, 142, homeName, { size: 48, weight: 800, anchor: "end" }),
-        text(850, 142, `(${home.goals})`, { size: 38, weight: 800, anchor: "middle" }),
+        text(680, 142, homeName, { size: 48, weight: 800, anchor: "end" }),
+        text(845, 142, `(${home.goals || 0})`, { size: 38, weight: 800, anchor: "middle" }),
         text(960, 142, "vs", { size: 36, weight: 800, anchor: "middle" }),
-        text(1070, 142, `(${away.goals})`, { size: 38, weight: 800, anchor: "middle" }),
-        text(1230, 142, awayName, { size: 48, weight: 800 }),
-        `<circle cx="760" cy="126" r="42" fill="rgba(0,0,0,0.6)" stroke="#d4b429" stroke-width="4"/>`,
-        text(760, 140, getInitials(homeName), { size: 28, weight: 900, anchor: "middle", fill: "#d4b429" }),
-        `<circle cx="1160" cy="126" r="42" fill="rgba(0,0,0,0.6)" stroke="#2f7cff" stroke-width="4"/>`,
-        text(1160, 140, getInitials(awayName), { size: 28, weight: 900, anchor: "middle", fill: "#2f7cff" }),
+        text(1075, 142, `(${away.goals || 0})`, { size: 38, weight: 800, anchor: "middle" }),
+        text(1240, 142, awayName, { size: 48, weight: 800 }),
+        // Badge placeholders are drawn underneath - actual crests composited later.
+        `<circle cx="755" cy="126" r="46" fill="rgba(0,0,0,0.6)" stroke="#d4b429" stroke-width="4"/>`,
+        text(755, 140, getInitials(homeName), { size: 28, weight: 900, anchor: "middle", fill: "#d4b429" }),
+        `<circle cx="1165" cy="126" r="46" fill="rgba(0,0,0,0.6)" stroke="#2f7cff" stroke-width="4"/>`,
+        text(1165, 140, getInitials(awayName), { size: 28, weight: 900, anchor: "middle", fill: "#2f7cff" }),
         text(960, 184, meta, { size: 24, weight: 700, anchor: "middle" }),
         text(960, 214, playerNote, { size: 21, weight: 500, anchor: "middle", opacity: 0.86 }),
         ...columns.map(([label, x]) =>
@@ -360,22 +351,19 @@ function buildSvg(match, home, away) {
             bg,
             rowText(120, y, `${row.name} ${row.badges}`.trim(), 24, { size: 19, weight: 650 }),
             rowText(378, y, row.position, 25, { size: 19 }),
-            text(696, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
-            text(802, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
-            text(898, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
-            text(1006, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
-            text(1112, y, row.secondAssists, { size: 19, weight: 650, anchor: "middle" }),
-            text(1212, y, row.dribbles, { size: 19, weight: 650, anchor: "middle" }),
-            rowText(1306, y, row.passes, 14, { size: 19, weight: 650 }),
-            rowText(1490, y, row.tackles, 14, { size: 19, weight: 650 }),
-            text(1662, y, row.interceptions, { size: 19, weight: 650, anchor: "middle" }),
-            text(1768, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
+            text(716, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
+            text(822, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
+            text(918, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
+            text(1026, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
+            rowText(1140, y, row.passes, 14, { size: 19, weight: 650 }),
+            rowText(1340, y, row.tackles, 14, { size: 19, weight: 650 }),
+            text(1560, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
         ];
     });
 
     const footer = [
         text(22, 1058, "Powered by", { size: 32, weight: 500, opacity: 0.82 }),
-        text(214, 1058, "OurProClub.app", { size: 32, weight: 800, fill: "#d5b617" })
+        text(214, 1058, "EA Pro Clubs API", { size: 32, weight: 800, fill: "#d5b617" })
     ];
 
     return Buffer.from(
@@ -388,42 +376,9 @@ function buildSvg(match, home, away) {
     );
 }
 
-function extractBadgeUrl(club) {
+async function fetchBadgeInput(crestAssetId, left, top) {
 
-    if (!club || typeof club !== "object") {
-        return null;
-    }
-
-    for (const key of BADGE_KEYS) {
-        const value = club[key];
-        if (
-            typeof value === "string" &&
-            /^https?:\/\//i.test(value)
-        ) {
-            return value;
-        }
-    }
-
-    for (const value of Object.values(club)) {
-        if (!value || typeof value !== "object") {
-            continue;
-        }
-
-        for (const key of BADGE_KEYS) {
-            const nested = value[key];
-            if (
-                typeof nested === "string" &&
-                /^https?:\/\//i.test(nested)
-            ) {
-                return nested;
-            }
-        }
-    }
-
-    return null;
-}
-
-async function fetchBadgeInput(url, left, top) {
+    const url = buildCrestUrl(crestAssetId);
 
     if (!url) {
         return null;
@@ -488,38 +443,46 @@ async function fetchBadgeInput(url, left, top) {
     }
 }
 
-async function generateMatchInfographic(match) {
+async function generateMatchInfographic(match, ourClubId) {
 
-    const teams =
-        Object.entries(match.match_data?.clubs || {});
+    const clubsObj = match.clubs || {};
+    const clubIds = Object.keys(clubsObj);
 
-    if (teams.length < 2) {
+    if (clubIds.length < 2) {
         return null;
     }
 
+    const ourId = String(ourClubId || clubIds[0]);
+
+    // Render with our club on the LEFT (home).
+    const oppId = clubIds.find(id => id !== ourId) || clubIds[1];
+
     const home = {
-        clubId: teams[0][0],
-        ...teams[0][1]
+        clubId: ourId,
+        ...clubsObj[ourId]
     };
 
     const away = {
-        clubId: teams[1][0],
-        ...teams[1][1]
+        clubId: oppId,
+        ...clubsObj[oppId]
     };
 
     const overlay =
-        buildSvg(match, home, away);
+        buildSvg(match, ourId, home, away);
+
+    const homeCrest = home.details?.customKit?.crestAssetId;
+    const awayCrest = away.details?.customKit?.crestAssetId;
 
     const badgeInputs =
         (await Promise.all([
             fetchBadgeInput(
-                extractBadgeUrl(home),
-                760 - Math.floor(BADGE_SIZE / 2),
+                homeCrest,
+                755 - Math.floor(BADGE_SIZE / 2),
                 126 - Math.floor(BADGE_SIZE / 2)
             ),
             fetchBadgeInput(
-                extractBadgeUrl(away),
-                1160 - Math.floor(BADGE_SIZE / 2),
+                awayCrest,
+                1165 - Math.floor(BADGE_SIZE / 2),
                 126 - Math.floor(BADGE_SIZE / 2)
             )
         ]))
