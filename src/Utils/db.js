@@ -321,13 +321,29 @@ async function migrateLinkedPlayersTable() {
         )
     `);
 
+    const hasGuildId =
+        columns.some(row => row.name === "guild_id");
+
+    const hasPlayerId =
+        columns.some(row => row.name === "player_id");
+
+    const guildExpr =
+        hasGuildId
+            ? "COALESCE(guild_id, 'legacy')"
+            : "'legacy'";
+
+    const playerIdExpr =
+        hasPlayerId
+            ? "player_id"
+            : "NULL";
+
     await run(`
         INSERT OR IGNORE INTO linked_players_new
         (discord_id, guild_id, player_id, player_name)
         SELECT
             discord_id,
-            COALESCE(guild_id, 'legacy'),
-            player_id,
+            ${guildExpr},
+            ${playerIdExpr},
             player_name
         FROM linked_players
     `);
