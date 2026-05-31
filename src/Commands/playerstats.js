@@ -10,13 +10,18 @@ const {
     getCrestUrl
 } = require("../Services/crests");
 
-function toNumber(value) {
-    return Number(value || 0);
-}
+const {
+    FOOTER,
+    underline,
+    number,
+    memberWinRate,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
 
-function fmt(value, digits = 0) {
-    const number = toNumber(value);
-    return digits > 0 ? number.toFixed(digits) : String(number);
+function n(value) {
+    return Number(value || 0);
 }
 
 async function getLinkedPlayer(guildId, discordId) {
@@ -35,30 +40,25 @@ async function autocompleteLinkedPlayers(interaction) {
         interaction.options.getFocused().toLowerCase();
 
     const rows =
-        await db.all(
-            `
-            SELECT player_name
-            FROM linked_players
-            WHERE guild_id = ?
-            AND player_name IS NOT NULL
-            ORDER BY player_name COLLATE NOCASE
-            LIMIT 100
-            `,
-            [interaction.guild.id]
-        );
+        await getLinkedRows(db, interaction.guild.id);
 
-    const choices =
+    await interaction.respond(
         rows
             .filter(row =>
-                row.player_name.toLowerCase().includes(focused)
+                row.player_name?.toLowerCase().includes(focused)
             )
             .slice(0, 25)
             .map(row => ({
                 name: row.player_name,
                 value: row.player_name
-            }));
+            }))
+    );
+}
 
-    await interaction.respond(choices);
+function goalRatio(player) {
+    const games = n(player.gamesPlayed);
+    if (!games) return "0.00";
+    return (n(player.goals) / games).toFixed(2);
 }
 
 module.exports = {
@@ -99,7 +99,6 @@ module.exports = {
 
             const user =
                 interaction.options.getUser("user");
-
             const playerOption =
                 interaction.options.getString("player");
 
@@ -123,10 +122,20 @@ module.exports = {
                 playerName = linked.player_name;
             }
 
-            const [members, crestUrl] =
+            const [members, info, crestUrl, linkedRows, localRows] =
                 await Promise.all([
                     eaApi.getMembersStats(club.club_id),
-                    getCrestUrl(club.club_id)
+                    eaApi.getClubInfo(club.club_id),
+                    getCrestUrl(club.club_id),
+                    getLinkedRows(db, interaction.guild.id),
+                    db.all(
+                        `
+                        SELECT *
+                        FROM players
+                        WHERE guild_id = ?
+                        `,
+                        [interaction.guild.id]
+                    )
                 ]);
 
             const player =
@@ -142,43 +151,56 @@ module.exports = {
                 );
             }
 
-            const games = toNumber(player.gamesPlayed);
-            const goals = toNumber(player.goals);
-            const assists = toNumber(player.assists);
-            const goalRatio =
-                games > 0 ? (goals / games).toFixed(2) : "0.00";
+            const clubName =
+                info?.[String(club.club_id)]?.name || "Club";
+            const linkedMaps =
+                buildLinkedMaps(linkedRows);
+            const local =
+                localRows.find(row =>
+                    String(row.player_name || "").toLowerCase() ===
+                    String(player.name).toLowerCase()
+                ) || {};
+
+            const display =
+                displayName(player.name, linkedMaps);
+            const proName =
+                player.proName ? ` - "${player.proName}"` : "";
+
+            const description = [
+                `👤 **${player.name}**${proName}`,
+                "",
+                `👕 Games Played: **${number(player.gamesPlayed)}**`,
+                `🏅 Man of the Match: **${number(player.manOfTheMatch)}**`,
+                `⭐ Average Rating: **${number(player.ratingAve, 2)}**`,
+                `🏆 Win Rate: **${number(memberWinRate(player))}%**`,
+                `🎯 Shot Conversion Rate: **${number(player.shotSuccessRate)}%**`,
+                "",
+                `⚽ Goals: **${number(player.goals)}**`,
+                `▌ xG Per Game: **${goalRatio(player)}**`,
+                `🤝 Assists: **${number(player.assists)}**`,
+                `▌ xA Per Game: **${n(player.gamesPlayed) ? (n(player.assists) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+                `🔗 Second Assists: **${number(local.second_assists)}**`,
+                `💨 Dribbles: **${number(local.dribbles)}**`,
+                `👟 Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
+                `▌ xP Per Game: **${n(player.gamesPlayed) ? (n(player.passesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+                `🛡️ Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
+                `▌ xT Per Game: **${n(player.gamesPlayed) ? (n(player.tacklesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+                `🧠 Interceptions: **${number(local.interceptions)}**`,
+                "",
+                `🚫 Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
+                `🥅 Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
+                `🟥 Red Cards: **${number(player.redCards)}**`,
+                "",
+                "> Use `/matches` or `/automode` regularly to keep your",
+                "> **Second Assists, Dribbles, and Interceptions** updated"
+            ].join("\n");
 
             const embed =
                 new EmbedBuilder()
-                    .setColor("#00ff99")
-                    .setTitle(`${player.name} - Member Stats`)
-                    .addFields(
-                        { name: "Games", value: fmt(player.gamesPlayed), inline: true },
-                        { name: "Goals", value: fmt(player.goals), inline: true },
-                        { name: "Assists", value: fmt(player.assists), inline: true },
-                        { name: "Goals/Game", value: goalRatio, inline: true },
-                        { name: "Avg Rating", value: fmt(player.ratingAve, 2), inline: true },
-                        { name: "MOTM", value: fmt(player.manOfTheMatch), inline: true },
-                        { name: "Passes", value: fmt(player.passesMade), inline: true },
-                        { name: "Pass %", value: `${fmt(player.passSuccessRate, 1)}%`, inline: true },
-                        { name: "Tackles", value: fmt(player.tacklesMade), inline: true },
-                        { name: "Tackle %", value: `${fmt(player.tackleSuccessRate, 1)}%`, inline: true },
-                        { name: "Shot %", value: `${fmt(player.shotSuccessRate, 1)}%`, inline: true },
-                        { name: "Red Cards", value: fmt(player.redCards), inline: true },
-                        { name: "CS Def", value: fmt(player.cleanSheetsDef), inline: true },
-                        { name: "CS GK", value: fmt(player.cleanSheetsGK), inline: true }
-                    );
-
-            const description =
-                [
-                    player.proName ? `Pro: ${player.proName}` : null,
-                    player.proPos ? `Position: ${player.proPos}` : null,
-                    player.proOverall ? `Overall: ${player.proOverall}` : null
-                ].filter(Boolean).join("\n");
-
-            if (description) {
-                embed.setDescription(description);
-            }
+                    .setColor("#ffffff")
+                    .setTitle(`${player.name}'s Player Statistics for ${underline(clubName)}`)
+                    .setDescription(description.slice(0, 4096))
+                    .setFooter(FOOTER);
 
             if (crestUrl) {
                 embed.setThumbnail(crestUrl);

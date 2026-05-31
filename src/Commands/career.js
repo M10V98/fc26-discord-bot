@@ -10,10 +10,13 @@ const {
     getCrestUrl
 } = require("../Services/crests");
 
-function valueOf(value, digits = 0) {
-    const number = Number(value || 0);
-    return digits > 0 ? number.toFixed(digits) : String(number);
-}
+const {
+    FOOTER,
+    number,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
 
 async function linkedPlayer(guildId, discordId) {
     return db.get(
@@ -31,22 +34,12 @@ async function autocomplete(interaction) {
         interaction.options.getFocused().toLowerCase();
 
     const rows =
-        await db.all(
-            `
-            SELECT player_name
-            FROM linked_players
-            WHERE guild_id = ?
-            AND player_name IS NOT NULL
-            ORDER BY player_name COLLATE NOCASE
-            LIMIT 100
-            `,
-            [interaction.guild.id]
-        );
+        await getLinkedRows(db, interaction.guild.id);
 
     await interaction.respond(
         rows
             .filter(row =>
-                row.player_name.toLowerCase().includes(focused)
+                row.player_name?.toLowerCase().includes(focused)
             )
             .slice(0, 25)
             .map(row => ({
@@ -114,10 +107,11 @@ module.exports = {
                 playerName = linked.player_name;
             }
 
-            const [career, crestUrl] =
+            const [career, crestUrl, linkedRows] =
                 await Promise.all([
                     eaApi.getMembersCareer(club.club_id),
-                    getCrestUrl(club.club_id)
+                    getCrestUrl(club.club_id),
+                    getLinkedRows(db, interaction.guild.id)
                 ]);
 
             const player =
@@ -133,29 +127,34 @@ module.exports = {
                 );
             }
 
+            const linkedMaps =
+                buildLinkedMaps(linkedRows);
+            const display =
+                displayName(player.name, linkedMaps);
+
+            const description = [
+                `Showing EA career totals only - ${display} does not have Premium.`,
+                "Premium includes OurProClub historical tracking, which includes passes, tackles, second assists, dribbles, interceptions, and more.",
+                "Get OurProClub Premium",
+                "",
+                "**EA ID**",
+                player.name,
+                `${player.proOverall || "-"} rated ${player.favoritePosition || player.proPos || "Player"}`,
+                "",
+                "**Career Statistics (From EA)**",
+                `👕 Appearances: ${number(player.gamesPlayed)}`,
+                `🏅 Man of the Match: ${number(player.manOfTheMatch)}`,
+                `⭐ Average Rating: ${number(player.ratingAve, 1)}`,
+                `⚽ Goals: ${number(player.goals)}`,
+                `🤝 Assists: ${number(player.assists)}`
+            ].join("\n");
+
             const embed =
                 new EmbedBuilder()
-                    .setColor("#6cdb7f")
-                    .setTitle(`${player.name} - Career Stats`)
-                    .addFields(
-                        { name: "Games", value: valueOf(player.gamesPlayed), inline: true },
-                        { name: "Goals", value: valueOf(player.goals), inline: true },
-                        { name: "Assists", value: valueOf(player.assists), inline: true },
-                        { name: "MOTM", value: valueOf(player.manOfTheMatch), inline: true },
-                        { name: "Avg Rating", value: valueOf(player.ratingAve, 2), inline: true }
-                    );
-
-            const description =
-                [
-                    player.favoritePosition
-                        ? `Favorite position: ${player.favoritePosition}`
-                        : null,
-                    player.proPos ? `Current position: ${player.proPos}` : null
-                ].filter(Boolean).join("\n");
-
-            if (description) {
-                embed.setDescription(description);
-            }
+                    .setColor("#ffffff")
+                    .setTitle(`${player.name}'s All-time Statistics`)
+                    .setDescription(description.slice(0, 4096))
+                    .setFooter(FOOTER);
 
             if (crestUrl) {
                 embed.setThumbnail(crestUrl);

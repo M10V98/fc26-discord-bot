@@ -10,35 +10,39 @@ const {
     getCrestUrl
 } = require("../Services/crests");
 
-function number(value, digits = 0) {
-    const n = Number(value || 0);
-    return digits > 0 ? n.toFixed(digits) : String(n);
-}
+const {
+    FOOTER,
+    underline,
+    number,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows,
+    infoBlock
+} = require("../Utils/embedStyle");
 
-function winRate(member) {
-    const wins = Number(member.wins || 0);
-    const losses = Number(member.losses || 0);
-    const ties = Number(member.ties || 0);
-    const games =
-        Number(member.gamesPlayed || 0) ||
-        wins + losses + ties;
-    const supplied = Number(member.winRate || 0);
+function memberBlock(member, linkedMaps) {
+    const position =
+        member.favoritePosition ||
+        member.proPos ||
+        "Player";
+    const overall =
+        member.proOverall || "-";
+    const height =
+        member.proHeight
+            ? `↕️ Height: ${member.proHeight}cm`
+            : null;
+    const amr =
+        Math.round(Number(member.ratingAve || 0) * 10);
 
-    if (supplied) return supplied.toFixed(1);
-    if (!games) return "0.0";
-
-    return ((wins / games) * 100).toFixed(1);
-}
-
-function memberLine(member) {
     return [
-        `GP ${number(member.gamesPlayed)}`,
-        `G ${number(member.goals)}`,
-        `A ${number(member.assists)}`,
-        `R ${number(member.ratingAve, 2)}`,
-        `MOTM ${number(member.manOfTheMatch)}`,
-        `WR ${winRate(member)}%`
-    ].join(" | ");
+        `**${member.name || "Unknown"}**`,
+        `👤 ${displayName(member.name, linkedMaps)}`,
+        `📍 ${overall} ${position}`,
+        "🔶 Creator",
+        `👕 GP: ${number(member.gamesPlayed)}`,
+        `⭐ AMR: ${amr}`,
+        height
+    ].filter(Boolean).join("\n");
 }
 
 module.exports = {
@@ -62,11 +66,12 @@ module.exports = {
                 );
             }
 
-            const [members, info, crestUrl] =
+            const [members, info, crestUrl, linkedRows] =
                 await Promise.all([
                     eaApi.getMembersStats(club.club_id),
                     eaApi.getClubInfo(club.club_id),
-                    getCrestUrl(club.club_id)
+                    getCrestUrl(club.club_id),
+                    getLinkedRows(db, interaction.guild.id)
                 ]);
 
             const list =
@@ -82,37 +87,36 @@ module.exports = {
 
             const clubName =
                 info?.[String(club.club_id)]?.name || "Club";
+            const notPlayed =
+                list.filter(member => Number(member.gamesPlayed || 0) === 0).length;
+            const linkedMaps =
+                buildLinkedMaps(linkedRows);
 
-            const embeds = [];
+            const embed =
+                new EmbedBuilder()
+                    .setColor("#ffffff")
+                    .setTitle(`Members of ${underline(clubName)}`)
+                    .setDescription(
+                        infoBlock([
+                            `**${clubName}** has a total of ${list.length} member${list.length === 1 ? "" : "s"}, ${notPlayed} have not played a game yet.`
+                        ])
+                    )
+                    .setFooter(FOOTER);
 
-            for (let i = 0; i < list.length; i += 25) {
-                const chunk = list.slice(i, i + 25);
+            if (crestUrl) {
+                embed.setThumbnail(crestUrl);
+            }
 
-                const embed =
-                    new EmbedBuilder()
-                        .setColor("#00b0f4")
-                        .setTitle(`${clubName} - Members`)
-                        .setFooter({
-                            text: `${list.length} member${list.length === 1 ? "" : "s"}`
-                        });
-
-                if (crestUrl) {
-                    embed.setThumbnail(crestUrl);
-                }
-
-                for (const member of chunk) {
-                    embed.addFields({
-                        name: member.name || "Unknown",
-                        value: memberLine(member),
-                        inline: false
-                    });
-                }
-
-                embeds.push(embed);
+            for (const member of list.slice(0, 24)) {
+                embed.addFields({
+                    name: "\u200b",
+                    value: memberBlock(member, linkedMaps),
+                    inline: true
+                });
             }
 
             await interaction.editReply({
-                embeds: embeds.slice(0, 10)
+                embeds: [embed]
             });
         } catch (err) {
             console.error("members error:", err);

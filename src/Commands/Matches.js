@@ -3,42 +3,92 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const eaApi =
-    require("../Services/eaApi");
+const eaApi = require("../Services/eaApi");
+const db = require("../Utils/db");
 
 const {
     getCrestUrl
 } = require("../Services/crests");
 
-const db =
-    require("../Utils/db");
-
-const archetypes =
-    require("../Utils/archetypes");
-
 const {
-    formatScoreboard
-} = require("../Utils/scoreboard");
+    FOOTER,
+    underline,
+    number,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows,
+    resultDot,
+    formatMatchType,
+    timeAgo
+} = require("../Utils/embedStyle");
 
-function formatMatchType(value) {
+function clubName(club) {
+    return club?.details?.name || "Unknown";
+}
 
-    return String(value || "Match")
-        .replace(/([a-z])([A-Z])/g, "$1 $2")
-        .replace(/\b\w/g, c => c.toUpperCase());
+function bestPlayer(match, clubId, linkedMaps) {
+    const players =
+        Object.entries(match.players?.[clubId] || {});
+
+    if (!players.length) {
+        return null;
+    }
+
+    const motm =
+        players.find(([, player]) => player.mom === "1");
+
+    const [playerId, player] =
+        motm ||
+        players
+            .slice()
+            .sort(([, a], [, b]) =>
+                Number(b.rating || 0) - Number(a.rating || 0)
+            )[0];
+
+    return {
+        name: displayName(player.playername, linkedMaps, playerId),
+        rating: player.rating || "0.0"
+    };
+}
+
+function lineForMatch(match, clubId, linkedMaps) {
+    const clubs = match.clubs || {};
+    const our = clubs[clubId];
+    const opponentId =
+        Object.keys(clubs).find(id => id !== clubId);
+    const opponent = clubs[opponentId];
+
+    if (!our || !opponent) {
+        return null;
+    }
+
+    const best =
+        bestPlayer(match, clubId, linkedMaps);
+    const stadium =
+        our.details?.stadName ||
+        opponent.details?.stadName ||
+        "the stadium";
+    const matchType =
+        formatMatchType(our.matchType || opponent.matchType);
+
+    return [
+        `${resultDot(our.goals, opponent.goals)} **${clubName(opponent)} (${number(opponent.goals)}) vs. (${number(our.goals)}) ${clubName(our)}**`,
+        `${matchType}, played ${timeAgo(match.timestamp)}, at ${stadium}`,
+        best
+            ? `**${best.name}** got Man of the Match, and finished with a **${best.rating} match rating**`
+            : "No player ratings found."
+    ].join("\n");
 }
 
 module.exports = {
-
     data: new SlashCommandBuilder()
         .setName("matches")
         .setDescription("Show recent matches"),
 
     async execute(interaction) {
-
         await interaction.deferReply();
 
         try {
-
             const club =
                 await db.get(
                     `SELECT * FROM clubs WHERE guild_id = ?`,
@@ -47,128 +97,55 @@ module.exports = {
 
             if (!club) {
                 return interaction.editReply(
-                    "❌ No club linked. Use /linkclub"
+                    "No club linked. Use /linkclub first."
                 );
             }
 
-            const [matches, crestUrl] =
+            const [matches, info, crestUrl, linkedRows] =
                 await Promise.all([
-                    eaApi.getRecentMatches(club.club_id, { limit: 5 }),
-                    getCrestUrl(club.club_id)
+                    eaApi.getRecentMatches(club.club_id, { limit: 10 }),
+                    eaApi.getClubInfo(club.club_id),
+                    getCrestUrl(club.club_id),
+                    getLinkedRows(db, interaction.guild.id)
                 ]);
 
             if (!matches?.length) {
                 return interaction.editReply(
-                    "❌ No matches found."
+                    "No matches found."
                 );
             }
 
+            const clubId = String(club.club_id);
+            const clubNameValue =
+                info?.[clubId]?.name || "Club";
+            const linkedMaps =
+                buildLinkedMaps(linkedRows);
+
+            const description =
+                matches
+                    .map(match => lineForMatch(match, clubId, linkedMaps))
+                    .filter(Boolean)
+                    .join("\n\n");
+
             const embed =
                 new EmbedBuilder()
-                    .setColor("#00b0f4")
-                    .setTitle("📊 Recent Matches")
-                    .setDescription(
-                        `Showing latest ${matches.length} matches (league + playoff + friendly)`
-                    );
+                    .setColor("#ffffff")
+                    .setTitle(`Latest Matches for ${underline(clubNameValue)}`)
+                    .setDescription(description.slice(0, 4096))
+                    .setFooter(FOOTER);
 
             if (crestUrl) {
                 embed.setThumbnail(crestUrl);
             }
 
-            const ourId = String(club.club_id);
-
-            for (const match of matches) {
-
-                const clubsObj = match.clubs || {};
-                const ids = Object.keys(clubsObj);
-
-                if (ids.length < 2) continue;
-
-                const oppId = ids.find(id => id !== ourId) || ids[1];
-
-                const home = {
-                    clubId: ourId,
-                    ...clubsObj[ourId]
-                };
-
-                const away = {
-                    clubId: oppId,
-                    ...clubsObj[oppId]
-                };
-
-                const matchType =
-                    formatMatchType(home.matchType || away.matchType);
-
-                const date =
-                    match.timestamp
-                        ? new Date(Number(match.timestamp) * 1000).toLocaleString()
-                        : "Unknown";
-
-                const dnf =
-                    home.winnerByDnf === "1" ||
-                    away.winnerByDnf === "1"
-                        ? "\n⚠️ DNF Win"
-                        : "";
-
-                const scoreboard =
-                    formatScoreboard(home, away);
-
-                const ourPlayers =
-                    match.players?.[ourId] || {};
-
-                const playerLines =
-                    Object.values(ourPlayers)
-                        .sort(
-                            (a, b) =>
-                                Number(b.rating || 0) - Number(a.rating || 0)
-                        )
-                        .slice(0, 11)
-                        .map(p => {
-
-                            const archetype =
-                                archetypes[p.archetypeid] || "Unknown";
-
-                            const cleanSheet =
-                                p.cleansheetsdef === "1" ||
-                                p.cleansheetsgk === "1";
-
-                            const redCard =
-                                p.redcards === "1";
-
-                            const mom =
-                                p.mom === "1" ? "🏅 " : "";
-
-                            return (
-                                `${mom}**${p.playername}** (${archetype})\n` +
-                                `⭐ ${p.rating || "0.0"} | ⚽ ${p.goals || 0} | 🅰️ ${p.assists || 0} | 🥅 ${p.saves || 0}\n` +
-                                `🎯 ${p.passesmade || 0}/${p.passattempts || 0} passes\n` +
-                                `🛡️ ${p.tacklesmade || 0}/${p.tackleattempts || 0} tackles\n` +
-                                `${cleanSheet ? "🥅 Clean Sheet " : ""}${redCard ? "🟥 Red Card" : ""}`.trim()
-                            );
-                        })
-                        .join("\n\n");
-
-                embed.addFields({
-                    name: scoreboard,
-                    value:
-                        (
-                            `📅 ${date}\n` +
-                            `🎮 ${matchType}${dnf}\n\n` +
-                            playerLines
-                        ).slice(0, 1024)
-                });
-            }
-
             await interaction.editReply({
                 embeds: [embed]
             });
-
         } catch (err) {
-
             console.error("matches error:", err);
 
             await interaction.editReply(
-                "❌ Failed to load matches."
+                "Failed to load matches."
             );
         }
     }
