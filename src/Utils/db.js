@@ -146,6 +146,15 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS club_search_cache (
+        club_id TEXT PRIMARY KEY,
+        club_name TEXT,
+        crest_asset_id TEXT,
+        raw_json TEXT,
+        updated_at INTEGER
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS schema_meta (
         key TEXT PRIMARY KEY,
         value TEXT
@@ -258,6 +267,12 @@ async function init() {
         "scheduled_sessions",
         "maybe_play",
         "TEXT DEFAULT '[]'"
+    );
+
+    await ensureColumn(
+        "club_search_cache",
+        "crest_asset_id",
+        "TEXT"
     );
 
     // Schema migration: linked_players gains guild_id + player_id.
