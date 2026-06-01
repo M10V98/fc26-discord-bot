@@ -24,10 +24,6 @@ const {
 } = require("./Services/syncMatches");
 
 const {
-    maybeReplyToFootballChat
-} = require("./Services/footballAiResponder");
-
-const {
     startAutoStatsSync
 } = require("./Services/autoStatsSync");
 
@@ -316,11 +312,11 @@ client.on(
     }
 );
 
-client.on(
-    Events.MessageCreate,
-    async message => {
-        await maybeReplyToFootballChat(message, client);
-    }
-);
+const footballAI =
+    require("./Events/messageCreate");
 
+client.on(
+    "messageCreate",
+    footballAI
+);
 client.login(discordToken);
