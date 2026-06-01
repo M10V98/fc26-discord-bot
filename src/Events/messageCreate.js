@@ -1,6 +1,6 @@
 const {
     footballReplies,
-    triggers
+    footballTriggers as triggers
 } = require("../Services/footballBrain");
 
 let cooldown = 0;
