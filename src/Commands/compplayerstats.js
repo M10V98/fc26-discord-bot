@@ -156,31 +156,50 @@ module.exports = {
                 displayName(player.name, linkedMaps, player.playerId);
             const apps = n(player.appearances);
 
-            const description = [
-                `**${display}**`,
-                "",
-                `Games Played: **${number(player.appearances)}**`,
-                `Man of the Match: **${number(player.motm)}**`,
-                `Average Rating: **${number(player.avgRating, 2)}**`,
-                "",
-                `Goals: **${number(player.goals)}**`,
-                `xG Per Game: **${perGame(player.goals, apps)}**`,
-                `Assists: **${number(player.assists)}**`,
-                `xA Per Game: **${perGame(player.assists, apps)}**`,
-                `Second Assists: **${number(player.secondAssists)}**`,
-                `Dribbles: **${number(player.dribbles)}**`,
-                `Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
-                `xP Per Game: **${perGame(player.passes, apps)}**`,
-                `Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
-                `xT Per Game: **${perGame(player.tackles, apps)}**`,
-                `Interceptions: **${number(player.interceptions)}**`,
-                "",
-                `Clean Sheets: **${number(player.cleanSheets)}**`,
-                `Saves: **${number(player.saves)}**`,
-                `Red Cards: **${number(player.redCards)}**`,
-                "",
-                "> Competitive stats use stored Friendly Match data only."
-            ].join("\n");
+            const EMOJIS = {
+    PLAYER: "\u{1F464}",        // 👤
+    GAMES: "\u26BD",            // ⚽
+    MOTM: "\u{1F3C5}",          // 🏅
+    RATING: "\u2B50",           // ⭐
+    GOALS: "\u{1F945}",         // 🥅
+    XG: "\u{1F4CA}",            // 📊
+    ASSISTS: "\u{1F45F}",       // 👟
+    XA: "\u{1F4C8}",            // 📈
+    SECOND: "\u{1F501}",        // 🔁
+    DRIBBLES: "\u{1F3C3}",      // 🏃
+    PASSES: "\u{1F9E0}",        // 🧠
+    TACKLES: "\u{1F6E1}\uFE0F", // 🛡️
+    INTERCEPT: "\u{270B}",      // ✋
+    CLEAN: "\u{1F9FC}",         // 🧼
+    SAVES: "\u{1F9E4}",         // 🧤
+    RED: "\u{1F7E5}"            // 🟥
+};
+
+const description = [
+    `${EMOJIS.PLAYER} **${display}**`,
+    "",
+    `${EMOJIS.GAMES} Games Played: **${number(player.appearances)}**`,
+    `${EMOJIS.MOTM} Man of the Match: **${number(player.motm)}**`,
+    `${EMOJIS.RATING} Average Rating: **${number(player.avgRating, 2)}**`,
+    "",
+    `${EMOJIS.GOALS} Goals: **${number(player.goals)}**`,
+    `${EMOJIS.XG} xG Per Game: **${perGame(player.goals, apps)}**`,
+    `${EMOJIS.ASSISTS} Assists: **${number(player.assists)}**`,
+    `${EMOJIS.XA} xA Per Game: **${perGame(player.assists, apps)}**`,
+    `${EMOJIS.SECOND} Second Assists: **${number(player.secondAssists)}**`,
+    `${EMOJIS.DRIBBLES} Dribbles: **${number(player.dribbles)}**`,
+    `${EMOJIS.PASSES} Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
+    `${EMOJIS.XA} xP Per Game: **${perGame(player.passes, apps)}**`,
+    `${EMOJIS.TACKLES} Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
+    `${EMOJIS.TACKLES} xT Per Game: **${perGame(player.tackles, apps)}**`,
+    `${EMOJIS.INTERCEPT} Interceptions: **${number(player.interceptions)}**`,
+    "",
+    `${EMOJIS.CLEAN} Clean Sheets: **${number(player.cleanSheets)}**`,
+    `${EMOJIS.SAVES} Saves: **${number(player.saves)}**`,
+    `${EMOJIS.RED} Red Cards: **${number(player.redCards)}**`,
+    "",
+    "> Competitive stats use stored Friendly Match data only."
+].join("\n");
 
             const embed =
                 new EmbedBuilder()
