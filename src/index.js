@@ -28,13 +28,8 @@ const {
 } = require("./Services/footballAiResponder");
 
 const {
-    startAutoStatsSync,
-    syncGuildStats
+    startAutoStatsSync
 } = require("./Services/autoStatsSync");
-
-const {
-    linkClubToGuild
-} = require("./Services/clubSearch");
 
 const {
     handleSessionButton,
@@ -179,37 +174,6 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
-                if (interaction.customId === "link_club") {
-                    await interaction.deferReply({
-                        ephemeral: true
-                    });
-
-                    const rawValue =
-                        interaction.values[0];
-                    const [clubId, ...nameParts] =
-                        rawValue.split("|");
-                    const clubName =
-                        nameParts.join("|") || clubId;
-
-                    await linkClubToGuild(
-                        interaction.guild.id,
-                        clubId
-                    );
-
-                    const syncResult =
-                        await syncGuildStats(
-                            interaction.guild.id,
-                            clubId,
-                            { forceRefresh: true }
-                        );
-
-                    await interaction.editReply(
-                        `Linked **${clubName}** (${clubId}). Synced ${syncResult.processed} recent match${syncResult.processed === 1 ? "" : "es"} automatically.`
-                    );
-
-                    return;
-                }
-
                 if (interaction.customId !== "claim_player") {
                     return;
                 }
