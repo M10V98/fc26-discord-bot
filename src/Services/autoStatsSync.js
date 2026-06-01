@@ -5,6 +5,10 @@ const {
     processMatchXP
 } = require("./processMatchXP");
 
+const {
+    syncCompetitiveMatches
+} = require("./compStats");
+
 const DEFAULT_LIMIT = 25;
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -27,6 +31,19 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         );
 
     if (!matches?.length) {
+        await syncCompetitiveMatches(
+            guildId,
+            clubId,
+            {
+                forceRefresh: Boolean(options.forceRefresh)
+            }
+        ).catch(err => {
+            console.error(
+                `competitive sync failed for guild ${guildId}:`,
+                err
+            );
+        });
+
         return {
             checked: 0,
             processed: 0
@@ -40,6 +57,19 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         clubId,
         matches
     );
+
+    await syncCompetitiveMatches(
+        guildId,
+        clubId,
+        {
+            forceRefresh: Boolean(options.forceRefresh)
+        }
+    ).catch(err => {
+        console.error(
+            `competitive sync failed for guild ${guildId}:`,
+            err
+        );
+    });
 
     // Replay oldest -> newest so XP accumulates in the right order.
     const ordered = matches.slice().reverse();

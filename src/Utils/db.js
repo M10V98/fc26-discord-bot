@@ -108,6 +108,17 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS comp_matches (
+        guild_id TEXT,
+        club_id TEXT,
+        match_id TEXT,
+        timestamp INTEGER,
+        match_json TEXT,
+        created_at INTEGER,
+        PRIMARY KEY (guild_id, match_id)
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS schema_meta (
         key TEXT PRIMARY KEY,
         value TEXT

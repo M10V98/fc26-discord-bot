@@ -9,6 +9,24 @@ const {
 
 const processingMatches = new Set();
 
+function isFriendlyMatch(match, ourClub) {
+    const values = [
+        match.matchType,
+        match.matchtype,
+        ourClub?.matchType,
+        ourClub?.matchtype
+    ];
+
+    return values.some(value => {
+        const normalized =
+            String(value || "")
+                .toLowerCase()
+                .replace(/[\s_-]/g, "");
+
+        return normalized === "friendlymatch" || normalized === "friendly";
+    });
+}
+
 // =========================
 // PROCESS MATCH XP
 // =========================
@@ -73,7 +91,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 p.cleansheetsdef === "1" ||
                 p.cleansheetsgk === "1";
 
-            const xp = calculateXP({
+            const baseXp = calculateXP({
                 goals: Number(p.goals),
                 assists: Number(p.assists),
                 secondAssists: 0,
@@ -87,6 +105,11 @@ async function processMatchXP(match, guildId, options = {}) {
                 rating: Number(p.rating),
                 win: won
             });
+
+            const xp =
+                isFriendlyMatch(match, ourClub)
+                    ? baseXp * 2
+                    : baseXp;
 
             const existing = await db.get(
                 `

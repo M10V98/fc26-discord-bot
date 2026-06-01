@@ -1,0 +1,200 @@
+const {
+    SlashCommandBuilder,
+    EmbedBuilder
+} = require("discord.js");
+
+const db = require("../Utils/db");
+const {
+    refreshAndGetCompetitiveMatches,
+    aggregateCompetitivePlayers
+} = require("../Services/compStats");
+const {
+    getCrestUrl
+} = require("../Services/crests");
+const eaApi = require("../Services/eaApi");
+const {
+    FOOTER,
+    underline,
+    number,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
+
+function n(value) {
+    return Number(value || 0);
+}
+
+async function getLinkedPlayer(guildId, discordId) {
+    return db.get(
+        `
+        SELECT * FROM linked_players
+        WHERE guild_id = ?
+        AND discord_id = ?
+        `,
+        [guildId, discordId]
+    );
+}
+
+async function autocompleteLinkedPlayers(interaction) {
+    const focused =
+        interaction.options.getFocused().toLowerCase();
+    const rows =
+        await getLinkedRows(db, interaction.guild.id);
+
+    await interaction.respond(
+        rows
+            .filter(row =>
+                row.player_name?.toLowerCase().includes(focused)
+            )
+            .slice(0, 25)
+            .map(row => ({
+                name: row.player_name,
+                value: row.player_name
+            }))
+    );
+}
+
+function perGame(total, games) {
+    return games ? (n(total) / games).toFixed(2) : "0.00";
+}
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("compplayerstats")
+        .setDescription("View competitive friendly player stats")
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("Discord user with a claimed player")
+        )
+        .addStringOption(option =>
+            option
+                .setName("player")
+                .setDescription("Claimed player name")
+                .setAutocomplete(true)
+        ),
+
+    async autocomplete(interaction) {
+        await autocompleteLinkedPlayers(interaction);
+    },
+
+    async execute(interaction) {
+        await interaction.deferReply();
+
+        try {
+            const club =
+                await db.get(
+                    `SELECT * FROM clubs WHERE guild_id = ?`,
+                    [interaction.guild.id]
+                );
+
+            if (!club) {
+                return interaction.editReply("No club linked. Use /linkclub first.");
+            }
+
+            const user =
+                interaction.options.getUser("user");
+            const playerOption =
+                interaction.options.getString("player");
+
+            let selectedName = playerOption;
+            let selectedId = null;
+
+            if (!selectedName) {
+                const linked =
+                    await getLinkedPlayer(
+                        interaction.guild.id,
+                        user?.id || interaction.user.id
+                    );
+
+                if (!linked) {
+                    return interaction.editReply(
+                        user
+                            ? "That Discord user has not claimed a player."
+                            : "Use /claim first, or choose a player."
+                    );
+                }
+
+                selectedName = linked.player_name;
+                selectedId = linked.player_id;
+            }
+
+            const [matches, info, crestUrl, linkedRows] =
+                await Promise.all([
+                    refreshAndGetCompetitiveMatches(
+                        interaction.guild.id,
+                        club.club_id,
+                        { forceRefresh: true }
+                    ),
+                    eaApi.getClubInfo(club.club_id),
+                    getCrestUrl(club.club_id),
+                    getLinkedRows(db, interaction.guild.id)
+                ]);
+
+            const players =
+                aggregateCompetitivePlayers(matches, club.club_id);
+
+            const player =
+                players.find(row =>
+                    selectedId && String(row.playerId) === String(selectedId)
+                ) ||
+                players.find(row =>
+                    String(row.name).toLowerCase() ===
+                    String(selectedName).toLowerCase()
+                );
+
+            if (!player) {
+                return interaction.editReply("No competitive friendly stats found for that player.");
+            }
+
+            const clubId = String(club.club_id);
+            const clubName =
+                info?.[clubId]?.name || "Club";
+            const linkedMaps = buildLinkedMaps(linkedRows);
+            const display =
+                displayName(player.name, linkedMaps, player.playerId);
+            const apps = n(player.appearances);
+
+            const description = [
+                `**${display}**`,
+                "",
+                `Games Played: **${number(player.appearances)}**`,
+                `Man of the Match: **${number(player.motm)}**`,
+                `Average Rating: **${number(player.avgRating, 2)}**`,
+                "",
+                `Goals: **${number(player.goals)}**`,
+                `xG Per Game: **${perGame(player.goals, apps)}**`,
+                `Assists: **${number(player.assists)}**`,
+                `xA Per Game: **${perGame(player.assists, apps)}**`,
+                `Second Assists: **${number(player.secondAssists)}**`,
+                `Dribbles: **${number(player.dribbles)}**`,
+                `Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
+                `xP Per Game: **${perGame(player.passes, apps)}**`,
+                `Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
+                `xT Per Game: **${perGame(player.tackles, apps)}**`,
+                `Interceptions: **${number(player.interceptions)}**`,
+                "",
+                `Clean Sheets: **${number(player.cleanSheets)}**`,
+                `Saves: **${number(player.saves)}**`,
+                `Red Cards: **${number(player.redCards)}**`,
+                "",
+                "> Competitive stats use stored Friendly Match data only."
+            ].join("\n");
+
+            const embed =
+                new EmbedBuilder()
+                    .setColor("#ffffff")
+                    .setTitle(`${player.name}'s Competitive Statistics for ${underline(clubName)}`)
+                    .setDescription(description.slice(0, 4096))
+                    .setFooter(FOOTER);
+
+            if (crestUrl) embed.setThumbnail(crestUrl);
+
+            await interaction.editReply({ embeds: [embed] });
+        } catch (err) {
+            console.error("compplayerstats error:", err);
+            await interaction.editReply("Failed to load competitive player stats.");
+        }
+    }
+};

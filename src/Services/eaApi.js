@@ -229,7 +229,15 @@ async function getMatches(clubId, matchType, options = {}) {
 
             const json = await fetchJson(url);
 
-            return Array.isArray(json) ? json : [];
+            return Array.isArray(json)
+                ? json.map(match => ({
+                    ...match,
+                    matchType:
+                        match.matchType ||
+                        match.matchtype ||
+                        matchType
+                }))
+                : [];
         },
         options
     );
