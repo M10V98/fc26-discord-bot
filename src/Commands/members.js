@@ -1,4 +1,4 @@
-```js
+
 const {
     ActionRowBuilder,
     ButtonBuilder,
@@ -259,4 +259,4 @@ module.exports = {
 
     handleMembersPageButton
 };
-```
+
