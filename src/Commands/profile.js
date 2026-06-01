@@ -12,25 +12,22 @@ const {
 } = require("../Utils/xpSystem");
 
 module.exports = {
-
     data: new SlashCommandBuilder()
         .setName("profile")
         .setDescription("Shows your profile"),
 
     async execute(interaction) {
-
         await interaction.deferReply();
 
-        const linked =
-            await db.get(
-                `SELECT * FROM linked_players
-                 WHERE guild_id = ?
-                 AND discord_id = ?`,
-                [
-                    interaction.guild.id,
-                    interaction.user.id
-                ]
-            );
+        const linked = await db.get(
+            `SELECT * FROM linked_players
+             WHERE guild_id = ?
+             AND discord_id = ?`,
+            [
+                interaction.guild.id,
+                interaction.user.id
+            ]
+        );
 
         if (!linked) {
             return interaction.editReply(
@@ -38,20 +35,19 @@ module.exports = {
             );
         }
 
-        const player =
-            await db.get(
-                `SELECT * FROM players
-                 WHERE guild_id = ?
-                 AND (
-                    player_id = ?
-                    OR player_name = ?
-                 )`,
-                [
-                    interaction.guild.id,
-                    linked.player_id,
-                    linked.player_name
-                ]
-            );
+        const player = await db.get(
+            `SELECT * FROM players
+             WHERE guild_id = ?
+             AND (
+                player_id = ?
+                OR player_name = ?
+             )`,
+            [
+                interaction.guild.id,
+                linked.player_id,
+                linked.player_name
+            ]
+        );
 
         if (!player) {
             return interaction.editReply(
@@ -65,11 +61,10 @@ module.exports = {
         const nextLevelXP =
             getTotalXPForLevel(currentLevel + 1);
 
-        const avgRating =
-            (
-                player.total_rating /
-                Math.max(player.matches, 1)
-            ).toFixed(2);
+        const avgRating = (
+            player.total_rating /
+            Math.max(player.matches, 1)
+        ).toFixed(2);
 
         const archetype =
             archetypes[player.archetype] ||
@@ -82,45 +77,59 @@ module.exports = {
                 ? player.position
                 : archetype;
 
+        const EMOJIS = {
+            POSITION: "\u{1F4CD}",   // 📍
+            ARCHETYPE: "\u{1F3AF}",  // 🎯
+            LEVEL: "\u{1F3C6}",      // 🏆
+            XP: "\u{1F4C8}",         // 📈
+            MATCHES: "\u26BD",       // ⚽
+            GOALS: "\u{1F945}",      // 🥅
+            ASSISTS: "\u{1F45F}",    // 👟
+            RATING: "\u2B50"         // ⭐
+        };
+
         const embed = new EmbedBuilder()
             .setColor("#ffaa00")
             .setTitle(player.player_name)
             .setDescription(
-                `Position: ${position}\n` +
-                `Archetype: ${archetype}`
+                `${EMOJIS.POSITION} **Position:** ${position}\n` +
+                `${EMOJIS.ARCHETYPE} **Archetype:** ${archetype}`
             )
             .addFields(
                 {
-                    name: "Level",
+                    name: `${EMOJIS.LEVEL} Level`,
                     value: `${currentLevel}`,
                     inline: true
                 },
                 {
-                    name: "XP",
+                    name: `${EMOJIS.XP} XP`,
                     value: `${player.xp} / ${nextLevelXP}`,
                     inline: true
                 },
                 {
-                    name: "Matches",
+                    name: `${EMOJIS.MATCHES} Matches`,
                     value: `${player.matches}`,
                     inline: true
                 },
                 {
-                    name: "Goals",
+                    name: `${EMOJIS.GOALS} Goals`,
                     value: `${player.goals}`,
                     inline: true
                 },
                 {
-                    name: "Assists",
+                    name: `${EMOJIS.ASSISTS} Assists`,
                     value: `${player.assists}`,
                     inline: true
                 },
                 {
-                    name: "Avg Rating",
+                    name: `${EMOJIS.RATING} Avg Rating`,
                     value: `${avgRating}`,
                     inline: true
                 }
-            );
+            )
+            .setFooter({
+                text: `Level ${currentLevel} Player Profile`
+            });
 
         await interaction.editReply({
             embeds: [embed]
