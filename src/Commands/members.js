@@ -45,17 +45,23 @@ function memberBlock(member, linkedMaps) {
     const linkedName =
         displayName(playerName, linkedMaps);
 
+    const EMOJI_USER = "\u{1F464}";      // 👤
+    const EMOJI_PIN = "\u{1F4CD}";       // 📍
+    const EMOJI_SHIELD = "\u{1F6E1}\uFE0F"; // 🛡️
+    const EMOJI_STAR = "\u2B50";         // ⭐
+    const EMOJI_UP = "\u2B06\uFE0F";     // ⬆️
+
     const height =
         member.proHeight
-            ? `⬆️ Height: ${member.proHeight}cm`
+            ? `${EMOJI_UP} Height: ${member.proHeight}cm`
             : null;
 
     return [
         `**${playerName}**`,
-        `👤 ${linkedName}`,
-        `📍 ${overall} ${position}`,
-        `🛡️ GP: ${number(member.gamesPlayed)}`,
-        `⭐ AMR: ${amr}`,
+        `${EMOJI_USER} ${linkedName}`,
+        `${EMOJI_PIN} ${overall} ${position}`,
+        `${EMOJI_SHIELD} GP: ${number(member.gamesPlayed)}`,
+        `${EMOJI_STAR} AMR: ${amr}`,
         height
     ]
         .filter(Boolean)
