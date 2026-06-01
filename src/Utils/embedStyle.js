@@ -1,5 +1,5 @@
 const FOOTER = {
-    text: "OurProClub.app"
+    text: "BellaCiaoFC.app"
 };
 
 function underline(value) {
