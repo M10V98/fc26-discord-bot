@@ -31,28 +31,35 @@ function memberBlock(member, linkedMaps) {
         member.favoritePosition ||
         member.proPos ||
         "Player";
+
     const overall =
         member.proOverall || "-";
+
     const amr =
         Math.round(Number(member.ratingAve || 0) * 10);
+
+    const playerName =
+        member.name || "Unknown";
+
+    const linkedName =
+        displayName(playerName, linkedMaps);
+
     const height =
         member.proHeight
-            ? `Height: ${member.proHeight}cm`
+            ? `⬆️ Height: ${member.proHeight}cm`
             : null;
 
     return [
-        `**${member.name || "Unknown"}**`,
-        displayName(member.name, linkedMaps),
-        `${overall} ${position}`,
-        `GP ${number(member.gamesPlayed)} | AMR ${amr}`,
+        `**${playerName}**`,
+        `👤 ${linkedName}`,
+        `📍 ${overall} ${position}`,
+        `🛡️ GP: ${number(member.gamesPlayed)}`,
+        `⭐ AMR: ${amr}`,
         height
-    ].filter(Boolean).join("\n");
+    ]
+        .filter(Boolean)
+        .join("\n");
 }
-
-function buildPageButtons(page, totalPages) {
-    if (totalPages <= 1) {
-        return [];
-    }
 
     return [
         new ActionRowBuilder()
