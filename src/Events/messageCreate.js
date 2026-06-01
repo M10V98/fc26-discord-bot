@@ -1,7 +1,9 @@
 const {
     footballReplies,
-    footballTriggers as triggers
+    footballTriggers
 } = require("../Services/footballBrain");
+
+const triggers = footballTriggers;
 
 let cooldown = 0;
 
@@ -11,37 +13,26 @@ module.exports = async message => {
         return;
     }
 
-    const text =
-        message.content.toLowerCase();
+    const text = message.content.toLowerCase();
 
-    if (
-        Date.now() - cooldown <
-        20000
-    ) {
+    if (Date.now() - cooldown < 20000) {
         return;
     }
 
     for (const category of Object.keys(triggers)) {
 
-        const words =
-            triggers[category];
+        const words = triggers[category];
 
-        if (
-            words.some(word =>
-                text.includes(word)
-            )
-        ) {
+        if (words.some(word => text.includes(word))) {
 
             cooldown = Date.now();
 
-            const responses =
-                footballReplies[category];
+            const responses = footballReplies[category];
 
             const reply =
                 responses[
                     Math.floor(
-                        Math.random() *
-                        responses.length
+                        Math.random() * responses.length
                     )
                 ];
 
