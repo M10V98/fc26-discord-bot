@@ -17,6 +17,15 @@ module.exports = {
         .setName("claim")
         .setDescription(
             "Claim your EA player"
+        )
+        .addIntegerOption(option =>
+            option
+                .setName("page")
+                .setDescription("Roster page")
+                .addChoices(
+                    { name: "Players 1-25", value: 1 },
+                    { name: "Players 26-50", value: 2 }
+                )
         ),
 
     async execute(interaction) {
@@ -46,6 +55,8 @@ module.exports = {
             // =========================
             // GET MEMBERS (current season roster)
             // =========================
+            const page =
+                interaction.options.getInteger("page") || 1;
 
             const members =
                 await eaApi.getMembersStats(club.club_id);
@@ -86,7 +97,7 @@ module.exports = {
 
             const options =
                 list
-                    .slice(0, 25)
+                    .slice((page - 1) * 25, page * 25)
                     .map(m => {
 
                         const pid = idByName.get(m.name) || "";
@@ -101,10 +112,16 @@ module.exports = {
                         };
                     });
 
+            if (!options.length) {
+                return interaction.editReply(
+                    "There are no players on that roster page."
+                );
+            }
+
             const menu =
                 new StringSelectMenuBuilder()
                     .setCustomId("claim_player")
-                    .setPlaceholder("Select your player")
+                    .setPlaceholder(`Select your player (${(page - 1) * 25 + 1}-${Math.min(page * 25, list.length)})`)
                     .addOptions(options);
 
             const row =
@@ -112,7 +129,10 @@ module.exports = {
                     .addComponents(menu);
 
             await interaction.editReply({
-                content: "Select your player:",
+                content:
+                    list.length > 25
+                        ? `Select your player. Use \`/claim page:Players 26-50\` if you are not on this page.`
+                        : "Select your player:",
                 components: [row]
             });
 

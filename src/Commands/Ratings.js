@@ -4,51 +4,90 @@ const {
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const eaApi = require("../Services/eaApi");
+const {
+    getCrestUrl
+} = require("../Services/crests");
+const {
+    FOOTER,
+    compactRankLine,
+    splitDescription,
+    underline
+} = require("../Utils/embedStyle");
 
 module.exports = {
-
     data: new SlashCommandBuilder()
         .setName("ratings")
         .setDescription("Top average ratings"),
 
     async execute(interaction) {
-
         await interaction.deferReply();
 
-        const players =
-            await db.all(
-                `SELECT * FROM players WHERE guild_id = ?`,
+        const club =
+            await db.get(
+                `SELECT * FROM clubs WHERE guild_id = ?`,
                 [interaction.guild.id]
             );
 
+        const [players, info, crestUrl] =
+            await Promise.all([
+                db.all(
+                    `SELECT * FROM players WHERE guild_id = ?`,
+                    [interaction.guild.id]
+                ),
+                club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
+                club ? getCrestUrl(club.club_id).catch(() => null) : null
+            ]);
+
         const sorted =
             players
-            .map(p => ({
-                ...p,
-                avg:
-                    p.total_rating /
-                    Math.max(p.matches, 1)
-            }))
-            .sort((a, b) => b.avg - a.avg)
-            .slice(0, 10);
+                .map(player => ({
+                    ...player,
+                    avg:
+                        Number(player.total_rating || 0) /
+                        Math.max(Number(player.matches || 0), 1)
+                }))
+                .filter(player => Number(player.matches || 0) > 0)
+                .sort((a, b) => b.avg - a.avg)
+                .slice(0, 50);
 
-        const embed = new EmbedBuilder()
-            .setColor("#00b0f4")
-            .setTitle("⭐ Rating Leaderboard");
+        if (!sorted.length) {
+            return interaction.editReply("No rating data found yet.");
+        }
 
-        sorted.forEach((p, i) => {
+        const clubName =
+            club && info?.[String(club.club_id)]?.name
+                ? info[String(club.club_id)].name
+                : interaction.guild.name;
+        const lines =
+            sorted.map((player, index) =>
+                compactRankLine(
+                    index,
+                    player.player_name,
+                    `⭐ **${player.avg.toFixed(2)}** average rating (${player.matches || 0} apps)`
+                )
+            );
+        const embeds =
+            splitDescription(lines)
+                .map((chunk, index) => {
+                    const embed =
+                        new EmbedBuilder()
+                            .setColor("#00b0f4")
+                            .setTitle(
+                                index === 0
+                                    ? `⭐ Rating Leaderboard for ${underline(clubName)}`
+                                    : "⭐ Rating Leaderboard Continued"
+                            )
+                            .setDescription(chunk)
+                            .setFooter(FOOTER);
 
-            embed.addFields({
-                name:
-                    `#${i + 1} ${p.player_name}`,
-                value:
-                    `⭐ ${p.avg.toFixed(2)}`
-            });
+                    if (crestUrl && index === 0) {
+                        embed.setThumbnail(crestUrl);
+                    }
 
-        });
+                    return embed;
+                });
 
-        await interaction.editReply({
-            embeds: [embed]
-        });
+        await interaction.editReply({ embeds });
     }
 };

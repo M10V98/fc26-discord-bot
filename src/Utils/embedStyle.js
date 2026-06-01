@@ -3,12 +3,18 @@ const FOOTER = {
 };
 
 function underline(value) {
-    return `__${value || "Club"}__`;
+    return escapeMarkdown(value || "Club");
 }
 
 function number(value, digits = 0) {
     const parsed = Number(value || 0);
-    return digits > 0 ? parsed.toFixed(digits) : String(parsed);
+    return digits > 0 ? parsed.toFixed(digits) : String(Math.round(parsed));
+}
+
+function escapeMarkdown(value) {
+    return String(value || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/([*_~`>|])/g, "\\$1");
 }
 
 function percent(made, attempts) {
@@ -66,7 +72,42 @@ function displayName(name, linkedMaps, playerId = null) {
         return `<@${row.discord_id}>`;
     }
 
-    return name || "Unknown";
+    return escapeMarkdown(name || "Unknown");
+}
+
+function compactRankLine(index, label, value) {
+    const safeLabel =
+        String(label || "").startsWith("<@") ||
+        String(label || "").includes("\\")
+            ? label
+            : escapeMarkdown(label);
+
+    return `**#${index + 1}** ${safeLabel} - ${value}`;
+}
+
+function splitDescription(lines, maxLength = 3800) {
+    const chunks = [];
+    let current = "";
+
+    for (const line of lines) {
+        const next =
+            current
+                ? `${current}\n${line}`
+                : line;
+
+        if (next.length > maxLength && current) {
+            chunks.push(current);
+            current = line;
+        } else {
+            current = next;
+        }
+    }
+
+    if (current) {
+        chunks.push(current);
+    }
+
+    return chunks;
 }
 
 async function getLinkedRows(db, guildId) {
@@ -126,6 +167,9 @@ module.exports = {
     memberWinRate,
     buildLinkedMaps,
     displayName,
+    compactRankLine,
+    escapeMarkdown,
+    splitDescription,
     getLinkedRows,
     infoBlock,
     resultDot,

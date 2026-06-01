@@ -95,10 +95,10 @@ module.exports = {
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`Members of ${underline(clubName)}`)
+                    .setTitle(`👥 Members of ${underline(clubName)}`)
                     .setDescription(
                         infoBlock([
-                            `**${clubName}** has a total of ${list.length} member${list.length === 1 ? "" : "s"}, ${notPlayed} have not played a game yet.`
+                            `**${clubName}** has ${list.length} member${list.length === 1 ? "" : "s"}, ${notPlayed} have not played a game yet.`
                         ])
                     )
                     .setFooter(FOOTER);
@@ -107,16 +107,28 @@ module.exports = {
                 embed.setThumbnail(crestUrl);
             }
 
-            for (const member of list.slice(0, 24)) {
-                embed.addFields({
+            const embeds = [embed];
+            const shown = list.slice(0, 50);
+
+            shown.forEach((member, index) => {
+                if (index === 25) {
+                    embeds.push(
+                        new EmbedBuilder()
+                            .setColor("#ffffff")
+                            .setTitle("👥 Members Continued")
+                            .setFooter(FOOTER)
+                    );
+                }
+
+                embeds[embeds.length - 1].addFields({
                     name: "\u200b",
                     value: memberBlock(member, linkedMaps),
                     inline: true
                 });
-            }
+            });
 
             await interaction.editReply({
-                embeds: [embed]
+                embeds
             });
         } catch (err) {
             console.error("members error:", err);

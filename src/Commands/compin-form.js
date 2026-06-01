@@ -131,20 +131,20 @@ module.exports = {
                     "Each run refreshes the friendly-match API before reading stored history"
                 ]),
                 "",
-                `**Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
-                `**Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
-                `**Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-                `**Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
-                `**Top Passers**\n${top(players, linkedMaps, "passes")}`,
-                `**Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
-                `**Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
-                `**Top Tacklers**\n${top(players, linkedMaps, "tackles")}`
+                `✨ **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
+                `⚽ **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
+                `🤝 **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
+                `🔗 **Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
+                `👟 **Top Passers**\n${top(players, linkedMaps, "passes")}`,
+                `💨 **Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
+                `🧠 **Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
+                `🛡️ **Top Tacklers**\n${top(players, linkedMaps, "tackles")}`
             ].join("\n\n");
 
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`Competitive In-form Players for ${underline(clubName)}`)
+                    .setTitle(`🔥 Competitive In-form Players for ${underline(clubName)}`)
                     .setDescription(description.slice(0, 4096))
                     .setFooter(FOOTER);
 

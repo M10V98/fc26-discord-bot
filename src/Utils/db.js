@@ -137,6 +137,7 @@ const initStatements = [
         title TEXT,
         time_text TEXT,
         league TEXT,
+        crest_url TEXT,
         starts_at INTEGER,
         can_play TEXT DEFAULT '[]',
         cannot_play TEXT DEFAULT '[]',
@@ -232,6 +233,12 @@ async function init() {
     await ensureColumn(
         "scheduled_sessions",
         "league",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "crest_url",
         "TEXT"
     );
 

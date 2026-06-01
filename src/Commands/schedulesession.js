@@ -11,36 +11,31 @@ const {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("schedule")
-        .setDescription("Create scheduled club sessions")
+        .setName("schedulesession")
+        .setDescription("Create a role-backed RSVP session")
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName("session")
-                .setDescription("Create a role-backed RSVP session")
-                .addStringOption(option =>
-                    option
-                        .setName("date")
-                        .setDescription("Example: 2026-06-01 or 01/06/2026")
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option
-                        .setName("time")
-                        .setDescription("Example: 20:00")
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option
-                        .setName("league")
-                        .setDescription("League or competition name")
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option
-                        .setName("title")
-                        .setDescription("Session title")
-                )
+        .addStringOption(option =>
+            option
+                .setName("date")
+                .setDescription("Example: 2026-06-01 or 01/06/2026")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("time")
+                .setDescription("Example: 20:00")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("league")
+                .setDescription("League or competition name")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("title")
+                .setDescription("Session title")
         ),
 
     async execute(interaction) {
@@ -72,7 +67,7 @@ module.exports = {
                 `Scheduled session created with role <@&${result.role.id}>.`
             );
         } catch (err) {
-            console.error("schedule session error:", err);
+            console.error("schedulesession error:", err);
             await interaction.editReply(err.message || "Failed to create scheduled session.");
         }
     }

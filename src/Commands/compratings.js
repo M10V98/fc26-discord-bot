@@ -16,8 +16,10 @@ const {
     underline,
     number,
     buildLinkedMaps,
+    compactRankLine,
     displayName,
-    getLinkedRows
+    getLinkedRows,
+    splitDescription
 } = require("../Utils/embedStyle");
 const eaApi = require("../Services/eaApi");
 
@@ -55,7 +57,7 @@ module.exports = {
             const players =
                 aggregateCompetitivePlayers(matches, club.club_id)
                     .sort((a, b) => b.avgRating - a.avgRating)
-                    .slice(0, 10);
+                    .slice(0, 50);
 
             if (!players.length) {
                 return interaction.editReply("No competitive friendly data stored yet.");
@@ -65,23 +67,36 @@ module.exports = {
             const clubName =
                 info?.[String(club.club_id)]?.name || "Club";
 
-            const description =
+            const lines =
                 players
                     .map((player, index) =>
-                        `#${index + 1} ${displayName(player.name, linkedMaps, player.playerId)} - **${number(player.avgRating, 2)}** average rating (${number(player.appearances)} apps)`
-                    )
-                    .join("\n");
+                        compactRankLine(
+                            index,
+                            displayName(player.name, linkedMaps, player.playerId),
+                            `⭐ **${number(player.avgRating, 2)}** average rating (${number(player.appearances)} apps)`
+                        )
+                    );
 
-            const embed =
-                new EmbedBuilder()
-                    .setColor("#ffffff")
-                    .setTitle(`Competitive Ratings for ${underline(clubName)}`)
-                    .setDescription(description)
-                    .setFooter(FOOTER);
+            const embeds =
+                splitDescription(lines)
+                    .map((chunk, index) => {
+                        const embed =
+                            new EmbedBuilder()
+                                .setColor("#ffffff")
+                                .setTitle(
+                                    index === 0
+                                        ? `⭐ Competitive Ratings for ${underline(clubName)}`
+                                        : "⭐ Competitive Ratings Continued"
+                                )
+                                .setDescription(chunk)
+                                .setFooter(FOOTER);
 
-            if (crestUrl) embed.setThumbnail(crestUrl);
+                        if (crestUrl && index === 0) embed.setThumbnail(crestUrl);
 
-            await interaction.editReply({ embeds: [embed] });
+                        return embed;
+                    });
+
+            await interaction.editReply({ embeds });
         } catch (err) {
             console.error("compratings error:", err);
             await interaction.editReply("Failed to load competitive ratings.");

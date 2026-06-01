@@ -113,21 +113,21 @@ module.exports = {
                     "Each command refreshes the friendly-match API before reading stored history"
                 ]),
                 "",
-                `**Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
-                `**Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
-                `**Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
-                `**Top Second Assists**\n${ranked(players, linkedMaps, "secondAssists")}`,
-                `**Top Dribblers**\n${ranked(players, linkedMaps, "dribbles")}`,
-                `**Top Passers**\n${ranked(players, linkedMaps, "passes")}`,
-                `**Top Tacklers**\n${ranked(players, linkedMaps, "tackles")}`,
-                `**Top Interceptors**\n${ranked(players, linkedMaps, "interceptions")}`,
-                `**Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
+                `✨ **Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
+                `⚽ **Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
+                `🤝 **Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
+                `🔗 **Top Second Assists**\n${ranked(players, linkedMaps, "secondAssists")}`,
+                `💨 **Top Dribblers**\n${ranked(players, linkedMaps, "dribbles")}`,
+                `👟 **Top Passers**\n${ranked(players, linkedMaps, "passes")}`,
+                `🛡️ **Top Tacklers**\n${ranked(players, linkedMaps, "tackles")}`,
+                `🧠 **Top Interceptors**\n${ranked(players, linkedMaps, "interceptions")}`,
+                `🟥 **Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
             ].join("\n\n");
 
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`Competitive Top Players for ${underline(clubName)}`)
+                    .setTitle(`🏅 Competitive Top Players for ${underline(clubName)}`)
                     .setDescription(description.slice(0, 4096))
                     .setFooter(FOOTER);
 

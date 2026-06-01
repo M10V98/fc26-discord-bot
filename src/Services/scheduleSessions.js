@@ -7,13 +7,18 @@ const {
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const eaApi = require("./eaApi");
+const {
+    getCrestUrl
+} = require("./crests");
 const {
     FOOTER,
+    escapeMarkdown,
     underline
 } = require("../Utils/embedStyle");
 
 const CLEANUP_CHECK_MS = 60 * 1000;
-const CLEANUP_GRACE_MS = 10 * 60 * 1000;
+const CLEANUP_GRACE_MS = 0;
 
 let clientRef = null;
 let interval = null;
@@ -66,6 +71,11 @@ function formatDiscordTime(startsAt) {
     return `<t:${unix}:F>`;
 }
 
+function formatRelativeTime(startsAt) {
+    const unix = Math.floor(Number(startsAt) / 1000);
+    return `<t:${unix}:R>`;
+}
+
 function mentionList(ids) {
     if (!ids.length) return "No one yet";
     return ids.map(id => `<@${id}>`).join("\n").slice(0, 1024);
@@ -79,18 +89,19 @@ function buildSessionEmbed(session, guild) {
         session.title ||
         `${guild?.name || "Club"} Scheduled Session`;
 
-    return new EmbedBuilder()
+    const embed =
+        new EmbedBuilder()
         .setColor("#ffffff")
-        .setTitle(`${underline(title)} - ${formatDiscordTime(session.starts_at)}`)
+        .setTitle(`${underline(title)} - ${formatRelativeTime(session.starts_at)}`)
         .setDescription(
             [
-                `<@${session.creator_id}> has scheduled a Pro Clubs session. Use the buttons below to RSVP.`,
+                `<@${session.creator_id}> has scheduled a Pro Clubs session. Use the buttons below: ✅ (can play), ❌ (cannot), ❔ (maybe).`,
                 "",
                 "**Time & Date**",
                 formatDiscordTime(session.starts_at),
                 "",
                 "**League**",
-                session.league || "Not set",
+                escapeMarkdown(session.league || "Not set"),
                 "",
                 "**Session Role**",
                 session.role_id ? `<@&${session.role_id}>` : "Role unavailable"
@@ -98,22 +109,28 @@ function buildSessionEmbed(session, guild) {
         )
         .addFields(
             {
-                name: `Can Play (${canPlay.length})`,
+                name: `✅ Can Play (${canPlay.length})`,
                 value: mentionList(canPlay),
                 inline: true
             },
             {
-                name: `Cannot Play (${cannotPlay.length})`,
+                name: `❌ Cannot Play (${cannotPlay.length})`,
                 value: mentionList(cannotPlay),
                 inline: true
             },
             {
-                name: `Maybe (${maybePlay.length})`,
+                name: `❔ Maybe (${maybePlay.length})`,
                 value: mentionList(maybePlay),
                 inline: true
             }
         )
         .setFooter(FOOTER);
+
+    if (session.crest_url) {
+        embed.setThumbnail(session.crest_url);
+    }
+
+    return embed;
 }
 
 function buildSessionButtons(sessionId) {
@@ -122,14 +139,17 @@ function buildSessionButtons(sessionId) {
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`session_rsvp:${sessionId}:can`)
+                    .setEmoji("✅")
                     .setLabel("Can Play")
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                     .setCustomId(`session_rsvp:${sessionId}:cannot`)
+                    .setEmoji("❌")
                     .setLabel("Cannot Play")
                     .setStyle(ButtonStyle.Danger),
                 new ButtonBuilder()
                     .setCustomId(`session_rsvp:${sessionId}:maybe`)
+                    .setEmoji("❔")
                     .setLabel("Maybe")
                     .setStyle(ButtonStyle.Secondary)
             )
@@ -149,11 +169,32 @@ async function createSession(interaction, options) {
 
     const sessionId =
         `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const club =
+        await db.get(
+            `SELECT * FROM clubs WHERE guild_id = ?`,
+            [interaction.guild.id]
+        );
+    const [info, crestUrl, existingSessions] =
+        await Promise.all([
+            club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
+            club ? getCrestUrl(club.club_id).catch(() => null) : null,
+            db.all(
+                `
+                SELECT session_id
+                FROM scheduled_sessions
+                WHERE guild_id = ?
+                `,
+                [interaction.guild.id]
+            )
+        ]);
+    const clubName =
+        club && info?.[String(club.club_id)]?.name
+            ? info[String(club.club_id)].name
+            : interaction.guild.name;
+    const sessionNumber =
+        existingSessions.length + 1;
     const roleName =
-        `${options.title || "Session"} ${new Date(startsAt).toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short"
-        })} ${sessionId.slice(-3)}`.slice(0, 100);
+        `Session ${sessionNumber}`.slice(0, 100);
 
     const role =
         await interaction.guild.roles.create({
@@ -169,10 +210,13 @@ async function createSession(interaction, options) {
         message_id: null,
         role_id: role.id,
         creator_id: interaction.user.id,
-        title: options.title,
+        title:
+            options.title ||
+            `${clubName} Scheduled Session`,
         time_text: options.timeText,
         league: options.league,
         starts_at: startsAt,
+        crest_url: crestUrl,
         can_play: "[]",
         cannot_play: "[]",
         maybe_play: "[]",
@@ -200,13 +244,14 @@ async function createSession(interaction, options) {
             title,
             time_text,
             league,
+            crest_url,
             starts_at,
             can_play,
             cannot_play,
             maybe_play,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             sessionId,
@@ -215,9 +260,10 @@ async function createSession(interaction, options) {
             message.id,
             role.id,
             interaction.user.id,
-            options.title,
+            session.title,
             options.timeText,
             options.league,
+            crestUrl,
             startsAt,
             "[]",
             "[]",

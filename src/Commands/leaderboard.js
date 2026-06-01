@@ -1,6 +1,22 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const {
+    SlashCommandBuilder,
+    EmbedBuilder
+} = require("discord.js");
+
 const db = require("../Utils/db");
-const { getLevel } = require("../Services/levelService");
+const eaApi = require("../Services/eaApi");
+const {
+    getCrestUrl
+} = require("../Services/crests");
+const {
+    getLevel
+} = require("../Services/levelService");
+const {
+    FOOTER,
+    compactRankLine,
+    splitDescription,
+    underline
+} = require("../Utils/embedStyle");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,40 +24,69 @@ module.exports = {
         .setDescription("XP leaderboard"),
 
     async execute(interaction) {
-
         await interaction.deferReply();
 
-        const players = await db.all(
-            `
-            SELECT player_name, xp
-            FROM players
-            WHERE guild_id = ?
-            ORDER BY xp DESC
-            LIMIT 10
-            `,
-            [interaction.guild.id]
-        );
-
-        if (players.length === 0) {
-            return interaction.editReply(
-                "No players found yet."
+        const club =
+            await db.get(
+                `SELECT * FROM clubs WHERE guild_id = ?`,
+                [interaction.guild.id]
             );
+
+        const [players, info, crestUrl] =
+            await Promise.all([
+                db.all(
+                    `
+                    SELECT player_name, xp
+                    FROM players
+                    WHERE guild_id = ?
+                    ORDER BY xp DESC
+                    LIMIT 50
+                    `,
+                    [interaction.guild.id]
+                ),
+                club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
+                club ? getCrestUrl(club.club_id).catch(() => null) : null
+            ]);
+
+        if (!players.length) {
+            return interaction.editReply("No players found yet.");
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle("🏆 XP Leaderboard")
-            .setColor("Gold");
+        const clubName =
+            club && info?.[String(club.club_id)]?.name
+                ? info[String(club.club_id)].name
+                : interaction.guild.name;
+        const lines =
+            players.map((player, index) => {
+                const level = getLevel(player.xp || 0);
 
-        players.forEach((p, i) => {
-
-            const level = getLevel(p.xp || 0);
-
-            embed.addFields({
-                name: `#${i + 1} ${p.player_name}`,
-                value: `XP: ${p.xp || 0} | ${level.name}`
+                return compactRankLine(
+                    index,
+                    player.player_name,
+                    `🏆 **${player.xp || 0} XP** | ${level.name}`
+                );
             });
-        });
+        const embeds =
+            splitDescription(lines)
+                .map((chunk, index) => {
+                    const embed =
+                        new EmbedBuilder()
+                            .setColor("#f5c542")
+                            .setTitle(
+                                index === 0
+                                    ? `🏆 XP Leaderboard for ${underline(clubName)}`
+                                    : "🏆 XP Leaderboard Continued"
+                            )
+                            .setDescription(chunk)
+                            .setFooter(FOOTER);
 
-        await interaction.editReply({ embeds: [embed] });
+                    if (crestUrl && index === 0) {
+                        embed.setThumbnail(crestUrl);
+                    }
+
+                    return embed;
+                });
+
+        await interaction.editReply({ embeds });
     }
 };
