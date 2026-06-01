@@ -267,7 +267,7 @@ async function handleSessionButton(interaction) {
     if (choice === "maybe") maybePlay.push(userId);
 
     const member =
-        await interaction.guild.members.fetch(userId).catch(() => null);
+        interaction.member;
 
     if (member && session.role_id) {
         if (choice === "can") {
