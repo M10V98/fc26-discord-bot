@@ -252,6 +252,19 @@ client.on(
 
             if (interaction.isButton()) {
                 if (
+                    interaction.customId.startsWith("members_page:")
+                ) {
+                    const command =
+                        client.commands.get("members");
+
+                    if (command?.handleMembersPageButton) {
+                        await command.handleMembersPageButton(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("session_rsvp:")
                 ) {
                     await handleSessionButton(interaction);

@@ -21,13 +21,13 @@ module.exports = {
                 .addStringOption(option =>
                     option
                         .setName("date")
-                        .setDescription("Example: 2026-06-01 or 01/06/2026")
+                        .setDescription("Examples: 01/06/2026, 2026-06-01, 1 June 2026, tomorrow")
                         .setRequired(true)
                 )
                 .addStringOption(option =>
                     option
                         .setName("time")
-                        .setDescription("Example: 20:00")
+                        .setDescription("Examples: 20:00, 8pm, 8.30pm, 2030")
                         .setRequired(true)
                 )
                 .addStringOption(option =>

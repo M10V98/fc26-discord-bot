@@ -13,7 +13,10 @@ const {
 } = require("../Services/levelService");
 const {
     FOOTER,
+    buildLinkedMaps,
     compactRankLine,
+    displayName,
+    getLinkedRows,
     splitDescription,
     underline
 } = require("../Utils/embedStyle");
@@ -32,11 +35,11 @@ module.exports = {
                 [interaction.guild.id]
             );
 
-        const [players, info, crestUrl] =
+        const [players, info, crestUrl, linkedRows] =
             await Promise.all([
                 db.all(
                     `
-                    SELECT player_name, xp
+                    SELECT player_id, player_name, xp
                     FROM players
                     WHERE guild_id = ?
                     ORDER BY xp DESC
@@ -45,7 +48,8 @@ module.exports = {
                     [interaction.guild.id]
                 ),
                 club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
-                club ? getCrestUrl(club.club_id).catch(() => null) : null
+                club ? getCrestUrl(club.club_id).catch(() => null) : null,
+                getLinkedRows(db, interaction.guild.id)
             ]);
 
         if (!players.length) {
@@ -56,13 +60,21 @@ module.exports = {
             club && info?.[String(club.club_id)]?.name
                 ? info[String(club.club_id)].name
                 : interaction.guild.name;
+        const linkedMaps =
+            buildLinkedMaps(linkedRows);
         const lines =
             players.map((player, index) => {
                 const level = getLevel(player.xp || 0);
+                const label =
+                    displayName(
+                        player.player_name,
+                        linkedMaps,
+                        player.player_id
+                    );
 
                 return compactRankLine(
                     index,
-                    player.player_name,
+                    label,
                     `🏆 **${player.xp || 0} XP** | ${level.name}`
                 );
             });

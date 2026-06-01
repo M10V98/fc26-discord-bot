@@ -5,28 +5,28 @@ function calculateXP(stats) {
 
     let xp = 0;
 
-    xp += 100;
+    xp += 25;
 
-    xp += (stats.goals || 0) * 250;
-    xp += (stats.assists || 0) * 180;
-    xp += (stats.secondAssists || 0) * 80;
+    xp += (stats.goals || 0) * 220;
+    xp += (stats.assists || 0) * 170;
+    xp += (stats.secondAssists || 0) * 95;
 
-    xp += (stats.tackles || 0) * 35;
-    xp += (stats.interceptions || 0) * 30;
-    xp += (stats.saves || 0) * 120;
+    xp += (stats.tackles || 0) * 45;
+    xp += (stats.interceptions || 0) * 55;
+    xp += (stats.saves || 0) * 70;
 
-    xp += (stats.passes || 0) * 2;
-    xp += (stats.dribbles || 0) * 12;
+    xp += (stats.passes || 0) * 1.5;
+    xp += (stats.dribbles || 0) * 20;
 
-    if (stats.cleanSheet) xp += 150;
-    if (stats.motm) xp += 200;
-    if (stats.win) xp += 120;
+    if (stats.cleanSheet) xp += 110;
+    if (stats.motm) xp += 160;
+    if (stats.win) xp += 70;
 
     xp += Math.floor(
-        (stats.rating || 0) * 25
+        (stats.rating || 0) * 20
     );
 
-    return xp;
+    return Math.floor(xp);
 }
 
 function getLevelFromXP(xp) {

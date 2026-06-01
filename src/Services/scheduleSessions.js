@@ -19,6 +19,33 @@ const {
 
 const CLEANUP_CHECK_MS = 60 * 1000;
 const CLEANUP_GRACE_MS = 0;
+const SESSION_TIME_ZONE = "Europe/London";
+const MONTHS = {
+    jan: 1,
+    january: 1,
+    feb: 2,
+    february: 2,
+    mar: 3,
+    march: 3,
+    apr: 4,
+    april: 4,
+    may: 5,
+    jun: 6,
+    june: 6,
+    jul: 7,
+    july: 7,
+    aug: 8,
+    august: 8,
+    sep: 9,
+    sept: 9,
+    september: 9,
+    oct: 10,
+    october: 10,
+    nov: 11,
+    november: 11,
+    dec: 12,
+    december: 12
+};
 
 let clientRef = null;
 let interval = null;
@@ -36,34 +63,323 @@ function writeList(values) {
     return JSON.stringify([...new Set(values.map(String))]);
 }
 
-function parseDateTime(input) {
-    const raw = String(input || "").trim();
+function fullYear(value) {
+    const year = Number(value);
 
-    if (!raw) return null;
+    return year < 100 ? 2000 + year : year;
+}
 
-    const direct = Date.parse(raw);
-    if (!Number.isNaN(direct)) return direct;
+function isValidDateParts(parts) {
+    const date =
+        new Date(
+            Date.UTC(
+                parts.year,
+                parts.month - 1,
+                parts.day
+            )
+        );
 
-    const match =
-        raw.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    return (
+        date.getUTCFullYear() === parts.year &&
+        date.getUTCMonth() === parts.month - 1 &&
+        date.getUTCDate() === parts.day
+    );
+}
+
+function getTimeZoneOffsetMs(timeZone, utcMs) {
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            }
+        )
+            .formatToParts(new Date(utcMs))
+            .reduce(
+                (acc, part) => {
+                    acc[part.type] = part.value;
+                    return acc;
+                },
+                {}
+            );
+
+    const localAsUtc =
+        Date.UTC(
+            Number(parts.year),
+            Number(parts.month) - 1,
+            Number(parts.day),
+            Number(parts.hour),
+            Number(parts.minute),
+            Number(parts.second)
+        );
+
+    return localAsUtc - utcMs;
+}
+
+function zonedTimeToUtcMs(parts, timeZone = SESSION_TIME_ZONE) {
+    const utcGuess =
+        Date.UTC(
+            parts.year,
+            parts.month - 1,
+            parts.day,
+            parts.hour,
+            parts.minute
+        );
+    const offset = getTimeZoneOffsetMs(timeZone, utcGuess);
+
+    return utcGuess - offset;
+}
+
+function parseTime(input) {
+    const raw =
+        String(input || "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, "");
+
+    if (!raw) {
+        return {
+            hour: 0,
+            minute: 0
+        };
+    }
+
+    let match =
+        raw.match(/^(\d{1,2})(?::|\.|h)(\d{2})(?::\d{2})?(am|pm)?$/);
+
+    if (!match) {
+        match = raw.match(/^(\d{1,2})(am|pm)$/);
+        if (match) {
+            match.splice(2, 0, "0");
+        }
+    }
+
+    if (!match) {
+        match = raw.match(/^(\d{1,2})$/);
+        if (match) {
+            match.splice(2, 0, "0", "");
+        }
+    }
+
+    if (!match) {
+        match = raw.match(/^(\d{1,2})(\d{2})(am|pm)?$/);
+    }
 
     if (!match) return null;
 
-    const [, day, month, year, hour = "0", minute = "0"] = match;
-    const fullYear =
-        Number(year) < 100
-            ? Number(`20${year}`)
-            : Number(year);
-    const parsed =
-        new Date(
-            fullYear,
-            Number(month) - 1,
-            Number(day),
-            Number(hour),
-            Number(minute)
-        ).getTime();
+    let hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    const meridiem = match[3] || "";
 
-    return Number.isNaN(parsed) ? null : parsed;
+    if (minute > 59) return null;
+
+    if (meridiem) {
+        if (hour < 1 || hour > 12) return null;
+        if (meridiem === "pm" && hour !== 12) hour += 12;
+        if (meridiem === "am" && hour === 12) hour = 0;
+    } else if (hour > 23) {
+        return null;
+    }
+
+    return {
+        hour,
+        minute
+    };
+}
+
+function parseDate(input) {
+    let raw =
+        String(input || "")
+            .trim()
+            .replace(/,/g, "")
+            .replace(/\s+/g, " ");
+
+    if (!raw) return null;
+
+    const relativeDate = parseRelativeDate(raw);
+    if (relativeDate) return relativeDate;
+
+    raw =
+        raw.replace(
+            /^(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s+/i,
+            ""
+        );
+
+    let match =
+        raw.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);
+
+    if (match) {
+        const parts = {
+            year: Number(match[1]),
+            month: Number(match[2]),
+            day: Number(match[3])
+        };
+
+        return isValidDateParts(parts) ? parts : null;
+    }
+
+    match = raw.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+
+    if (match) {
+        const first = Number(match[1]);
+        const second = Number(match[2]);
+        const parts = {
+            year: fullYear(match[3]),
+            month: second,
+            day: first
+        };
+
+        if (first <= 12 && second > 12) {
+            parts.month = first;
+            parts.day = second;
+        }
+
+        return isValidDateParts(parts) ? parts : null;
+    }
+
+    match =
+        raw.toLowerCase().match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]+) (\d{2,4})$/);
+
+    if (match && MONTHS[match[2]]) {
+        const parts = {
+            year: fullYear(match[3]),
+            month: MONTHS[match[2]],
+            day: Number(match[1])
+        };
+
+        return isValidDateParts(parts) ? parts : null;
+    }
+
+    match =
+        raw.toLowerCase().match(/^([a-z]+) (\d{1,2})(?:st|nd|rd|th)? (\d{2,4})$/);
+
+    if (match && MONTHS[match[1]]) {
+        const parts = {
+            year: fullYear(match[3]),
+            month: MONTHS[match[1]],
+            day: Number(match[2])
+        };
+
+        return isValidDateParts(parts) ? parts : null;
+    }
+
+    return null;
+}
+
+function getLondonDateParts(date = new Date()) {
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone: SESSION_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }
+        )
+            .formatToParts(date)
+            .reduce(
+                (acc, part) => {
+                    acc[part.type] = part.value;
+                    return acc;
+                },
+                {}
+            );
+
+    return {
+        year: Number(parts.year),
+        month: Number(parts.month),
+        day: Number(parts.day)
+    };
+}
+
+function addDays(parts, days) {
+    const date =
+        new Date(
+            Date.UTC(
+                parts.year,
+                parts.month - 1,
+                parts.day + days
+            )
+        );
+
+    return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate()
+    };
+}
+
+function parseRelativeDate(raw) {
+    const value = raw.toLowerCase();
+
+    if (value === "today") {
+        return getLondonDateParts();
+    }
+
+    if (value === "tomorrow") {
+        return addDays(getLondonDateParts(), 1);
+    }
+
+    return null;
+}
+
+function splitDateTime(input) {
+    const raw =
+        String(input || "")
+            .trim()
+            .replace(/[T@]/g, " ");
+
+    if (!raw) return null;
+
+    const words = raw.split(/\s+/);
+
+    const match =
+        raw.match(
+            /^(.+?)\s+(?:at\s+)?(\d{1,2}(?:(?::|\.|h)\d{2})?\s*(?:am|pm)?|\d{3,4})$/i
+        );
+
+    if (match) {
+        return {
+            dateText: match[1],
+            timeText: match[2]
+        };
+    }
+
+    if (words.length > 1) {
+        return {
+            dateText: words.slice(0, -1).join(" "),
+            timeText: words[words.length - 1]
+        };
+    }
+
+    return {
+        dateText: raw,
+        timeText: ""
+    };
+}
+
+function parseDateTime(input) {
+    const split = splitDateTime(input);
+
+    if (!split) return null;
+
+    const date = parseDate(split.dateText);
+    const time = parseTime(split.timeText);
+
+    if (!date || !time) return null;
+
+    return zonedTimeToUtcMs({
+        ...date,
+        ...time
+    });
 }
 
 function formatDiscordTime(startsAt) {

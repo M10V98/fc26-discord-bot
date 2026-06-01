@@ -10,7 +10,10 @@ const {
 } = require("../Services/crests");
 const {
     FOOTER,
+    buildLinkedMaps,
     compactRankLine,
+    displayName,
+    getLinkedRows,
     splitDescription,
     underline
 } = require("../Utils/embedStyle");
@@ -29,14 +32,15 @@ module.exports = {
                 [interaction.guild.id]
             );
 
-        const [players, info, crestUrl] =
+        const [players, info, crestUrl, linkedRows] =
             await Promise.all([
                 db.all(
                     `SELECT * FROM players WHERE guild_id = ?`,
                     [interaction.guild.id]
                 ),
                 club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
-                club ? getCrestUrl(club.club_id).catch(() => null) : null
+                club ? getCrestUrl(club.club_id).catch(() => null) : null,
+                getLinkedRows(db, interaction.guild.id)
             ]);
 
         const sorted =
@@ -59,11 +63,17 @@ module.exports = {
             club && info?.[String(club.club_id)]?.name
                 ? info[String(club.club_id)].name
                 : interaction.guild.name;
+        const linkedMaps =
+            buildLinkedMaps(linkedRows);
         const lines =
             sorted.map((player, index) =>
                 compactRankLine(
                     index,
-                    player.player_name,
+                    displayName(
+                        player.player_name,
+                        linkedMaps,
+                        player.player_id
+                    ),
                     `⭐ **${player.avg.toFixed(2)}** average rating (${player.matches || 0} apps)`
                 )
             );
