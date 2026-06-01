@@ -13,6 +13,8 @@ async function deployCommands() {
         process.env.BOT_TOKEN;
     const clientId = process.env.CLIENT_ID;
     const guildId = process.env.GUILD_ID;
+    const deployScope =
+        String(process.env.DEPLOY_SCOPE || "global").toLowerCase();
 
     console.log("ENV CHECK:");
     console.log("TOKEN:", !!token);
@@ -20,6 +22,7 @@ async function deployCommands() {
     console.log("BOT_TOKEN:", !!process.env.BOT_TOKEN);
     console.log("CLIENT_ID:", !!clientId);
     console.log("GUILD_ID:", !!guildId);
+    console.log("DEPLOY_SCOPE:", deployScope);
 
     if (!token || !clientId) {
         throw new Error(
@@ -59,7 +62,7 @@ async function deployCommands() {
 
     console.log("Deploying slash commands...");
 
-    if (guildId) {
+    if (deployScope === "guild" && guildId) {
         await rest.put(
             Routes.applicationGuildCommands(clientId, guildId),
             { body: commands }
@@ -75,6 +78,15 @@ async function deployCommands() {
     );
 
     console.log("Commands deployed globally.");
+
+    if (guildId) {
+        await rest.put(
+            Routes.applicationGuildCommands(clientId, guildId),
+            { body: [] }
+        );
+
+        console.log("Cleared guild-specific commands so global commands are used.");
+    }
 }
 
 if (require.main === module) {

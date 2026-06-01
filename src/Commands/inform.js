@@ -5,6 +5,9 @@ const {
 
 const eaApi = require("../Services/eaApi");
 const db = require("../Utils/db");
+const {
+    getGuildSettings
+} = require("../Services/settingsService");
 
 const {
     getCrestUrl
@@ -140,7 +143,6 @@ module.exports = {
             option
                 .setName("last")
                 .setDescription("Recent match window")
-                .setRequired(true)
                 .addChoices(
                     { name: "Last 5 matches", value: 5 },
                     { name: "Last 10 matches", value: 10 }
@@ -164,7 +166,8 @@ module.exports = {
             }
 
             const limit =
-                interaction.options.getInteger("last") || 10;
+                interaction.options.getInteger("last") ||
+                (await getGuildSettings(interaction.guild.id)).inFormWindow;
 
             const [matches, info, crestUrl, linkedRows] =
                 await Promise.all([

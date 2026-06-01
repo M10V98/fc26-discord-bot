@@ -119,6 +119,32 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS guild_settings (
+        guild_id TEXT,
+        key TEXT,
+        value TEXT,
+        PRIMARY KEY (guild_id, key)
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS scheduled_sessions (
+        session_id TEXT PRIMARY KEY,
+        guild_id TEXT,
+        channel_id TEXT,
+        message_id TEXT,
+        role_id TEXT,
+        creator_id TEXT,
+        title TEXT,
+        time_text TEXT,
+        league TEXT,
+        starts_at INTEGER,
+        can_play TEXT DEFAULT '[]',
+        cannot_play TEXT DEFAULT '[]',
+        maybe_play TEXT DEFAULT '[]',
+        created_at INTEGER
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS schema_meta (
         key TEXT PRIMARY KEY,
         value TEXT
@@ -201,6 +227,30 @@ async function init() {
         "automode",
         "last_activity_at",
         "INTEGER"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "league",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "can_play",
+        "TEXT DEFAULT '[]'"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "cannot_play",
+        "TEXT DEFAULT '[]'"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "maybe_play",
+        "TEXT DEFAULT '[]'"
     );
 
     // Schema migration: linked_players gains guild_id + player_id.

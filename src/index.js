@@ -31,9 +31,15 @@ const {
     startAutoStatsSync
 } = require("./Services/autoStatsSync");
 
+const {
+    handleSessionButton,
+    startScheduleSessionCleanup
+} = require("./Services/scheduleSessions");
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
@@ -106,6 +112,7 @@ client.once(
         }
 
         startAutoStatsSync();
+        startScheduleSessionCleanup(readyClient);
 
         try {
             const guilds =
@@ -245,6 +252,13 @@ client.on(
             }
 
             if (interaction.isButton()) {
+                if (
+                    interaction.customId.startsWith("session_rsvp:")
+                ) {
+                    await handleSessionButton(interaction);
+                    return;
+                }
+
                 if (
                     !interaction.customId.startsWith("automode_stop:")
                 ) {

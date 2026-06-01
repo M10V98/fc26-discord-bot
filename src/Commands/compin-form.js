@@ -5,6 +5,9 @@ const {
 
 const db = require("../Utils/db");
 const {
+    getGuildSettings
+} = require("../Services/settingsService");
+const {
     refreshAndGetCompetitiveMatches,
     aggregateCompetitivePlayers
 } = require("../Services/compStats");
@@ -67,7 +70,6 @@ module.exports = {
             option
                 .setName("last")
                 .setDescription("Recent competitive match window")
-                .setRequired(true)
                 .addChoices(
                     { name: "Last 5 matches", value: 5 },
                     { name: "Last 10 matches", value: 10 }
@@ -89,7 +91,8 @@ module.exports = {
             }
 
             const limit =
-                interaction.options.getInteger("last") || 10;
+                interaction.options.getInteger("last") ||
+                (await getGuildSettings(interaction.guild.id)).compInFormWindow;
 
             const [storedMatches, info, crestUrl, linkedRows] =
                 await Promise.all([
