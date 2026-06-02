@@ -600,6 +600,35 @@ const footballReplies = {
         "🎯 Compact, clinical, relentless.",
         "👑 Germany's greatest club."
     ]
+tactics: [
+    "The tactical battle is fascinating. 🧠",
+    "That setup is causing problems. 📋",
+    "Manager got the tactics spot on. ⚽"
+],
+
+training: [
+    "Hard work on the training ground shows. 💪",
+    "Practice makes perfect. ⚽",
+    "Those drills are paying off. 🔥"
+],
+
+transfer: [
+    "Transfer rumours never stop. 📰",
+    "That signing could be huge. ✍️",
+    "Scouts have been busy. 👀"
+],
+
+trophy: [
+    "Silverware is the goal. 🏆",
+    "Champions think differently. 👑",
+    "Eyes firmly on the trophy. 🏅"
+],
+
+matchday: [
+    "Nothing beats matchday. ⚽",
+    "Big-game atmosphere today. 🔥",
+    "The fans are ready. 📣"
+],
  
 };
  
@@ -657,45 +686,48 @@ const footballTriggers = {
 };
  
 function getFootballReply(message) {
+
     const m = message.toLowerCase();
 
-    for (const [category, triggers] of Object.entries(footballTriggers)) {
+   for (const [category, triggers] of Object.entries(footballTriggers)) {
 
-        if (triggers.some(t => m.includes(t))) {
+    const matched = triggers.some(t => {
+        const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp(`\\b${escaped}\\b`, "i").test(m);
+    });
 
-            const replies = footballReplies[category];
+    if (!matched) {
+        continue;
+    }
 
-            if (replies && replies.length > 0) {
 
-                const reply =
-                    replies[
-                        Math.floor(
-                            Math.random() *
-                            replies.length
-                        )
-                    ];
+        const replies = footballReplies[category];
 
-                const emojiMatch =
-                    reply.match(
-                        /^(\p{Extended_Pictographic}(?:\uFE0F)?)/u
-                    );
-
-                if (!emojiMatch) {
-                    return reply;
-                }
-
-                const emoji =
-                    emojiMatch[1];
-
-                const text =
-                    reply.replace(
-                        /^(\p{Extended_Pictographic}(?:\uFE0F)?\s*)/u,
-                        ""
-                    );
-
-                return `${text} ${emoji}`;
-            }
+        if (!Array.isArray(replies) || replies.length === 0) {
+            continue;
         }
+
+        const reply =
+            replies[
+                Math.floor(
+                    Math.random() *
+                    replies.length
+                )
+            ];
+
+        const match =
+            reply.match(
+                /^([^\w\s]+)\s*(.*)$/
+            );
+
+        if (!match) {
+            return reply;
+        }
+
+        const emoji = match[1];
+        const text = match[2];
+
+        return `${text} ${emoji}`;
     }
 
     return null;
