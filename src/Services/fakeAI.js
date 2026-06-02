@@ -466,9 +466,9 @@ function shouldReplyAutomatically(question, options = {}) {
         /\b(bot|ourproclub|assistant)\b/i.test(text) ||
         text.includes("?");
     const chance =
-        directBotCue
-            ? options.directChance ?? 0.55
-            : options.passiveChance ?? 0.22;
+    directBotCue
+        ? options.directChance ?? 0.75
+        : options.passiveChance ?? 0.30;
 
     return Math.random() < chance;
 }

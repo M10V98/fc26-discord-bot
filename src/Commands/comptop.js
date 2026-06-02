@@ -110,12 +110,12 @@ module.exports = {
                     "Each command refreshes the friendly-match API before reading stored history"
                 ]),
                 "",
-                `**Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
-                `**Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
-                `**Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
-                `**Best Passers**\n${ranked(players, linkedMaps, "passPercent")}`,
-                `**Best Tacklers**\n${ranked(players, linkedMaps, "tacklePercent")}`,
-                `**Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
+                `⭐ **Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
+`⚽ **Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
+`🎯 **Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
+`🅿️ **Best Passers**\n${ranked(players, linkedMaps, "passPercent")}`,
+`🛡️ **Best Tacklers**\n${ranked(players, linkedMaps, "tacklePercent")}`,
+`🟥 **Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
             ].join("\n\n");
 
             const embed =

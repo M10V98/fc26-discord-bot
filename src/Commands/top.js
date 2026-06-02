@@ -108,12 +108,12 @@ module.exports = {
                     "Best passers and best tacklers are sorted by success percentage."
                 ]),
                 "",
-                `**Highest AMR**\n${ranked(players, linkedMaps, "ratingAve")}`,
-                `**Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
-                `**Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
-                `**Best Passers**\n${ranked(players, linkedMaps, "passSuccessRate")}`,
-                `**Best Tacklers**\n${ranked(players, linkedMaps, "tackleSuccessRate")}`,
-                `**Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
+               `⭐ **Highest AMR**\n${ranked(players, linkedMaps, "ratingAve")}`,
+`⚽ **Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
+`🎯 **Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
+`🅿️ **Best Passers**\n${ranked(players, linkedMaps, "passSuccessRate")}`,
+`🛡️ **Best Tacklers**\n${ranked(players, linkedMaps, "tackleSuccessRate")}`,
+`🟥 **Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
             ].join("\n\n");
 
             const embed =

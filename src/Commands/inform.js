@@ -200,11 +200,11 @@ module.exports = {
                     "**Best Tacklers**, sorted by tackle success percentage"
                 ]),
                 "",
-                `**Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
-                `**Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
-                `**Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-                `**Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
-                `**Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
+                `⭐ **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
+`⚽ **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
+`🎯 **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
+`🅿️ **Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
+`🛡️ **Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
             ].join("\n\n");
 
             const embed =

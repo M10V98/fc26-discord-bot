@@ -2,17 +2,35 @@ const {
     answerAutoMessage
 } = require("../Services/fakeAI");
 
-let cooldown = 0;
+const {
+    getFootballReply
+} = require("../Services/footballBrain");
+
+const cooldowns = new Map();
 
 const COOLDOWN_MS = 45000;
 const MAX_INPUT_LENGTH = 500;
+const FOOTBALL_REPLY_CHANCE = 0.12;
 
 module.exports = async message => {
-    if (message.author.bot || !message.guild) {
+
+    if (
+        message.author.bot ||
+        !message.guild
+    ) {
         return;
     }
 
-    if (Date.now() - cooldown < COOLDOWN_MS) {
+    const guildId =
+        message.guild.id;
+
+    const lastReply =
+        cooldowns.get(guildId) || 0;
+
+    if (
+        Date.now() - lastReply <
+        COOLDOWN_MS
+    ) {
         return;
     }
 
@@ -27,17 +45,53 @@ module.exports = async message => {
         return;
     }
 
-    const response =
-        await answerAutoMessage(
-            message.guild.id,
-            content
+    try {
+
+        // Main fake AI replies
+        const aiResponse =
+            await answerAutoMessage(
+                guildId,
+                content
+            );
+
+        if (aiResponse) {
+
+            cooldowns.set(
+                guildId,
+                Date.now()
+            );
+
+            return await message.reply(
+                aiResponse
+            );
+        }
+
+        // Football chatter replies
+        const footballReply =
+            getFootballReply(content);
+
+        if (
+            footballReply &&
+            Math.random() <
+                FOOTBALL_REPLY_CHANCE
+        ) {
+
+            cooldowns.set(
+                guildId,
+                Date.now()
+            );
+
+            return await message.reply(
+                footballReply
+            );
+        }
+
+    } catch (err) {
+
+        console.error(
+            "FakeAI messageCreate error:",
+            err
         );
 
-    if (!response) {
-        return;
     }
-
-    cooldown = Date.now();
-
-    await message.reply(response);
 };
