@@ -1,104 +1,97 @@
 const {
-    answerAutoMessage
+answerAutoMessage
 } = require("../Services/fakeAI");
 
 const {
-    getFootballReply
+getFootballReply
 } = require("../Services/footballBrain");
-
-console.log("messageCreate.js loaded");
 
 const cooldowns = new Map();
 
-const COOLDOWN_MS = 15000;
+const COOLDOWN_MS = 5000;
 const MAX_INPUT_LENGTH = 500;
-const FOOTBALL_REPLY_CHANCE = 1.0; // force replies while testing
+const FOOTBALL_REPLY_CHANCE = 0.25;
 
 module.exports = async message => {
 
-    console.log(
-        "MESSAGE:",
-        message.content
-    );
+```
+if (
+    message.author.bot ||
+    !message.guild
+) {
+    return;
+}
 
-    if (
-        message.author.bot ||
-        !message.guild
-    ) {
-        return;
-    }
+const guildId = message.guild.id;
 
-    const guildId =
-        message.guild.id;
+const lastReply =
+    cooldowns.get(guildId) || 0;
 
-    const lastReply =
-        cooldowns.get(guildId) || 0;
+if (
+    Date.now() - lastReply <
+    COOLDOWN_MS
+) {
+    return;
+}
 
-    if (
-        Date.now() - lastReply <
-        COOLDOWN_MS
-    ) {
-        return;
-    }
+const content =
+    String(message.content || "")
+        .replace(/<@!?\d+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, MAX_INPUT_LENGTH);
 
-    const content =
-        String(message.content || "")
-            .replace(/<@!?\d+>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .slice(0, MAX_INPUT_LENGTH);
+if (!content) {
+    return;
+}
 
-    try {
+try {
 
-        const aiResponse =
-            await answerAutoMessage(
-                guildId,
-                content
-            );
+    const aiResponse =
+        await answerAutoMessage(
+            guildId,
+            content
+        );
 
-        console.log(
-            "AI RESPONSE:",
+    if (aiResponse) {
+
+        cooldowns.set(
+            guildId,
+            Date.now()
+        );
+
+        return await message.reply(
             aiResponse
         );
+    }
 
-        if (aiResponse) {
+    const footballReply =
+        getFootballReply(content);
 
-            cooldowns.set(
-                guildId,
-                Date.now()
-            );
+    if (
+        footballReply &&
+        Math.random() <
+            FOOTBALL_REPLY_CHANCE
+    ) {
 
-            return message.reply(
-                aiResponse
-            );
-        }
+        cooldowns.set(
+            guildId,
+            Date.now()
+        );
 
-        const footballReply =
-            getFootballReply(content);
-
-        console.log(
-            "FOOTBALL RESPONSE:",
+        return await message.reply(
             footballReply
         );
-
-        if (footballReply) {
-
-            cooldowns.set(
-                guildId,
-                Date.now()
-            );
-
-            return message.reply(
-                footballReply
-            );
-        }
-
-    } catch (err) {
-
-        console.error(
-            "MESSAGECREATE ERROR:",
-            err
-        );
-
     }
+
+} catch (err) {
+
+    console.error(
+        "messageCreate error:",
+        err
+    );
+
+}
+```
+
 };

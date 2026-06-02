@@ -658,16 +658,46 @@ const footballTriggers = {
  
 function getFootballReply(message) {
     const m = message.toLowerCase();
- 
+
     for (const [category, triggers] of Object.entries(footballTriggers)) {
+
         if (triggers.some(t => m.includes(t))) {
+
             const replies = footballReplies[category];
+
             if (replies && replies.length > 0) {
-                return replies[Math.floor(Math.random() * replies.length)];
+
+                const reply =
+                    replies[
+                        Math.floor(
+                            Math.random() *
+                            replies.length
+                        )
+                    ];
+
+                const emojiMatch =
+                    reply.match(
+                        /^(\p{Extended_Pictographic}(?:\uFE0F)?)/u
+                    );
+
+                if (!emojiMatch) {
+                    return reply;
+                }
+
+                const emoji =
+                    emojiMatch[1];
+
+                const text =
+                    reply.replace(
+                        /^(\p{Extended_Pictographic}(?:\uFE0F)?\s*)/u,
+                        ""
+                    );
+
+                return `${text} ${emoji}`;
             }
         }
     }
- 
+
     return null;
 }
  
