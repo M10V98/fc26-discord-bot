@@ -143,32 +143,7 @@ client.once(
         }
     }
 );
-client.once(
-    Events.ClientReady,
-    async readyClient => {
-
-        console.log(
-            `Logged in as ${readyClient.user.tag}`
-        );
-
-        try {
-
-            await deployCommands();
-
-            console.log(
-                "✅ Slash commands deployed."
-            );
-
-        } catch (err) {
-
-            console.error(
-                "❌ Slash command deployment failed:",
-                err
-            );
-        }
-
-        await db.init();
-
+       
 client.on(
     Events.InteractionCreate,
     async interaction => {
