@@ -599,7 +599,8 @@ const footballReplies = {
         "💪 Youth development is outstanding.",
         "🎯 Compact, clinical, relentless.",
         "👑 Germany's greatest club."
-    ]
+    ],
+
 tactics: [
     "The tactical battle is fascinating. 🧠",
     "That setup is causing problems. 📋",
