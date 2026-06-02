@@ -30,11 +30,8 @@ function valueFor(player, key) {
     if (key === "avgRating") return `${number(player.avgRating, 1)} average match rating`;
     if (key === "goals") return `${number(player.goals)} goals, ${number(player.shotPercent)}% conversion rate`;
     if (key === "assists") return `${number(player.assists)} assists`;
-    if (key === "secondAssists") return `${number(player.secondAssists)} second assists`;
-    if (key === "dribbles") return `${number(player.dribbles)} dribbles`;
-    if (key === "passes") return `${number(player.passes)} passes, ${number(player.passPercent)}% success rate`;
-    if (key === "tackles") return `${number(player.tackles)} tackles, ${number(player.tacklePercent)}% success rate`;
-    if (key === "interceptions") return `${number(player.interceptions)} interceptions`;
+    if (key === "passPercent") return `${number(player.passPercent)}% pass success (${number(player.passes)} passes)`;
+    if (key === "tacklePercent") return `${number(player.tacklePercent)}% tackle success (${number(player.tackles)} tackles)`;
     if (key === "redCards") return `${number(player.redCards)} red cards`;
     return number(player[key]);
 }
@@ -113,15 +110,12 @@ module.exports = {
                     "Each command refreshes the friendly-match API before reading stored history"
                 ]),
                 "",
-                `✨ **Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
-                `⚽ **Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
-                `🤝 **Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
-                `🔗 **Top Second Assists**\n${ranked(players, linkedMaps, "secondAssists")}`,
-                `💨 **Top Dribblers**\n${ranked(players, linkedMaps, "dribbles")}`,
-                `👟 **Top Passers**\n${ranked(players, linkedMaps, "passes")}`,
-                `🛡️ **Top Tacklers**\n${ranked(players, linkedMaps, "tackles")}`,
-                `🧠 **Top Interceptors**\n${ranked(players, linkedMaps, "interceptions")}`,
-                `🟥 **Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
+                `**Highest AMR**\n${ranked(players, linkedMaps, "avgRating")}`,
+                `**Top Goalscorers**\n${ranked(players, linkedMaps, "goals")}`,
+                `**Top Assisters**\n${ranked(players, linkedMaps, "assists")}`,
+                `**Best Passers**\n${ranked(players, linkedMaps, "passPercent")}`,
+                `**Best Tacklers**\n${ranked(players, linkedMaps, "tacklePercent")}`,
+                `**Most Red Cards**\n${ranked(players, linkedMaps, "redCards")}`
             ].join("\n\n");
 
             const embed =

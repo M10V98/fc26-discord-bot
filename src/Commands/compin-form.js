@@ -33,11 +33,8 @@ function valueFor(player, key) {
     if (key === "avgRating") return `${number(player.avgRating, 1)} average rating`;
     if (key === "goals") return `${number(player.goals)} goals, ${number(player.shots)} shots, ${number(player.shotPercent)}% conversion rate`;
     if (key === "assists") return `${number(player.assists)} assists`;
-    if (key === "secondAssists") return `${number(player.secondAssists)} second assists`;
-    if (key === "passes") return `${number(player.passes)} passes, ${number(player.passAttempts)} attempted, ${number(player.passPercent)}% success rate`;
-    if (key === "dribbles") return `${number(player.dribbles)} dribbles completed`;
-    if (key === "interceptions") return `${number(player.interceptions)} interceptions`;
-    if (key === "tackles") return `${number(player.tackles)} tackles, ${number(player.tackleAttempts)} attempted, ${number(player.tacklePercent)}% success rate`;
+    if (key === "passPercent") return `${number(player.passes)} passes, ${number(player.passAttempts)} attempted, ${number(player.passPercent)}% success rate`;
+    if (key === "tacklePercent") return `${number(player.tackles)} tackles, ${number(player.tackleAttempts)} attempted, ${number(player.tacklePercent)}% success rate`;
     return number(player[key]);
 }
 
@@ -131,14 +128,11 @@ module.exports = {
                     "Each run refreshes the friendly-match API before reading stored history"
                 ]),
                 "",
-                `✨ **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
-                `⚽ **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
-                `🤝 **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-                `🔗 **Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
-                `👟 **Top Passers**\n${top(players, linkedMaps, "passes")}`,
-                `💨 **Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
-                `🧠 **Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
-                `🛡️ **Top Tacklers**\n${top(players, linkedMaps, "tackles")}`
+                `**Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
+                `**Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
+                `**Top Assisters**\n${top(players, linkedMaps, "assists")}`,
+                `**Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
+                `**Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
             ].join("\n\n");
 
             const embed =

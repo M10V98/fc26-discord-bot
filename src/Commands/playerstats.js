@@ -122,20 +122,12 @@ module.exports = {
                 playerName = linked.player_name;
             }
 
-            const [members, info, crestUrl, linkedRows, localRows] =
+            const [members, info, crestUrl, linkedRows] =
                 await Promise.all([
                     eaApi.getMembersStats(club.club_id),
                     eaApi.getClubInfo(club.club_id),
                     getCrestUrl(club.club_id),
-                    getLinkedRows(db, interaction.guild.id),
-                    db.all(
-                        `
-                        SELECT *
-                        FROM players
-                        WHERE guild_id = ?
-                        `,
-                        [interaction.guild.id]
-                    )
+                    getLinkedRows(db, interaction.guild.id)
                 ]);
 
             const player =
@@ -155,12 +147,6 @@ module.exports = {
                 info?.[String(club.club_id)]?.name || "Club";
             const linkedMaps =
                 buildLinkedMaps(linkedRows);
-            const local =
-                localRows.find(row =>
-                    String(row.player_name || "").toLowerCase() ===
-                    String(player.name).toLowerCase()
-                ) || {};
-
             const display =
                 displayName(player.name, linkedMaps);
             const proName =
@@ -179,20 +165,15 @@ module.exports = {
                 `▌ xG Per Game: **${goalRatio(player)}**`,
                 `🤝 Assists: **${number(player.assists)}**`,
                 `▌ xA Per Game: **${n(player.gamesPlayed) ? (n(player.assists) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
-                `🔗 Second Assists: **${number(local.second_assists)}**`,
-                `💨 Dribbles: **${number(local.dribbles)}**`,
                 `👟 Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
                 `▌ xP Per Game: **${n(player.gamesPlayed) ? (n(player.passesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
                 `🛡️ Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
                 `▌ xT Per Game: **${n(player.gamesPlayed) ? (n(player.tacklesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
-                `🧠 Interceptions: **${number(local.interceptions)}**`,
                 "",
                 `🚫 Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
                 `🥅 Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
                 `🟥 Red Cards: **${number(player.redCards)}**`,
                 "",
-                "> Use `/matches` or `/automode` regularly to keep your",
-                "> **Second Assists, Dribbles, and Interceptions** updated"
             ].join("\n");
 
             const embed =

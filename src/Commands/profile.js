@@ -11,6 +11,24 @@ const {
     getTotalXPForLevel
 } = require("../Utils/xpSystem");
 
+function formatPositionCounts(value) {
+    let counts = {};
+
+    try {
+        counts = JSON.parse(value || "{}");
+    } catch {
+        counts = {};
+    }
+
+    const lines =
+        Object.entries(counts)
+            .filter(([, count]) => Number(count) > 0)
+            .sort((a, b) => Number(b[1]) - Number(a[1]))
+            .map(([position, count]) => `${position}: **${count}**`);
+
+    return lines.length ? lines.join("\n") : "No position data tracked yet.";
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("profile")
@@ -125,6 +143,11 @@ module.exports = {
                     name: `${EMOJIS.RATING} Avg Rating`,
                     value: `${avgRating}`,
                     inline: true
+                },
+                {
+                    name: "Positions Played",
+                    value: formatPositionCounts(player.position_counts),
+                    inline: false
                 }
             )
             .setFooter({

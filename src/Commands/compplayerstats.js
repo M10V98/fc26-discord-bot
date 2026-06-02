@@ -165,11 +165,8 @@ module.exports = {
     XG: "\u{1F4CA}",            // 📊
     ASSISTS: "\u{1F45F}",       // 👟
     XA: "\u{1F4C8}",            // 📈
-    SECOND: "\u{1F501}",        // 🔁
-    DRIBBLES: "\u{1F3C3}",      // 🏃
     PASSES: "\u{1F9E0}",        // 🧠
     TACKLES: "\u{1F6E1}\uFE0F", // 🛡️
-    INTERCEPT: "\u{270B}",      // ✋
     CLEAN: "\u{1F9FC}",         // 🧼
     SAVES: "\u{1F9E4}",         // 🧤
     RED: "\u{1F7E5}"            // 🟥
@@ -186,13 +183,10 @@ const description = [
     `${EMOJIS.XG} xG Per Game: **${perGame(player.goals, apps)}**`,
     `${EMOJIS.ASSISTS} Assists: **${number(player.assists)}**`,
     `${EMOJIS.XA} xA Per Game: **${perGame(player.assists, apps)}**`,
-    `${EMOJIS.SECOND} Second Assists: **${number(player.secondAssists)}**`,
-    `${EMOJIS.DRIBBLES} Dribbles: **${number(player.dribbles)}**`,
     `${EMOJIS.PASSES} Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
     `${EMOJIS.XA} xP Per Game: **${perGame(player.passes, apps)}**`,
     `${EMOJIS.TACKLES} Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
     `${EMOJIS.TACKLES} xT Per Game: **${perGame(player.tackles, apps)}**`,
-    `${EMOJIS.INTERCEPT} Interceptions: **${number(player.interceptions)}**`,
     "",
     `${EMOJIS.CLEAN} Clean Sheets: **${number(player.cleanSheets)}**`,
     `${EMOJIS.SAVES} Saves: **${number(player.saves)}**`,

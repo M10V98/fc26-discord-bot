@@ -6,14 +6,19 @@ const {
 const {
     syncGuildStats
 } = require("../Services/autoStatsSync");
-const {
-    linkClubToGuild
-} = require("../Services/clubSearch");
+const db = require("../Utils/db");
 
 async function linkById(interaction, clubId) {
-    await linkClubToGuild(
-        interaction.guild.id,
-        clubId
+    await db.run(
+        `
+        INSERT OR REPLACE INTO clubs
+        (guild_id, club_id)
+        VALUES (?, ?)
+        `,
+        [
+            interaction.guild.id,
+            clubId
+        ]
     );
 
     const syncResult =

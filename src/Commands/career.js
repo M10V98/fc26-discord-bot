@@ -134,7 +134,7 @@ module.exports = {
 
             const description = [
                 `Showing EA career totals only - ${display} does not have Premium.`,
-                "Premium includes OurProClub historical tracking, which includes passes, tackles, second assists, dribbles, interceptions, and more.",
+                "Premium includes OurProClub historical tracking, including passes, tackles, ratings, clean sheets, XP, and more.",
                 "Get OurProClub Premium",
                 "",
                 "**EA ID**",

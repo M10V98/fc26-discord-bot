@@ -60,6 +60,8 @@ const initStatements = [
         position TEXT,
         archetype TEXT,
         xp INTEGER DEFAULT 0,
+        all_time_xp INTEGER DEFAULT 0,
+        season_xp INTEGER DEFAULT 0,
         level INTEGER DEFAULT 1,
         matches INTEGER DEFAULT 0,
         goals INTEGER DEFAULT 0,
@@ -77,12 +79,25 @@ const initStatements = [
         motm INTEGER DEFAULT 0,
         red_cards INTEGER DEFAULT 0,
         total_rating REAL DEFAULT 0,
+        position_counts TEXT DEFAULT '{}',
         PRIMARY KEY (guild_id, player_id)
     )
     `,
     `
     CREATE TABLE IF NOT EXISTS processed_matches (
         match_id TEXT PRIMARY KEY
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS xp_seasons (
+        guild_id TEXT,
+        club_id TEXT,
+        season_number INTEGER DEFAULT 1,
+        last_match_type TEXT,
+        last_match_timestamp INTEGER,
+        last_finish_count INTEGER DEFAULT 0,
+        updated_at INTEGER,
+        PRIMARY KEY (guild_id, club_id)
     )
     `,
     `
@@ -143,15 +158,6 @@ const initStatements = [
         cannot_play TEXT DEFAULT '[]',
         maybe_play TEXT DEFAULT '[]',
         created_at INTEGER
-    )
-    `,
-    `
-    CREATE TABLE IF NOT EXISTS club_search_cache (
-        club_id TEXT PRIMARY KEY,
-        club_name TEXT,
-        crest_asset_id TEXT,
-        raw_json TEXT,
-        updated_at INTEGER
     )
     `,
     `
@@ -270,10 +276,30 @@ async function init() {
     );
 
     await ensureColumn(
-        "club_search_cache",
-        "crest_asset_id",
-        "TEXT"
+        "players",
+        "position_counts",
+        "TEXT DEFAULT '{}'"
     );
+
+    await ensureColumn(
+        "players",
+        "all_time_xp",
+        "INTEGER DEFAULT 0"
+    );
+
+    await ensureColumn(
+        "players",
+        "season_xp",
+        "INTEGER DEFAULT 0"
+    );
+
+    await ensureColumn(
+        "xp_seasons",
+        "last_finish_count",
+        "INTEGER DEFAULT 0"
+    );
+
+    await backfillXpColumns();
 
     // Schema migration: linked_players gains guild_id + player_id.
     await ensureColumn(
@@ -303,6 +329,8 @@ async function init() {
                     position TEXT,
                     archetype TEXT,
                     xp INTEGER DEFAULT 0,
+                    all_time_xp INTEGER DEFAULT 0,
+                    season_xp INTEGER DEFAULT 0,
                     level INTEGER DEFAULT 1,
                     matches INTEGER DEFAULT 0,
                     goals INTEGER DEFAULT 0,
@@ -319,7 +347,8 @@ async function init() {
                     clean_sheets INTEGER DEFAULT 0,
                     motm INTEGER DEFAULT 0,
                     red_cards INTEGER DEFAULT 0,
-                    total_rating REAL DEFAULT 0
+                    total_rating REAL DEFAULT 0,
+                    position_counts TEXT DEFAULT '{}'
                 )
             `);
 
@@ -347,6 +376,8 @@ async function init() {
                     position TEXT,
                     archetype TEXT,
                     xp INTEGER DEFAULT 0,
+                    all_time_xp INTEGER DEFAULT 0,
+                    season_xp INTEGER DEFAULT 0,
                     level INTEGER DEFAULT 1,
                     matches INTEGER DEFAULT 0,
                     goals INTEGER DEFAULT 0,
@@ -364,6 +395,7 @@ async function init() {
                     motm INTEGER DEFAULT 0,
                     red_cards INTEGER DEFAULT 0,
                     total_rating REAL DEFAULT 0,
+                    position_counts TEXT DEFAULT '{}',
                     PRIMARY KEY (guild_id, player_id)
                 )
             `);
@@ -377,6 +409,22 @@ async function init() {
             );
         }
     );
+}
+
+async function backfillXpColumns() {
+    await run(`
+        UPDATE players
+        SET all_time_xp = xp
+        WHERE COALESCE(all_time_xp, 0) = 0
+        AND COALESCE(xp, 0) > 0
+    `);
+
+    await run(`
+        UPDATE players
+        SET season_xp = xp
+        WHERE COALESCE(season_xp, 0) = 0
+        AND COALESCE(xp, 0) > 0
+    `);
 }
 
 async function migrateLinkedPlayersTable() {

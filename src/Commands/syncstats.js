@@ -61,6 +61,20 @@ module.exports = {
                     { limit }
                 );
 
+            const overallStats =
+                await eaApi.getOverallStats(
+                    club.club_id,
+                    {
+                        forceRefresh: true
+                    }
+                ).catch(err => {
+                    console.error(
+                        "overall stats fetch failed:",
+                        err
+                    );
+                    return null;
+                });
+
             if (!matches?.length) {
                 return interaction.editReply(
                     "No matches found for this club."
@@ -75,6 +89,7 @@ module.exports = {
                     interaction.guild.id,
                     {
                         clubId: club.club_id,
+                        overallStats,
                         force
                     }
                 );

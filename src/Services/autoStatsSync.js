@@ -30,6 +30,20 @@ async function syncGuildStats(guildId, clubId, options = {}) {
             }
         );
 
+    const overallStats =
+        await eaApi.getOverallStats(
+            clubId,
+            {
+                forceRefresh: Boolean(options.forceRefresh)
+            }
+        ).catch(err => {
+            console.error(
+                `overall stats sync failed for guild ${guildId}:`,
+                err
+            );
+            return null;
+        });
+
     if (!matches?.length) {
         await syncCompetitiveMatches(
             guildId,
@@ -81,6 +95,7 @@ async function syncGuildStats(guildId, clubId, options = {}) {
                 guildId,
                 {
                     clubId,
+                    overallStats,
                     force: Boolean(options.force)
                 }
             );

@@ -261,6 +261,32 @@ client.on(
                 }
 
                 if (
+                    interaction.customId.startsWith("leaderboard_page:")
+                ) {
+                    const command =
+                        client.commands.get("leaderboard");
+
+                    if (command?.handleLeaderboardPageButton) {
+                        await command.handleLeaderboardPageButton(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("ratings_page:")
+                ) {
+                    const command =
+                        client.commands.get("ratings");
+
+                    if (command?.handleRatingsPageButton) {
+                        await command.handleRatingsPageButton(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("session_rsvp:")
                 ) {
                     await handleSessionButton(interaction);

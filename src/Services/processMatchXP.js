@@ -1,4 +1,5 @@
 const db = require("../Utils/db");
+const eaApi = require("./eaApi");
 
 const archetypes = require("../Utils/archetypes");
 
@@ -25,6 +26,170 @@ function isFriendlyMatch(match, ourClub) {
 
         return normalized === "friendlymatch" || normalized === "friendly";
     });
+}
+
+function normalizeMatchType(match, ourClub) {
+    return String(
+        match.matchType ||
+        match.matchtype ||
+        ourClub?.matchType ||
+        ourClub?.matchtype ||
+        ""
+    )
+        .toLowerCase()
+        .replace(/[\s_-]/g, "");
+}
+
+function getOverallStatsRow(overallStats, clubId) {
+    if (Array.isArray(overallStats)) {
+        return overallStats.find(row =>
+            String(row.clubId) === String(clubId)
+        ) || overallStats[0];
+    }
+
+    return overallStats;
+}
+
+function getFinishCount(overallStats) {
+    return Object.entries(overallStats || {})
+        .filter(([key]) =>
+            /^finishesInDivision\d+Group\d+$/.test(key)
+        )
+        .reduce(
+            (total, [, value]) => total + Number(value || 0),
+            0
+        );
+}
+
+async function getSeasonStats(clubId, options = {}) {
+    if (options.overallStats) {
+        return getOverallStatsRow(
+            options.overallStats,
+            clubId
+        );
+    }
+
+    const overallStats =
+        await eaApi.getOverallStats(
+            clubId,
+            {
+                forceRefresh: Boolean(options.forceRefreshSeasonStats)
+            }
+        );
+
+    return getOverallStatsRow(
+        overallStats,
+        clubId
+    );
+}
+
+async function updateSeasonState(guildId, clubId, match, ourClub, options = {}) {
+    const matchType =
+        normalizeMatchType(match, ourClub);
+    const timestamp =
+        Number(match.timestamp || 0);
+    const seasonStats =
+        await getSeasonStats(clubId, options).catch(err => {
+            console.error(
+                "season stats fetch failed:",
+                err.message
+            );
+            return null;
+        });
+    const finishCount =
+        getFinishCount(seasonStats);
+    const existing =
+        await db.get(
+            `
+            SELECT *
+            FROM xp_seasons
+            WHERE guild_id = ?
+            AND club_id = ?
+            `,
+            [
+                guildId,
+                String(clubId)
+            ]
+        );
+
+    if (
+        existing &&
+        timestamp &&
+        Number(existing.last_match_timestamp || 0) > timestamp
+    ) {
+        return existing;
+    }
+
+    const shouldStartNewSeason =
+        existing &&
+        finishCount > Number(existing.last_finish_count || 0);
+    const seasonNumber =
+        Number(existing?.season_number || 1) +
+        (shouldStartNewSeason ? 1 : 0);
+
+    if (shouldStartNewSeason) {
+        await db.run(
+            `
+            UPDATE players
+            SET season_xp = 0,
+                xp = 0
+            WHERE guild_id = ?
+            `,
+            [guildId]
+        );
+    }
+
+    await db.run(
+        `
+        INSERT OR REPLACE INTO xp_seasons
+        (
+            guild_id,
+            club_id,
+            season_number,
+            last_match_type,
+            last_match_timestamp,
+            last_finish_count,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            guildId,
+            String(clubId),
+            seasonNumber,
+            matchType,
+            timestamp,
+            Math.max(
+                finishCount,
+                Number(existing?.last_finish_count || 0)
+            ),
+            Date.now()
+        ]
+    );
+
+    return {
+        season_number: seasonNumber,
+        last_match_type: matchType,
+        last_finish_count: finishCount
+    };
+}
+
+function readPositionCounts(value) {
+    try {
+        const parsed = JSON.parse(value || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function writePositionCounts(existing, position) {
+    const counts = readPositionCounts(existing);
+    const key = String(position || "Unknown");
+
+    counts[key] = Number(counts[key] || 0) + 1;
+
+    return JSON.stringify(counts);
 }
 
 // =========================
@@ -85,6 +250,14 @@ async function processMatchXP(match, guildId, options = {}) {
         const ourPlayers =
             match.players?.[ourClubId] || {};
 
+        await updateSeasonState(
+            guildId,
+            ourClubId,
+            match,
+            ourClub,
+            options
+        );
+
         for (const [playerId, p] of Object.entries(ourPlayers)) {
 
             const cleanSheet =
@@ -123,11 +296,18 @@ async function processMatchXP(match, guildId, options = {}) {
                 ]
             );
 
-            const totalXP =
-                (existing?.xp || 0) + xp;
+            const allTimeXP =
+                Number(existing?.all_time_xp || existing?.xp || 0) + xp;
+            const seasonXP =
+                Number(existing?.season_xp || existing?.xp || 0) + xp;
 
             const level =
-                getLevelFromXP(totalXP);
+                getLevelFromXP(allTimeXP);
+            const positionCounts =
+                writePositionCounts(
+                    existing?.position_counts,
+                    p.pos || "Unknown"
+                );
 
             await db.run(`
             INSERT OR REPLACE INTO players (
@@ -135,6 +315,8 @@ async function processMatchXP(match, guildId, options = {}) {
                 player_name,
                 guild_id,
                 xp,
+                all_time_xp,
+                season_xp,
                 level,
                 matches,
                 goals,
@@ -152,11 +334,12 @@ async function processMatchXP(match, guildId, options = {}) {
                 motm,
                 red_cards,
                 total_rating,
+                position_counts,
                 archetype,
                 position
             )
             VALUES (
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?,
                 COALESCE(?,0)+1,
                 COALESCE(?,0)+?,
                 COALESCE(?,0)+?,
@@ -174,6 +357,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 COALESCE(?,0)+?,
                 ?,
                 ?,
+                ?,
                 ?
             )
         `,
@@ -181,7 +365,9 @@ async function processMatchXP(match, guildId, options = {}) {
                 playerId,
                 p.playername || existing?.player_name || playerId,
                 guildId,
-                totalXP,
+                seasonXP,
+                allTimeXP,
+                seasonXP,
                 level,
 
                 existing?.matches,
@@ -229,6 +415,8 @@ async function processMatchXP(match, guildId, options = {}) {
 
                 (existing?.total_rating || 0) +
                 Number(p.rating || 0),
+
+                positionCounts,
 
                 archetypes[p.archetypeid] || "Unknown",
 

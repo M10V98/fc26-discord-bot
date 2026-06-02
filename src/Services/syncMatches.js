@@ -122,7 +122,7 @@ function buildFallbackEmbed(match, ourClubId) {
         );
 }
 
-async function ensureMatchProcessed(match, guildId, clubId) {
+async function ensureMatchProcessed(match, guildId, clubId, overallStats = null) {
 
     const processed =
         await db.get(
@@ -135,7 +135,10 @@ async function ensureMatchProcessed(match, guildId, clubId) {
         return false;
     }
 
-    await processMatchXP(match, guildId, { clubId });
+    await processMatchXP(match, guildId, {
+        clubId,
+        overallStats
+    });
 
     return true;
 }
@@ -295,6 +298,19 @@ async function syncGuild(guildId, channel, options = {}) {
         }
 
         const latestMatch = matches[0];
+        const overallStats =
+            await eaApi.getOverallStats(
+                row.club_id,
+                {
+                    forceRefresh: true
+                }
+            ).catch(err => {
+                console.error(
+                    `overall stats fetch failed for guild ${guildId}:`,
+                    err
+                );
+                return null;
+            });
         const latestMatchId = String(latestMatch.matchId);
         const lastPostedMatchId =
             row.last_match_id
@@ -315,7 +331,8 @@ async function syncGuild(guildId, channel, options = {}) {
         await ensureMatchProcessed(
             latestMatch,
             guildId,
-            row.club_id
+            row.club_id,
+            overallStats
         );
 
         await sendMatchPost(

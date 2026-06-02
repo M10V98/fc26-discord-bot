@@ -1,29 +1,62 @@
 const BASE_LEVEL_XP = 12500;
 const LEVEL_GROWTH = Math.sqrt(1.35);
+const XP_WEIGHTS = {
+    appearance: 20,
+    goal: 50,
+    assist: 45,
+    tackle: 40,
+    save: 45,
+    pass: 35,
+    cleanSheet: 80,
+    motm: 90,
+    win: 40,
+    ratingPoint: 15
+};
+
+function calculateXPBreakdown(stats) {
+    const breakdown = {
+        appearances: (stats.matches || 0) * XP_WEIGHTS.appearance,
+        goals: (stats.goals || 0) * XP_WEIGHTS.goal,
+        assists: (stats.assists || 0) * XP_WEIGHTS.assist,
+        tackles: (stats.tackles || 0) * XP_WEIGHTS.tackle,
+        saves: (stats.saves || 0) * XP_WEIGHTS.save,
+        passes: (stats.passes || 0) * XP_WEIGHTS.pass,
+        cleanSheets: (stats.clean_sheets || 0) * XP_WEIGHTS.cleanSheet,
+        motm: (stats.motm || 0) * XP_WEIGHTS.motm,
+        rating: Math.floor((stats.total_rating || 0) * XP_WEIGHTS.ratingPoint)
+    };
+
+    return {
+        ...breakdown,
+        total:
+            Object.values(breakdown)
+                .reduce((sum, value) => sum + Number(value || 0), 0)
+    };
+}
 
 function calculateXP(stats) {
 
     let xp = 0;
 
-    xp += 25;
+    xp += XP_WEIGHTS.appearance;
 
-    xp += (stats.goals || 0) * 220;
-    xp += (stats.assists || 0) * 170;
-    xp += (stats.secondAssists || 0) * 95;
+    xp += (stats.goals || 0) * XP_WEIGHTS.goal;
+    xp += (stats.assists || 0) * XP_WEIGHTS.assist;
+    xp += (stats.secondAssists || 0) * 0;
 
-    xp += (stats.tackles || 0) * 45;
-    xp += (stats.interceptions || 0) * 55;
-    xp += (stats.saves || 0) * 70;
+    xp += (stats.tackles || 0) * XP_WEIGHTS.tackle;
+    xp += (stats.interceptions || 0) * 0;
+    xp += (stats.saves || 0) * XP_WEIGHTS.save;
 
-    xp += (stats.passes || 0) * 1.5;
-    xp += (stats.dribbles || 0) * 20;
+    xp += (stats.passes || 0) * XP_WEIGHTS.pass;
+    xp += (stats.dribbles || 0) * 0;
 
-    if (stats.cleanSheet) xp += 110;
-    if (stats.motm) xp += 160;
-    if (stats.win) xp += 70;
+    if (stats.cleanSheet) xp += XP_WEIGHTS.cleanSheet;
+    if (stats.motm) xp += XP_WEIGHTS.motm;
+    if (stats.win) xp += XP_WEIGHTS.win;
 
     xp += Math.floor(
-        (stats.rating || 0) * 20
+        (stats.rating || 0) * XP_WEIGHTS.ratingPoint
     );
 
     return Math.floor(xp);
@@ -77,7 +110,9 @@ function getTotalXPForLevel(level) {
 }
 
 module.exports = {
+    XP_WEIGHTS,
     calculateXP,
+    calculateXPBreakdown,
     getLevelFromXP,
     getXPForNextLevel,
     getTotalXPForLevel

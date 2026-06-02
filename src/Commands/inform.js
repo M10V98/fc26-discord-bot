@@ -36,28 +36,22 @@ function addPlayer(aggregate, playerId, player) {
             appearances: 0,
             goals: 0,
             assists: 0,
-            secondAssists: 0,
             ratingTotal: 0,
             passes: 0,
             passAttempts: 0,
             tackles: 0,
             tackleAttempts: 0,
-            dribbles: 0,
-            interceptions: 0,
             shots: 0
         };
 
     current.appearances += 1;
     current.goals += n(player.goals);
     current.assists += n(player.assists);
-    current.secondAssists += n(player.secondassists);
     current.ratingTotal += n(player.rating);
     current.passes += n(player.passesmade);
     current.passAttempts += n(player.passattempts);
     current.tackles += n(player.tacklesmade);
     current.tackleAttempts += n(player.tackleattempts);
-    current.dribbles += n(player.dribbles);
-    current.interceptions += n(player.interceptions);
     current.shots += n(player.shots);
 
     aggregate.set(playerId, current);
@@ -89,23 +83,11 @@ function valueFor(player, key) {
         return `${number(player.assists)} assists`;
     }
 
-    if (key === "secondAssists") {
-        return `${number(player.secondAssists)} second assists`;
-    }
-
-    if (key === "passes") {
+    if (key === "passPercent") {
         return `${number(player.passes)} passes, ${number(player.passAttempts)} attempted, ${number(player.passPercent)}% success rate`;
     }
 
-    if (key === "dribbles") {
-        return `${number(player.dribbles)} dribbles completed`;
-    }
-
-    if (key === "interceptions") {
-        return `${number(player.interceptions)} interceptions`;
-    }
-
-    if (key === "tackles") {
+    if (key === "tacklePercent") {
         return `${number(player.tackles)} tackles, ${number(player.tackleAttempts)} attempted, ${number(player.tacklePercent)}% success rate`;
     }
 
@@ -214,22 +196,15 @@ module.exports = {
                     "**Top Average Rating**, sorted by average match rating",
                     "**Top Goalscorers**, sorted by # goals",
                     "**Top Assisters**, sorted by # assists",
-                    "**Top Second Assisters**, sorted by # second assists",
-                    "**Top Passes**, sorted by # successful passes made",
-                    "**Top Dribblers**, sorted by # dribbles completed",
-                    "**Top Interceptors**, sorted by # interceptions",
-                    "**Top Tacklers**, sorted by # successful tackles made"
+                    "**Best Passers**, sorted by pass success percentage",
+                    "**Best Tacklers**, sorted by tackle success percentage"
                 ]),
-                "ℹ️ Use `/matches` or `/automode` regularly to keep your **Second Assists, Dribbles, and Interceptions** updated",
                 "",
-                `✨ **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
-                `⚽ **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
-                `🤝 **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-                `🔗 **Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
-                `👟 **Top Passers**\n${top(players, linkedMaps, "passes")}`,
-                `💨 **Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
-                `🧠 **Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
-                `🛡️ **Top Tacklers**\n${top(players, linkedMaps, "tackles")}`
+                `**Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
+                `**Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
+                `**Top Assisters**\n${top(players, linkedMaps, "assists")}`,
+                `**Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
+                `**Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
             ].join("\n\n");
 
             const embed =
