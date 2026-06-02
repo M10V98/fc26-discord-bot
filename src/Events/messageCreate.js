@@ -6,13 +6,20 @@ const {
     getFootballReply
 } = require("../Services/footballBrain");
 
+console.log("messageCreate.js loaded");
+
 const cooldowns = new Map();
 
-const COOLDOWN_MS = 45000;
+const COOLDOWN_MS = 15000;
 const MAX_INPUT_LENGTH = 500;
-const FOOTBALL_REPLY_CHANCE = 0.12;
+const FOOTBALL_REPLY_CHANCE = 1.0; // force replies while testing
 
 module.exports = async message => {
+
+    console.log(
+        "MESSAGE:",
+        message.content
+    );
 
     if (
         message.author.bot ||
@@ -41,18 +48,18 @@ module.exports = async message => {
             .trim()
             .slice(0, MAX_INPUT_LENGTH);
 
-    if (!content) {
-        return;
-    }
-
     try {
 
-        // Main fake AI replies
         const aiResponse =
             await answerAutoMessage(
                 guildId,
                 content
             );
+
+        console.log(
+            "AI RESPONSE:",
+            aiResponse
+        );
 
         if (aiResponse) {
 
@@ -61,27 +68,27 @@ module.exports = async message => {
                 Date.now()
             );
 
-            return await message.reply(
+            return message.reply(
                 aiResponse
             );
         }
 
-        // Football chatter replies
         const footballReply =
             getFootballReply(content);
 
-        if (
-            footballReply &&
-            Math.random() <
-                FOOTBALL_REPLY_CHANCE
-        ) {
+        console.log(
+            "FOOTBALL RESPONSE:",
+            footballReply
+        );
+
+        if (footballReply) {
 
             cooldowns.set(
                 guildId,
                 Date.now()
             );
 
-            return await message.reply(
+            return message.reply(
                 footballReply
             );
         }
@@ -89,7 +96,7 @@ module.exports = async message => {
     } catch (err) {
 
         console.error(
-            "FakeAI messageCreate error:",
+            "MESSAGECREATE ERROR:",
             err
         );
 
