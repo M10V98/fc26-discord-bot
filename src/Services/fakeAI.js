@@ -447,6 +447,49 @@ function detectIntent(question) {
  
     return "unknown";
 }
+
+function shouldReplyAutomatically(question, options = {}) {
+    const text = String(question || "").trim();
+
+    if (text.length < 8) {
+        return false;
+    }
+
+    const intent =
+        detectIntent(text);
+
+    if (intent === "unknown") {
+        return false;
+    }
+
+    const directBotCue =
+        /\b(bot|ourproclub|assistant)\b/i.test(text) ||
+        text.includes("?");
+    const chance =
+        directBotCue
+            ? options.directChance ?? 0.55
+            : options.passiveChance ?? 0.22;
+
+    return Math.random() < chance;
+}
+
+async function answerAutoMessage(guildId, message) {
+    const text =
+        String(message || "").trim();
+
+    if (!shouldReplyAutomatically(text)) {
+        return null;
+    }
+
+    const intent =
+        detectIntent(text);
+
+    if (intent === "unknown") {
+        return null;
+    }
+
+    return answerQuestion(guildId, text);
+}
  
 async function answerQuestion(guildId, question) {
  
@@ -677,5 +720,8 @@ async function answerQuestion(guildId, question) {
 }
  
 module.exports = {
-    answerQuestion
+    answerAutoMessage,
+    answerQuestion,
+    detectIntent,
+    shouldReplyAutomatically
 };

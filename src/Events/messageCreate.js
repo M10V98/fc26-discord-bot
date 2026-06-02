@@ -1,65 +1,43 @@
 const {
-    footballReplies,
-    footballTriggers
-} = require("../Services/footballBrain");
-
-const triggers = footballTriggers;
+    answerAutoMessage
+} = require("../Services/fakeAI");
 
 let cooldown = 0;
 
+const COOLDOWN_MS = 45000;
+const MAX_INPUT_LENGTH = 500;
+
 module.exports = async message => {
-
-    if (message.author.bot) {
+    if (message.author.bot || !message.guild) {
         return;
     }
 
-    const text = message.content.toLowerCase();
-
-    if (Date.now() - cooldown < 20000) {
+    if (Date.now() - cooldown < COOLDOWN_MS) {
         return;
     }
 
-    for (const category of Object.keys(triggers)) {
+    const content =
+        String(message.content || "")
+            .replace(/<@!?\d+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, MAX_INPUT_LENGTH);
 
-        const words = triggers[category];
-
-        if (words.some(word => text.includes(word))) {
-
-            cooldown = Date.now();
-
-            const responses = footballReplies[category];
-
-            const reply =
-                responses[
-                    Math.floor(
-                        Math.random() * responses.length
-                    )
-                ];
-
-            await message.reply(reply);
-            return;
-        }
+    if (!content) {
+        return;
     }
 
-    if (Math.random() < 0.005) {
-
-        cooldown = Date.now();
-
-        const randomThoughts = [
-            "⚫⚪ Massive club.",
-            "🏆 Another trophy incoming.",
-            "📈 Standards remain high.",
-            "🔥 Trust the process.",
-            "⚽ Football heritage."
-        ];
-
-        await message.reply(
-            randomThoughts[
-                Math.floor(
-                    Math.random() *
-                    randomThoughts.length
-                )
-            ]
+    const response =
+        await answerAutoMessage(
+            message.guild.id,
+            content
         );
+
+    if (!response) {
+        return;
     }
+
+    cooldown = Date.now();
+
+    await message.reply(response);
 };
