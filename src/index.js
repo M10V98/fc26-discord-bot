@@ -169,7 +169,6 @@ client.once(
 
         await db.init();
 
-        ...
 client.on(
     Events.InteractionCreate,
     async interaction => {
