@@ -62,7 +62,7 @@ module.exports = {
                             "- Includes player stats\n" +
                             "- XP updates automatically\n" +
                             "- Checks every 15 seconds\n" +
-                            "- Stops after 30 minutes without a new backend result"
+                            "- Stops after 90 minutes without a new backend result"
                         )
                 ],
                 components: [

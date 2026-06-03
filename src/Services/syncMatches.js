@@ -42,7 +42,11 @@ const SYNC_FETCH_COUNT =
         5,
         Number(process.env.AUTOMODE_FETCH_COUNT || 10)
     );
-const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+const INACTIVITY_LIMIT_MS =
+    Math.max(
+        45 * 60 * 1000,
+        Number(process.env.AUTOMODE_INACTIVITY_LIMIT_MS || 90 * 60 * 1000)
+    );
 
 function buildStopButtonRow(guildId) {
 
@@ -292,7 +296,7 @@ async function syncGuild(guildId, channel, options = {}) {
             await stopAutoMode(guildId, {
                 channel,
                 reason:
-                    "Stopped automatically after 30 minutes with no new match from EA."
+                    "Stopped automatically after 90 minutes with no new match from EA."
             });
             return {
                 status: "stopped_inactive"
