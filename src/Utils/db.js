@@ -142,6 +142,50 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS polls (
+        poll_id TEXT PRIMARY KEY,
+        guild_id TEXT,
+        channel_id TEXT,
+        message_id TEXT,
+        creator_id TEXT,
+        question TEXT,
+        options_json TEXT,
+        created_at INTEGER
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS poll_votes (
+        poll_id TEXT,
+        guild_id TEXT,
+        user_id TEXT,
+        option_index INTEGER,
+        voted_at INTEGER,
+        PRIMARY KEY (poll_id, user_id)
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS quiz_scores (
+        guild_id TEXT,
+        user_id TEXT,
+        correct INTEGER DEFAULT 0,
+        attempts INTEGER DEFAULT 0,
+        xp_awarded INTEGER DEFAULT 0,
+        updated_at INTEGER,
+        PRIMARY KEY (guild_id, user_id)
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS mod_infractions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id TEXT,
+        user_id TEXT,
+        moderator_id TEXT,
+        type TEXT,
+        reason TEXT,
+        created_at INTEGER
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS scheduled_sessions (
         session_id TEXT PRIMARY KEY,
         guild_id TEXT,

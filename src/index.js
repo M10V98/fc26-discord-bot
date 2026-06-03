@@ -248,6 +248,32 @@ client.on(
 
             if (interaction.isButton()) {
                 if (
+                    interaction.customId.startsWith("poll_vote:")
+                ) {
+                    const command =
+                        client.commands.get("poll");
+
+                    if (command?.handleVote) {
+                        await command.handleVote(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("quiz_answer:")
+                ) {
+                    const command =
+                        client.commands.get("quiz");
+
+                    if (command?.handleAnswer) {
+                        await command.handleAnswer(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("members_page:")
                 ) {
                     const command =
