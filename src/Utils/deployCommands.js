@@ -1,5 +1,7 @@
+
 const fs = require("fs");
 const path = require("path");
+
 require("dotenv").config({
     path: path.resolve(__dirname, "../../.env")
 });
@@ -7,14 +9,19 @@ require("dotenv").config({
 const { REST, Routes } = require("discord.js");
 
 async function deployCommands() {
+
     const token =
         process.env.TOKEN ||
         process.env.DISCORD_TOKEN ||
         process.env.BOT_TOKEN;
+
     const clientId = process.env.CLIENT_ID;
     const guildId = process.env.GUILD_ID;
+
     const deployScope =
-        String(process.env.DEPLOY_SCOPE || "global").toLowerCase();
+        String(
+            process.env.DEPLOY_SCOPE || "global"
+        ).toLowerCase();
 
     console.log("ENV CHECK:");
     console.log("TOKEN:", !!token);
@@ -26,93 +33,149 @@ async function deployCommands() {
 
     if (!token || !clientId) {
         throw new Error(
-            "Missing TOKEN/DISCORD_TOKEN/BOT_TOKEN or CLIENT_ID in .env"
+            "Missing TOKEN/DISCORD_TOKEN/BOT_TOKEN or CLIENT_ID"
         );
     }
 
     const commands = [];
-    const commandsPath = path.join(__dirname, "../Commands");
+
+    const commandsPath =
+        path.join(__dirname, "../Commands");
+
     const commandFiles =
         fs.readdirSync(commandsPath)
             .filter(file => file.endsWith(".js"));
 
-    console.log(`Found ${commandFiles.length} command files.`);
+    console.log(
+        `Found ${commandFiles.length} command files.`
+    );
 
     for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
 
         try {
-            const command = require(filePath);
+
+            const command =
+                require(
+                    path.join(commandsPath, file)
+                );
 
             if (!command?.data) {
-                console.log(`Skipped invalid command: ${file}`);
+                console.log(
+                    `Skipped invalid command: ${file}`
+                );
                 continue;
             }
 
-            commands.push(command.data.toJSON());
-            console.log(`Loaded command: ${command.data.name}`);
+            commands.push(
+                command.data.toJSON()
+            );
+
+            console.log(
+                `Loaded command: ${command.data.name}`
+            );
 
         } catch (err) {
-            console.log(`Failed to load command: ${file}`);
+
+            console.error(
+                `Failed loading ${file}`
+            );
+
             console.error(err);
         }
     }
 
-    const rest = new REST({ version: "10" }).setToken(token);
+    const rest =
+        new REST({ version: "10" })
+            .setToken(token);
 
-    console.log("Deploying slash commands...");
-
-    if (deployScope === "guild" && guildId) {
-        await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: commands }
-        );
-
-        console.log("Commands deployed to guild.");
-        return;
-    }
-
-    await rest.put(
-        Routes.applicationCommands(clientId),
-        { body: commands }
+    console.log(
+        "Deploying slash commands..."
     );
 
-    console.log("Commands deployed globally.");
+    let result;
 
-    if (guildId) {
-        await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: [] }
+    if (
+        deployScope === "guild" &&
+        guildId
+    ) {
+
+        result = await rest.put(
+            Routes.applicationGuildCommands(
+                clientId,
+                guildId
+            ),
+            {
+                body: commands
+            }
         );
 
-        console.log("Cleared guild-specific commands so global commands are used.");
+        console.log(
+            `✅ Guild commands deployed (${result.length})`
+        );
+
+    } else {
+
+        result = await rest.put(
+            Routes.applicationCommands(
+                clientId
+            ),
+            {
+                body: commands
+            }
+        );
+
+        console.log(
+            `✅ Global commands deployed (${result.length})`
+        );
+
+        if (guildId) {
+
+            await rest.put(
+                Routes.applicationGuildCommands(
+                    clientId,
+                    guildId
+                ),
+                {
+                    body: []
+                }
+            );
+
+            console.log(
+                "Cleared guild-specific commands."
+            );
+        }
     }
+
+    console.log(
+        "\n========== REGISTERED COMMANDS =========="
+    );
+
+    for (const cmd of result) {
+        console.log(`/${cmd.name}`);
+    }
+
+    console.log(
+        "========================================\n"
+    );
 }
 
 if (require.main === module) {
+
     deployCommands()
         .catch(err => {
-            console.error("Deployment failed:");
 
-            if (err.status === 401) {
-                console.error(
-                    "Discord rejected the bot token. Check that your local .env token is current and belongs to the same application as CLIENT_ID."
-                );
-            }
+            console.error(
+                "Deployment failed:"
+            );
 
             console.error(err);
+
             process.exitCode = 1;
-        })
-        .finally(async () => {
-            try {
-                const db = require("./db");
-                await db.close();
-            } catch (err) {
-                // Ignore cleanup errors; deployment already reported the useful result.
-            }
         });
 }
 
 module.exports = {
     deployCommands
 };
+
+
