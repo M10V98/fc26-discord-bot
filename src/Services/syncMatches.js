@@ -30,8 +30,18 @@ const {
 } = require("./matchInfographic");
 
 const activeGuilds = new Map();
+const syncingGuilds = new Set();
 
-const CHECK_INTERVAL_MS = 60 * 1000;
+const CHECK_INTERVAL_MS =
+    Math.max(
+        10 * 1000,
+        Number(process.env.AUTOMODE_CHECK_INTERVAL_MS || 15 * 1000)
+    );
+const SYNC_FETCH_COUNT =
+    Math.max(
+        5,
+        Number(process.env.AUTOMODE_FETCH_COUNT || 10)
+    );
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 
 function buildStopButtonRow(guildId) {
@@ -294,7 +304,8 @@ async function syncGuild(guildId, channel, options = {}) {
                 row.club_id,
                 {
                     forceRefresh: true,
-                    limit: 1
+                    limit: 1,
+                    maxResultCount: SYNC_FETCH_COUNT
                 }
             );
 
@@ -383,6 +394,23 @@ async function syncGuild(guildId, channel, options = {}) {
     }
 }
 
+async function runGuildSync(guildId, channel, options = {}) {
+
+    if (syncingGuilds.has(guildId)) {
+        return {
+            status: "busy"
+        };
+    }
+
+    syncingGuilds.add(guildId);
+
+    try {
+        return await syncGuild(guildId, channel, options);
+    } finally {
+        syncingGuilds.delete(guildId);
+    }
+}
+
 function startAutoMode(
     guildId,
     channel,
@@ -400,7 +428,7 @@ function startAutoMode(
     );
 
     const firstSync =
-        syncGuild(
+        runGuildSync(
         guildId,
         channel,
         { forcePostLatest: Boolean(options.postLatest) }
@@ -408,7 +436,7 @@ function startAutoMode(
 
     const interval = setInterval(() => {
 
-        syncGuild(
+        runGuildSync(
             guildId,
             channel
         );

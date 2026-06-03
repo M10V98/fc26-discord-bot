@@ -61,7 +61,7 @@ module.exports = {
                             "- Posts latest completed match\n" +
                             "- Includes player stats\n" +
                             "- XP updates automatically\n" +
-                            "- Checks every 60 seconds\n" +
+                            "- Checks every 15 seconds\n" +
                             "- Stops after 30 minutes without a new backend result"
                         )
                 ],
@@ -92,7 +92,7 @@ module.exports = {
             if (result?.status === "error") {
                 await interaction.followUp({
                     content:
-                        "AutoMode is on, but the first backend check failed. I will keep checking every 60 seconds.",
+                        "AutoMode is on, but the first backend check failed. I will keep checking every 15 seconds.",
                     ephemeral: true
                 });
             }

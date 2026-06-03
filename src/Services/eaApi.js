@@ -250,10 +250,13 @@ async function getMatches(clubId, matchType, options = {}) {
 async function getRecentMatches(clubId, options = {}) {
 
     const limit = options.limit || 100;
+    const maxResultCount =
+        options.maxResultCount ||
+        Math.min(100, Math.max(limit, 10));
 
     const fetchOpts = {
         forceRefresh: Boolean(options.forceRefresh),
-        maxResultCount: 100
+        maxResultCount
     };
 
     const [league, playoff, friendly] = await Promise.all([
