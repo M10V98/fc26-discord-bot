@@ -121,7 +121,7 @@ module.exports = {
             description,
             "Sessions",
             [
-                isAdmin && "`/schedule session` creates a role-backed RSVP post. Players choose Can Play, Cannot Play, or Maybe.",
+                isAdmin && "`/schedule session` creates a role-backed RSVP post with load-up and kick-off times. Players choose Can Play, Cannot Play, or Maybe.",
                 isAdmin && "The session role is assigned to Can Play users and deleted after the event."
             ]
         );

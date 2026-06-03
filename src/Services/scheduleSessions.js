@@ -401,6 +401,9 @@ function buildSessionEmbed(session, guild) {
     const canPlay = readList(session.can_play);
     const cannotPlay = readList(session.cannot_play);
     const maybePlay = readList(session.maybe_play);
+    const loadUpAt =
+        Number(session.load_up_at || 0) ||
+        Number(session.starts_at);
     const title =
         session.title ||
         `${guild?.name || "Club"} Scheduled Session`;
@@ -408,13 +411,16 @@ function buildSessionEmbed(session, guild) {
     const embed =
         new EmbedBuilder()
         .setColor("#ffffff")
-        .setTitle(`${underline(title)} - ${formatRelativeTime(session.starts_at)}`)
+        .setTitle(`${underline(title)} - Kick-off ${formatRelativeTime(session.starts_at)}`)
         .setDescription(
             [
                 `<@${session.creator_id}> has scheduled a Pro Clubs session. Use the buttons below: ✅ (can play), ❌ (cannot), ❔ (maybe).`,
                 "",
-                "**Time & Date**",
-                formatDiscordTime(session.starts_at),
+                "**Load Up**",
+                `${formatDiscordTime(loadUpAt)} (${formatRelativeTime(loadUpAt)})`,
+                "",
+                "**Kick-Off**",
+                `${formatDiscordTime(session.starts_at)} (${formatRelativeTime(session.starts_at)})`,
                 "",
                 "**League**",
                 escapeMarkdown(session.league || "Not set"),
@@ -474,13 +480,29 @@ function buildSessionButtons(sessionId) {
 
 async function createSession(interaction, options) {
     const startsAt = parseDateTime(options.timeText);
+    const loadUpAt =
+        options.loadUpTimeText
+            ? parseDateTime(options.loadUpTimeText)
+            : startsAt;
 
     if (!startsAt) {
         throw new Error("I could not understand that time/date. Try `2026-06-01 20:00` or `01/06/2026 20:00`.");
     }
 
+    if (!loadUpAt) {
+        throw new Error("I could not understand the load-up time. Try `19:45`, `7.45pm`, or `1945`.");
+    }
+
+    if (loadUpAt >= startsAt) {
+        throw new Error("Load-up time must be before kick-off time.");
+    }
+
     if (startsAt <= Date.now()) {
-        throw new Error("That session time is in the past.");
+        throw new Error("That kick-off time is in the past.");
+    }
+
+    if (loadUpAt <= Date.now()) {
+        throw new Error("That load-up time is in the past.");
     }
 
     const sessionId =
@@ -530,7 +552,9 @@ async function createSession(interaction, options) {
             options.title ||
             `${clubName} Scheduled Session`,
         time_text: options.timeText,
+        load_up_text: options.loadUpTimeText,
         league: options.league,
+        load_up_at: loadUpAt,
         starts_at: startsAt,
         crest_url: crestUrl,
         can_play: "[]",
@@ -559,15 +583,17 @@ async function createSession(interaction, options) {
             creator_id,
             title,
             time_text,
+            load_up_text,
             league,
             crest_url,
+            load_up_at,
             starts_at,
             can_play,
             cannot_play,
             maybe_play,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             sessionId,
@@ -578,8 +604,10 @@ async function createSession(interaction, options) {
             interaction.user.id,
             session.title,
             options.timeText,
+            options.loadUpTimeText,
             options.league,
             crestUrl,
+            loadUpAt,
             startsAt,
             "[]",
             "[]",

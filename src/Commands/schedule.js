@@ -26,8 +26,14 @@ module.exports = {
                 )
                 .addStringOption(option =>
                     option
-                        .setName("time")
-                        .setDescription("Examples: 20:00, 8pm, 8.30pm, 2030")
+                        .setName("load_up_time")
+                        .setDescription("When players should load up. Examples: 19:45, 7.45pm, 1945")
+                        .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
+                        .setName("kickoff_time")
+                        .setDescription("Kick-off time. Examples: 20:00, 8pm, 8.30pm, 2030")
                         .setRequired(true)
                 )
                 .addStringOption(option =>
@@ -60,7 +66,9 @@ module.exports = {
                     interaction,
                     {
                         timeText:
-                            `${interaction.options.getString("date")} ${interaction.options.getString("time")}`,
+                            `${interaction.options.getString("date")} ${interaction.options.getString("kickoff_time")}`,
+                        loadUpTimeText:
+                            `${interaction.options.getString("date")} ${interaction.options.getString("load_up_time")}`,
                         league:
                             interaction.options.getString("league"),
                         title:
