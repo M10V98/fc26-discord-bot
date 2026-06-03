@@ -6,13 +6,15 @@ const {
 const bellaApi =
     require("../Services/bellaApi");
 
-const db =
-    require("../Utils/db");
+const {
+    getCrestUrl
+} = require("../Services/crests");
 
 const {
-    FOOTER,
-    getCrestUrl
+    FOOTER
 } = require("../Utils/embedStyle");
+
+const BELLA_CLUB_ID = 525542;
 
 module.exports = {
 
@@ -32,52 +34,48 @@ module.exports = {
             const stats =
                 await bellaApi.getCompStats();
 
-            const club =
-                await db.get(
-                    `
-                    SELECT club_id
-                    FROM clubs
-                    WHERE guild_id = ?
-                    `,
-                    [interaction.guild.id]
+            const crestUrl =
+                await getCrestUrl(
+                    BELLA_CLUB_ID
                 );
 
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
                     .setTitle(
-                        "📊 Competition Statistics"
+                        "📊 Bella Ciao FC Competition Statistics"
                     )
                     .setThumbnail(
-                        club
-                            ? getCrestUrl(club.club_id)
-                            : null
+                        crestUrl
                     )
                     .addFields(
                         {
                             name: "🏆 Results",
                             value:
-                                `Wins: **${stats.wins}**\n` +
-                                `Draws: **${stats.draws}**\n` +
-                                `Losses: **${stats.losses}**`,
+                                `✅ Wins: **${stats.wins ?? 0}**\n` +
+                                `🤝 Draws: **${stats.draws ?? 0}**\n` +
+                                `❌ Losses: **${stats.losses ?? 0}**`,
                             inline: true
                         },
                         {
                             name: "⚽ Activity",
                             value:
-                                `Matches: **${stats.total}**\n` +
-                                `Players: **${stats.activeplayers}**`,
+                                `🎮 Matches: **${stats.total ?? 0}**\n` +
+                                `👥 Players: **${stats.activeplayers ?? 0}**`,
                             inline: true
                         },
                         {
                             name: "🥇 Achievements",
                             value:
-                                `Win Rate: **${stats.winrate}**\n` +
-                                `Trophies: **${stats.trophies}**`,
+                                `📈 Win Rate: **${stats.winrate ?? "0%"}**\n` +
+                                `🏅 Trophies: **${stats.trophies ?? 0}**`,
                             inline: true
                         }
                     )
-                    .setFooter(FOOTER);
+                    .setFooter({
+                        text: FOOTER.text,
+                        iconURL: FOOTER.iconURL
+                    });
 
             await interaction.editReply({
                 embeds: [embed]
@@ -85,7 +83,10 @@ module.exports = {
 
         } catch (err) {
 
-            console.error(err);
+            console.error(
+                "CompStats error:",
+                err
+            );
 
             await interaction.editReply(
                 "Failed to load competition statistics."

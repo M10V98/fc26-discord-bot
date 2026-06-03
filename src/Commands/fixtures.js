@@ -9,15 +9,16 @@ const {
 const bellaApi =
     require("../Services/bellaApi");
 
-const db =
-    require("../Utils/db");
+const {
+    getCrestUrl
+} = require("../Services/crests");
 
 const {
-    FOOTER,
-    getCrestUrl
+    FOOTER
 } = require("../Utils/embedStyle");
 
 const PAGE_SIZE = 5;
+const BELLA_CLUB_ID = 525542;
 
 module.exports = {
 
@@ -37,21 +38,16 @@ module.exports = {
             const fixtures =
                 await bellaApi.getFixtures();
 
-            if (!fixtures.length) {
+            if (!fixtures?.length) {
 
                 return interaction.editReply(
                     "No upcoming fixtures found."
                 );
             }
 
-            const club =
-                await db.get(
-                    `
-                    SELECT club_id
-                    FROM clubs
-                    WHERE guild_id = ?
-                    `,
-                    [interaction.guild.id]
+            const crestUrl =
+                await getCrestUrl(
+                    BELLA_CLUB_ID
                 );
 
             let page = 0;
@@ -77,14 +73,10 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor("#ffffff")
                         .setTitle(
-                            "📋 Upcoming Fixtures"
+                            "📋 Bella Ciao FC Fixtures"
                         )
                         .setThumbnail(
-                            club
-                                ? getCrestUrl(
-                                    club.club_id
-                                )
-                                : null
+                            crestUrl
                         )
                         .setFooter({
                             text:
@@ -96,21 +88,22 @@ module.exports = {
                 for (const fixture of pageFixtures) {
 
                     const date =
-                        new Date(
-                            fixture.date
-                        )
-                            .toLocaleDateString(
+                        fixture.date
+                            ? new Date(
+                                fixture.date
+                            ).toLocaleDateString(
                                 "en-GB"
-                            );
+                            )
+                            : "Unknown";
 
                     embed.addFields({
                         name:
                             `⚔️ ${fixture.match}`,
                         value:
-                            `📅 ${date}\n` +
-                            `⏰ ${fixture.time}\n` +
-                            `🏆 ${fixture.competition}\n` +
-                            `🏟️ ${fixture.venue}`,
+                            `📅 Date: ${date}\n` +
+                            `⏰ Time: ${fixture.time || "TBC"}\n` +
+                            `🏆 Competition: ${fixture.competition || "Unknown"}\n` +
+                            `🏟️ Venue: ${fixture.venue || "TBC"}`,
                         inline: false
                     });
                 }
@@ -124,7 +117,7 @@ module.exports = {
                         .addComponents(
                             new ButtonBuilder()
                                 .setCustomId(
-                                    "prev"
+                                    "fixtures_prev"
                                 )
                                 .setLabel(
                                     "Previous"
@@ -138,7 +131,7 @@ module.exports = {
 
                             new ButtonBuilder()
                                 .setCustomId(
-                                    "next"
+                                    "fixtures_next"
                                 )
                                 .setLabel(
                                     "Next"
@@ -152,7 +145,7 @@ module.exports = {
                                 )
                         );
 
-            const msg =
+            const message =
                 await interaction.editReply({
                     embeds: [
                         createEmbed()
@@ -163,7 +156,7 @@ module.exports = {
                 });
 
             const collector =
-                msg.createMessageComponentCollector({
+                message.createMessageComponentCollector({
                     time: 300000
                 });
 
@@ -185,14 +178,14 @@ module.exports = {
 
                     if (
                         i.customId ===
-                        "next"
+                        "fixtures_next"
                     ) {
                         page++;
                     }
 
                     if (
                         i.customId ===
-                        "prev"
+                        "fixtures_prev"
                     ) {
                         page--;
                     }
@@ -208,9 +201,26 @@ module.exports = {
                 }
             );
 
+            collector.on(
+                "end",
+                async () => {
+
+                    try {
+
+                        await interaction.editReply({
+                            components: []
+                        });
+
+                    } catch {}
+                }
+            );
+
         } catch (err) {
 
-            console.error(err);
+            console.error(
+                "Fixtures error:",
+                err
+            );
 
             await interaction.editReply(
                 "Failed to load fixtures."

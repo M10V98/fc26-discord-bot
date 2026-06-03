@@ -6,13 +6,15 @@ const {
 const bellaApi =
     require("../Services/bellaApi");
 
-const db =
-    require("../Utils/db");
+const {
+    getCrestUrl
+} = require("../Services/crests");
 
 const {
-    FOOTER,
-    getCrestUrl
+    FOOTER
 } = require("../Utils/embedStyle");
+
+const BELLA_CLUB_ID = 525542;
 
 module.exports = {
 
@@ -32,14 +34,9 @@ module.exports = {
             const staff =
                 await bellaApi.getStaff();
 
-            const club =
-                await db.get(
-                    `
-                    SELECT club_id
-                    FROM clubs
-                    WHERE guild_id = ?
-                    `,
-                    [interaction.guild.id]
+            const crestUrl =
+                await getCrestUrl(
+                    BELLA_CLUB_ID
                 );
 
             const embed =
@@ -49,19 +46,31 @@ module.exports = {
                         "🏢 Bella Ciao FC Staff"
                     )
                     .setThumbnail(
-                        club
-                            ? getCrestUrl(club.club_id)
-                            : null
+                        crestUrl
                     )
-                    .setFooter(FOOTER);
+                    .setFooter({
+                        text: FOOTER.text,
+                        iconURL: FOOTER.iconURL
+                    });
 
-            for (const member of staff) {
+            if (!staff?.length) {
 
-                embed.addFields({
-                    name: `👔 ${member.role}`,
-                    value: member.name,
-                    inline: true
-                });
+                embed.setDescription(
+                    "No staff information available."
+                );
+
+            } else {
+
+                for (const member of staff) {
+
+                    embed.addFields({
+                        name:
+                            `👔 ${member.role || "Staff"}`,
+                        value:
+                            member.name || "Unknown",
+                        inline: true
+                    });
+                }
             }
 
             await interaction.editReply({
@@ -70,7 +79,10 @@ module.exports = {
 
         } catch (err) {
 
-            console.error(err);
+            console.error(
+                "Staff error:",
+                err
+            );
 
             await interaction.editReply(
                 "Failed to load staff."
