@@ -273,6 +273,18 @@ client.on(
                     return;
                 }
 
+                 if (
+                      interaction.customId.startsWith("resetstats_")
+                ) {
+                     const command =
+                         client.commands.get("resetstats");
+
+                     if (command?.handleResetButtons) {
+                         await command.handleResetButtons(interaction);
+                    }
+
+                    return;
+              }
                 if (
                     interaction.customId.startsWith("ratings_page:")
                 ) {
