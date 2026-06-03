@@ -119,8 +119,8 @@ module.exports = {
                         inline: true
                     },
                     {
-                        name: "Rating",
-                        value: `${number(player.total_rating, 1)} total rating x ${XP_WEIGHTS.ratingPoint} = **${number(breakdown.rating)}**`,
+                        name: "Red Cards",
+                        value: `${number(player.red_cards)} x ${XP_WEIGHTS.redCards} = **${number(breakdown.redCards)}**`,
                         inline: true
                     }
                 )
