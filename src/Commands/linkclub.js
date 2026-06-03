@@ -1,6 +1,7 @@
 const {
     SlashCommandBuilder,
-    MessageFlags
+    MessageFlags,
+    PermissionFlagsBits
 } = require("discord.js");
 
 const {
@@ -9,11 +10,12 @@ const {
 const db = require("../Utils/db");
 
 async function linkById(interaction, clubId) {
-   console.log({
-    guild: interaction.guild,
-    guildId: interaction.guildId
-});
- await db.run(
+    console.log({
+        guild: interaction.guild,
+        guildId: interaction.guildId
+    });
+
+    await db.run(
         `
         INSERT OR REPLACE INTO clubs
         (guild_id, club_id)
@@ -43,6 +45,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("linkclub")
         .setDescription("Link your EA club. Find your ClubID on the EA Clubs Ranking website.")
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // ✅ Admin-only visibility
         .addStringOption(option =>
             option
                 .setName("clubid")
@@ -51,6 +54,14 @@ module.exports = {
         ),
 
     async execute(interaction) {
+        // ✅ Admin check (runtime protection)
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({
+                content: "You must be an admin to use this command.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
         await interaction.deferReply({
             flags: MessageFlags.Ephemeral
         });
