@@ -9,7 +9,11 @@ const {
 const db = require("../Utils/db");
 
 async function linkById(interaction, clubId) {
-    await db.run(
+   console.log({
+    guild: interaction.guild,
+    guildId: interaction.guildId
+});
+ await db.run(
         `
         INSERT OR REPLACE INTO clubs
         (guild_id, club_id)
