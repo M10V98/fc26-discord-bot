@@ -7,15 +7,20 @@ const {
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const eaApi = require("../Services/eaApi");
 const {
     FOOTER,
     number,
     escapeMarkdown
 } = require("../Utils/embedStyle");
+const {
+    getClubName
+} = require("../Utils/scoreboard");
 
 const QUIZ_XP = 100;
 const TIME_LIMIT_SECONDS = 60;
 const quizTimers = new Map();
+const advancingQuestions = new Set();
 
 const STATIC_QUESTIONS = [
     ["In FC Clubs, which stat best shows a player is consistently completing distribution?", ["Pass success rate", "Shot success rate", "Tackle success rate", "Save percentage"], 0],
@@ -74,20 +79,239 @@ function staticQuestion() {
     return shuffleAnswers(row[0], row[1], row[2]);
 }
 
-async function dynamicQuestion(guildId) {
+function playerName(stats) {
+    return stats?.playername || "Unknown";
+}
+
+function uniqueAnswers(correct, candidates) {
+    const seen = new Set([String(correct).toLowerCase()]);
+    const answers = [correct];
+
+    for (const candidate of candidates) {
+        const value = String(candidate || "").trim();
+        const key = value.toLowerCase();
+
+        if (!value || seen.has(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        answers.push(value);
+
+        if (answers.length >= 4) {
+            break;
+        }
+    }
+
+    return answers.length === 4
+        ? answers
+        : null;
+}
+
+function getOurClubId(match, clubId) {
+    const ids = Object.keys(match.clubs || {});
+
+    return ids.includes(String(clubId))
+        ? String(clubId)
+        : ids[0];
+}
+
+function latestMatchQuestions(matches, clubId) {
+    const latest = matches[0];
+
+    if (!latest) {
+        return [];
+    }
+
+    const ourId = getOurClubId(latest, clubId);
+    const opponentId =
+        Object.keys(latest.clubs || {})
+            .find(id => id !== ourId);
+    const ourClub = latest.clubs?.[ourId];
+    const opponentClub = latest.clubs?.[opponentId];
     const players =
-        await db.all(
-            `
-            SELECT *
-            FROM players
-            WHERE guild_id = ?
-            AND COALESCE(matches, 0) > 0
-            `,
+        Object.values(latest.players?.[ourId] || {});
+    const playerNames =
+        players
+            .map(playerName)
+            .filter(Boolean)
+            .sort(() => Math.random() - 0.5);
+
+    if (!ourClub || !opponentClub || players.length < 4) {
+        return [];
+    }
+
+    const score =
+        `${number(ourClub.goals)}-${number(opponentClub.goals)}`;
+    const allScores =
+        [
+            score,
+            `${number(opponentClub.goals)}-${number(ourClub.goals)}`,
+            `${number(ourClub.goals)}-${number(Number(opponentClub.goals || 0) + 1)}`,
+            `${number(Number(ourClub.goals || 0) + 1)}-${number(opponentClub.goals)}`
+        ];
+    const statLeader = key =>
+        players
+            .slice()
+            .sort((a, b) => Number(b[key] || 0) - Number(a[key] || 0))[0];
+    const goalsLeader = statLeader("goals");
+    const assistsLeader = statLeader("assists");
+    const ratingLeader = statLeader("rating");
+    const questions = [
+        {
+            question: "What was the score in our latest tracked game?",
+            answers: uniqueAnswers(score, allScores.slice(1)),
+            correct: score
+        },
+        {
+            question: "What was the name of the latest team we played?",
+            answers: uniqueAnswers(
+                getClubName(opponentClub),
+                matches
+                    .map(match => {
+                        const id = getOurClubId(match, clubId);
+                        const oppId =
+                            Object.keys(match.clubs || {})
+                                .find(candidate => candidate !== id);
+                        return getClubName(match.clubs?.[oppId]);
+                    })
+            ),
+            correct: getClubName(opponentClub)
+        },
+        {
+            question: "Who scored the most goals in our latest tracked game?",
+            answers: uniqueAnswers(playerName(goalsLeader), playerNames),
+            correct:
+                Number(goalsLeader?.goals || 0) > 0
+                    ? playerName(goalsLeader)
+                    : null
+        },
+        {
+            question: "Who got the most assists in our latest tracked game?",
+            answers: uniqueAnswers(playerName(assistsLeader), playerNames),
+            correct:
+                Number(assistsLeader?.assists || 0) > 0
+                    ? playerName(assistsLeader)
+                    : null
+        },
+        {
+            question: "Who had the highest rating in our latest tracked game?",
+            answers: uniqueAnswers(playerName(ratingLeader), playerNames),
+            correct: playerName(ratingLeader)
+        }
+    ];
+
+    return questions
+        .filter(row => row.answers && row.correct)
+        .map(row => shuffleAnswers(row.question, row.answers, 0));
+}
+
+function bestChemistryQuestion(matches, clubId) {
+    const pairs = new Map();
+
+    for (const match of matches || []) {
+        const ourId = getOurClubId(match, clubId);
+        const players =
+            Object.entries(match.players?.[ourId] || {});
+
+        for (let i = 0; i < players.length; i++) {
+            for (let j = i + 1; j < players.length; j++) {
+                const [idA, a] = players[i];
+                const [idB, b] = players[j];
+                const key =
+                    [idA, idB].sort().join(":");
+                const existing =
+                    pairs.get(key) || {
+                        names: [playerName(a), playerName(b)].sort(),
+                        matches: 0,
+                        wins: 0,
+                        rating: 0,
+                        goalContrib: 0
+                    };
+                const ourClub = match.clubs?.[ourId];
+                const opponentId =
+                    Object.keys(match.clubs || {})
+                        .find(id => id !== ourId);
+                const opponentClub = match.clubs?.[opponentId];
+                const won =
+                    Number(ourClub?.goals || 0) >
+                    Number(opponentClub?.goals || 0);
+
+                existing.matches += 1;
+                existing.wins += won ? 1 : 0;
+                existing.rating +=
+                    (Number(a.rating || 0) + Number(b.rating || 0)) / 2;
+                existing.goalContrib +=
+                    Number(a.goals || 0) +
+                    Number(a.assists || 0) +
+                    Number(b.goals || 0) +
+                    Number(b.assists || 0);
+                pairs.set(key, existing);
+            }
+        }
+    }
+
+    const ranked =
+        [...pairs.values()]
+            .filter(pair => pair.matches >= 2)
+            .map(pair => ({
+                label: pair.names.join(" + "),
+                score:
+                    ((pair.wins / pair.matches) * 45) +
+                    ((pair.rating / pair.matches) * 6) +
+                    ((pair.goalContrib / pair.matches) * 8)
+            }))
+            .sort((a, b) => b.score - a.score);
+
+    if (ranked.length < 4) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        "Which two players currently have the best tracked chemistry?",
+        ranked.slice(0, 4).map(pair => pair.label),
+        0
+    );
+}
+
+async function dynamicQuestion(guildId) {
+    const club =
+        await db.get(
+            `SELECT * FROM clubs WHERE guild_id = ?`,
             [guildId]
         );
+    const [players, recentMatches] =
+        await Promise.all([
+            db.all(
+                `
+                SELECT *
+                FROM players
+                WHERE guild_id = ?
+                AND COALESCE(matches, 0) > 0
+                `,
+                [guildId]
+            ),
+            club?.club_id
+                ? eaApi.getRecentMatches(
+                    club.club_id,
+                    {
+                        forceRefresh: true,
+                        limit: 100,
+                        maxResultCount: 100
+                    }
+                ).catch(() => [])
+                : []
+        ]);
 
     if (players.length < 2) {
-        return null;
+        const liveQuestions =
+            club?.club_id
+                ? latestMatchQuestions(recentMatches, club.club_id)
+                : [];
+
+        return liveQuestions.length
+            ? liveQuestions[Math.floor(Math.random() * liveQuestions.length)]
+            : null;
     }
 
     const sortedBy = key =>
@@ -120,15 +344,39 @@ async function dynamicQuestion(guildId) {
             correct: sortedBy("matches")[0]?.player_name
         },
         {
+            question: "Who has made the most tracked appearances?",
+            correct: sortedBy("matches")[0]?.player_name
+        },
+        {
             question: "Who has recorded the most tracked clean sheets?",
             correct: sortedBy("clean_sheets")[0]?.player_name
         },
         {
             question: "Who has won the most tracked Man of the Match awards?",
             correct: sortedBy("motm")[0]?.player_name
+        },
+        {
+            question: "Who has the most tracked red cards?",
+            correct:
+                Number(sortedBy("red_cards")[0]?.red_cards || 0) > 0
+                    ? sortedBy("red_cards")[0]?.player_name
+                    : null
         }
     ]
         .filter(row => row.correct);
+
+    if (club?.club_id) {
+        categories.push(
+            ...latestMatchQuestions(recentMatches, club.club_id)
+        );
+
+        const chemistryQuestion =
+            bestChemistryQuestion(recentMatches, club.club_id);
+
+        if (chemistryQuestion) {
+            categories.push(chemistryQuestion);
+        }
+    }
 
     if (!categories.length) {
         return null;
@@ -138,6 +386,10 @@ async function dynamicQuestion(guildId) {
         categories[
             Math.floor(Math.random() * categories.length)
         ];
+    if (selected.answers) {
+        return selected;
+    }
+
     const distractors =
         players
             .map(player => player.player_name)
@@ -287,6 +539,97 @@ async function recordAttempt(guildId, userId, correct) {
     }
 }
 
+async function getActiveQuiz(guildId) {
+    return db.get(
+        `
+        SELECT *
+        FROM quiz_sessions
+        WHERE guild_id = ?
+        AND active = 1
+        LIMIT 1
+        `,
+        [guildId]
+    );
+}
+
+async function getEligibleAnswerCount(guild) {
+    if (!guild) {
+        return 0;
+    }
+
+    const fetched =
+        await guild.members.fetch().catch(() => null);
+    const members =
+        fetched || guild.members.cache;
+    const humans =
+        members?.filter(member => !member.user?.bot);
+
+    if (humans?.size) {
+        return humans.size;
+    }
+
+    return Math.max(0, Number(guild.memberCount || 0) - 1);
+}
+
+function mentionSummary(rows) {
+    if (!rows.length) {
+        return "No one";
+    }
+
+    return rows
+        .map(row => `<@${row.user_id}>`)
+        .join(", ")
+        .slice(0, 900);
+}
+
+async function buildResultContent(session, question, reason) {
+    const answers =
+        await db.all(
+            `
+            SELECT *
+            FROM quiz_answers
+            WHERE session_id = ?
+            AND question_id = ?
+            ORDER BY answered_at ASC
+            `,
+            [
+                session.session_id,
+                session.current_question_id
+            ]
+        );
+    const correctRows =
+        answers.filter(row => Number(row.correct));
+    const wrongRows =
+        answers.filter(row => !Number(row.correct));
+
+    for (const row of answers) {
+        await recordAttempt(
+            session.guild_id,
+            row.user_id,
+            Boolean(Number(row.correct))
+        );
+    }
+
+    const correctAnswer =
+        question.answers?.[question.correct] || "unknown";
+    const closeLine =
+        reason === "all_answered"
+            ? "\u{1F4E3} Everyone answered."
+            : "\u23F1\uFE0F Time is up.";
+
+    return [
+        closeLine,
+        `Correct answer: **${escapeMarkdown(correctAnswer)}**`,
+        `\u2705 Correct: ${mentionSummary(correctRows)}`,
+        `\u274C Wrong: ${mentionSummary(wrongRows)}`,
+        correctRows.length
+            ? `Awarded **${QUIZ_XP} XP** to each correct answer.`
+            : "No XP awarded this round.",
+        "",
+        "Next question:"
+    ].join("\n").slice(0, 1900);
+}
+
 function clearQuizTimer(sessionId) {
     const timer =
         quizTimers.get(sessionId);
@@ -298,6 +641,16 @@ function clearQuizTimer(sessionId) {
 }
 
 async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time") {
+    const advanceKey =
+        `${sessionId}:${expectedQuestionId}`;
+
+    if (advancingQuestions.has(advanceKey)) {
+        return;
+    }
+
+    advancingQuestions.add(advanceKey);
+    clearQuizTimer(sessionId);
+
     const session =
         await db.get(
             `
@@ -313,53 +666,57 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
         !Number(session.active) ||
         session.current_question_id !== expectedQuestionId
     ) {
+        advancingQuestions.delete(advanceKey);
         return;
     }
 
-    const current =
-        JSON.parse(session.current_question_json || "{}");
-    const next =
-        await nextQuestion(session.guild_id);
-    const nextQuestionId =
-        createQuestionId();
-    const nextCount =
-        Number(session.asked_count || 0) + 1;
-    const message =
-        await client.channels
-            .fetch(session.channel_id)
-            .then(channel => channel.messages.fetch(session.message_id))
-            .catch(() => null);
+    try {
+        const current =
+            JSON.parse(session.current_question_json || "{}");
+        const next =
+            await nextQuestion(session.guild_id);
+        const nextQuestionId =
+            createQuestionId();
+        const nextCount =
+            Number(session.asked_count || 0) + 1;
+        const message =
+            await client.channels
+                .fetch(session.channel_id)
+                .then(channel => channel.messages.fetch(session.message_id))
+                .catch(() => null);
+        const resultContent =
+            await buildResultContent(session, current, reason);
 
-    await db.run(
-        `
-        UPDATE quiz_sessions
-        SET current_question_id = ?,
-            current_question_json = ?,
-            asked_count = ?,
-            updated_at = ?
-        WHERE session_id = ?
-        `,
-        [
-            nextQuestionId,
-            JSON.stringify(next),
-            nextCount,
-            Date.now(),
-            sessionId
-        ]
-    );
+        await db.run(
+            `
+            UPDATE quiz_sessions
+            SET current_question_id = ?,
+                current_question_json = ?,
+                asked_count = ?,
+                updated_at = ?
+            WHERE session_id = ?
+            `,
+            [
+                nextQuestionId,
+                JSON.stringify(next),
+                nextCount,
+                Date.now(),
+                sessionId
+            ]
+        );
 
-    if (message) {
-        await message.edit({
-            content:
-                reason === "time"
-                    ? `Time. Correct answer: ${current.answers?.[current.correct] || "unknown"}. Next question:`
-                    : "Next question:",
-            embeds: [buildQuestionEmbed(next, nextCount)],
-            components: [buildButtons(sessionId, nextQuestionId)]
-        });
+        if (message) {
+            await message.edit({
+                content: resultContent,
+                embeds: [buildQuestionEmbed(next, nextCount)],
+                components: [buildButtons(sessionId, nextQuestionId)]
+            });
+        }
+
+        scheduleQuizAdvance(client, sessionId, nextQuestionId);
+    } finally {
+        advancingQuestions.delete(advanceKey);
     }
-
-    scheduleQuizAdvance(client, sessionId, nextQuestionId);
 }
 
 function scheduleQuizAdvance(client, sessionId, expectedQuestionId) {
@@ -548,19 +905,38 @@ module.exports = {
             ]
         );
 
-        await recordAttempt(
-            interaction.guild.id,
-            interaction.user.id,
-            isCorrect
-        );
-
-        return interaction.reply({
-            content:
-                isCorrect
-                    ? `Correct. You earned ${QUIZ_XP} XP.`
-                    : "Answer submitted.",
+        await interaction.reply({
+            content: "Answer submitted. Results will show when the question closes.",
             ephemeral: true
         });
+
+        const answered =
+            await db.get(
+                `
+                SELECT COUNT(*) AS count
+                FROM quiz_answers
+                WHERE session_id = ?
+                AND question_id = ?
+                `,
+                [
+                    sessionId,
+                    clickedQuestionId
+                ]
+            );
+        const eligibleCount =
+            await getEligibleAnswerCount(interaction.guild);
+
+        if (
+            eligibleCount > 0 &&
+            Number(answered?.count || 0) >= eligibleCount
+        ) {
+            await advanceQuiz(
+                interaction.client,
+                sessionId,
+                clickedQuestionId,
+                "all_answered"
+            );
+        }
     },
 
     async handleStop(interaction) {
@@ -601,5 +977,11 @@ module.exports = {
             embeds: [],
             components: []
         });
+    },
+
+    async hasActiveQuiz(guildId) {
+        return Boolean(
+            await getActiveQuiz(guildId)
+        );
     }
 };

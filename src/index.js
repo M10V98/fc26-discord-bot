@@ -86,6 +86,15 @@ client.once(
         console.log(`Logged in as ${readyClient.user.tag}`);
 
         await db.init();
+        await db.run(
+            `
+            UPDATE quiz_sessions
+            SET active = 0,
+                updated_at = ?
+            WHERE active = 1
+            `,
+            [Date.now()]
+        );
 
         try {
             const linkedClubs =
@@ -164,6 +173,29 @@ client.on(
                     client.commands.get(interaction.commandName);
 
                 if (!command) return;
+
+                const quizCommand =
+                    client.commands.get("quiz");
+                const quizSubcommand =
+                    interaction.commandName === "quiz"
+                        ? interaction.options.getSubcommand(false)
+                        : null;
+                const allowDuringQuiz =
+                    interaction.commandName === "quiz" &&
+                    quizSubcommand === "leaderboard";
+                const activeQuiz =
+                    !allowDuringQuiz &&
+                    quizCommand?.hasActiveQuiz
+                        ? await quizCommand.hasActiveQuiz(interaction.guild.id)
+                        : false;
+
+                if (activeQuiz) {
+                    return interaction.reply({
+                        content:
+                            "A quiz is active right now. Other commands are locked until someone presses Stop. `/quiz leaderboard` still works.",
+                        ephemeral: true
+                    });
+                }
 
                 await command.execute(interaction);
                 return;
