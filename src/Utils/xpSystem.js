@@ -1,7 +1,7 @@
 const BASE_LEVEL_XP = 12500;
 
 const LEVEL_GROWTH =
-    Math.sqrt(1.35);
+    Math.sqrt(1.45);
 
 const XP_WEIGHTS = {
 
