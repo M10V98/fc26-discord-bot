@@ -221,6 +221,14 @@ function competitionFromText(text) {
         };
     }
 
+    if (lower.includes("conference league")) {
+        return {
+            type: "competition",
+            key: "conference league",
+            data: COMPETITIONS["conference league"]
+        };
+    }
+
     if (lower.includes("world cup")) {
         return {
             type: "competition",
