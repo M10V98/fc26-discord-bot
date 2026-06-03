@@ -13,13 +13,13 @@ const {
     getStoredPlayer,
     getModeMatches,
     summarizePlayerForm,
+    aggregateFormStats,
     compareStoredPlayers
 } = require("../Services/playerAnalytics");
 const {
     FOOTER,
     underline,
     number,
-    memberWinRate,
     escapeMarkdown,
     getLinkedRows
 } = require("../Utils/embedStyle");
@@ -113,20 +113,18 @@ function goalRatio(player) {
     return (n(player.goals) / games).toFixed(2);
 }
 
-function memberStatsLines(player) {
+function formStatsLines(player) {
     if (!player) {
         return [
-            "No current member stat profile found for this player."
+            "No recent stat profile found for this player."
         ];
     }
 
     return [
-        `\u{1F464} **${player.name}**${player.proName ? ` - "${player.proName}"` : ""}`,
-        "",
         `\u{1F455} Games Played: **${number(player.gamesPlayed)}**`,
         `\u{1F3C5} Man of the Match: **${number(player.manOfTheMatch)}**`,
         `\u2B50 Average Rating: **${number(player.ratingAve, 2)}**`,
-        `\u{1F3C6} Win Rate: **${number(memberWinRate(player))}%**`,
+        `\u{1F3C6} Win Rate: **${number(player.winRate)}%**`,
         `\u{1F3AF} Shot Conversion Rate: **${number(player.shotSuccessRate)}%**`,
         "",
         `\u26BD Goals: **${number(player.goals)}**`,
@@ -181,6 +179,15 @@ module.exports = {
                         .addChoices(
                             { name: "Divisions", value: "divisions" },
                             { name: "Competitive", value: "competitive" }
+                        )
+                )
+                .addIntegerOption(option =>
+                    option
+                        .setName("matches")
+                        .setDescription("Recent match window")
+                        .addChoices(
+                            { name: "Last 10", value: 10 },
+                            { name: "Last 5", value: 5 }
                         )
                 )
         )
@@ -277,8 +284,8 @@ module.exports = {
                 const mode =
                     interaction.options.getString("mode") || "divisions";
                 const last =
-                    10;
-                const [matches, info, crestUrl, members] =
+                    interaction.options.getInteger("matches") || 10;
+                const [matches, info, crestUrl] =
                     await Promise.all([
                         getModeMatches(
                             interaction.guild.id,
@@ -290,19 +297,14 @@ module.exports = {
                             }
                         ),
                         eaApi.getClubInfo(club.club_id),
-                        getCrestUrl(club.club_id),
-                        eaApi.getMembersStats(club.club_id)
+                        getCrestUrl(club.club_id)
                     ]);
                 const summary =
                     summarizePlayerForm(matches, club.club_id, linked, last);
                 const clubName =
                     info?.[String(club.club_id)]?.name || "Club";
-                const memberPlayer =
-                    (members?.members || [])
-                        .find(member =>
-                            String(member.name).toLowerCase() ===
-                            String(linked.player_name).toLowerCase()
-                        );
+                const formStats =
+                    aggregateFormStats(summary.rows);
 
                 if (!summary.rows.length) {
                     return interaction.editReply(`No ${mode} form data found for that player.`);
@@ -330,8 +332,8 @@ module.exports = {
                                 "",
                                 recentLines,
                                 "",
-                                "**Current Player Stats**",
-                                memberStatsLines(memberPlayer).join("\n")
+                                `**Stats From These ${summary.rows.length} Matches**`,
+                                formStatsLines(formStats).join("\n")
                             ].join("\n").slice(0, 4096)
                         )
                         .setFooter(FOOTER);

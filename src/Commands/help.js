@@ -42,7 +42,7 @@ module.exports = {
                         "`/career` shows career stats for a claimed player.",
                         "`/ratings`, `/top`, `/leaderboard`, `/in-form` show leaderboards and form.",
                         "`/player achievements` shows your milestones, or add `user` for someone else.",
-                        "`/player form` shows your recent form plus player stats. Add `user` or `mode` only when needed.",
+                        "`/player form` shows recent form plus stats from the selected 5/10-match window.",
                         "`/player compare player1 player2` compares goals, assists, average rating, and win rate.",
                         "`/chemistry player1 player2` shows two-player record, average rating, and Chemistry Score.",
                         "",

@@ -192,6 +192,7 @@ function summarizePlayerForm(matches, clubId, player, limit) {
                 return {
                     match,
                     playerId: entry.playerId,
+                    stats: entry.stats,
                     rating: n(entry.stats.rating),
                     goals: n(entry.stats.goals),
                     assists: n(entry.stats.assists),
@@ -232,6 +233,73 @@ function summarizePlayerForm(matches, clubId, player, limit) {
         trend,
         formLine:
             rows.map(row => row.result || "?").join(" ") || "-"
+    };
+}
+
+function aggregateFormStats(rows) {
+    const aggregate = {
+        gamesPlayed: rows.length,
+        manOfTheMatch: 0,
+        ratingTotal: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        goals: 0,
+        assists: 0,
+        shots: 0,
+        passesMade: 0,
+        passAttempts: 0,
+        tacklesMade: 0,
+        tackleAttempts: 0,
+        saves: 0,
+        cleanSheetsDef: 0,
+        cleanSheetsGK: 0,
+        redCards: 0
+    };
+
+    for (const row of rows || []) {
+        const stats = row.stats || {};
+
+        aggregate.manOfTheMatch += stats.mom === "1" ? 1 : 0;
+        aggregate.ratingTotal += n(stats.rating);
+        aggregate.wins += row.result === "W" ? 1 : 0;
+        aggregate.losses += row.result === "L" ? 1 : 0;
+        aggregate.draws += row.result === "D" ? 1 : 0;
+        aggregate.goals += n(stats.goals);
+        aggregate.assists += n(stats.assists);
+        aggregate.shots += n(stats.shots);
+        aggregate.passesMade += n(stats.passesmade);
+        aggregate.passAttempts += n(stats.passattempts);
+        aggregate.tacklesMade += n(stats.tacklesmade);
+        aggregate.tackleAttempts += n(stats.tackleattempts);
+        aggregate.saves += n(stats.saves);
+        aggregate.cleanSheetsDef += stats.cleansheetsdef === "1" ? 1 : 0;
+        aggregate.cleanSheetsGK += stats.cleansheetsgk === "1" ? 1 : 0;
+        aggregate.redCards += stats.redcards === "1" ? 1 : 0;
+    }
+
+    return {
+        ...aggregate,
+        ratingAve:
+            aggregate.gamesPlayed
+                ? aggregate.ratingTotal / aggregate.gamesPlayed
+                : 0,
+        winRate:
+            aggregate.gamesPlayed
+                ? (aggregate.wins / aggregate.gamesPlayed) * 100
+                : 0,
+        shotSuccessRate:
+            aggregate.shots
+                ? (aggregate.goals / aggregate.shots) * 100
+                : 0,
+        passSuccessRate:
+            aggregate.passAttempts
+                ? (aggregate.passesMade / aggregate.passAttempts) * 100
+                : 0,
+        tackleSuccessRate:
+            aggregate.tackleAttempts
+                ? (aggregate.tacklesMade / aggregate.tackleAttempts) * 100
+                : 0
     };
 }
 
@@ -323,6 +391,7 @@ module.exports = {
     getStoredPlayer,
     getModeMatches,
     summarizePlayerForm,
+    aggregateFormStats,
     compareStoredPlayers,
     chemistry
 };
