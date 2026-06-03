@@ -10,7 +10,8 @@ const {
 } = require("./footballBrain");
 const {
     answerFootballKnowledge,
-    getRelevantFootballKnowledge
+    getRelevantFootballKnowledge,
+    isFootballKnowledgeQuestion
 } = require("./footballKnowledge");
 const {
     answerSimpleQuestion
@@ -549,6 +550,10 @@ async function answerSmartMessage(message) {
 
     if (knowledge) {
         return knowledge;
+    }
+
+    if (isFootballKnowledgeQuestion(content)) {
+        return "I do not have that football history fact stored yet.";
     }
 
     if (decision.mode === "banter") {

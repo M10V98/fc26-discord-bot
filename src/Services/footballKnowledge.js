@@ -74,8 +74,33 @@ const FOOTBALL_FACTS = [
     "Lionel Messi has won the most men's Ballon d'Or awards.",
     "Michel Platini won three consecutive Ballon d'Or awards from 1983 to 1985.",
     "George Weah became the first African player to win the Ballon d'Or in 1995.",
+    "Matthias Sammer won the Ballon d'Or in 1996.",
+    "Ronaldo Nazario won the Ballon d'Or in 1997.",
     "Luka Modric won the 2018 Ballon d'Or, ending Messi and Ronaldo's long run.",
+    "Rivaldo won the Ballon d'Or in 1999.",
+    "Luis Figo won the Ballon d'Or in 2000.",
+    "Michael Owen won the Ballon d'Or in 2001.",
+    "Ronaldo Nazario won the Ballon d'Or in 2002.",
+    "Pavel Nedved won the Ballon d'Or in 2003.",
+    "Andriy Shevchenko won the Ballon d'Or in 2004.",
+    "Ronaldinho won the Ballon d'Or in 2005.",
+    "Fabio Cannavaro won the Ballon d'Or in 2006.",
+    "Kaka won the Ballon d'Or in 2007.",
+    "Cristiano Ronaldo won the Ballon d'Or in 2008.",
+    "Lionel Messi won the Ballon d'Or in 2009.",
+    "Lionel Messi won the Ballon d'Or in 2010.",
+    "Lionel Messi won the Ballon d'Or in 2011.",
+    "Lionel Messi won the Ballon d'Or in 2012.",
+    "Cristiano Ronaldo won the Ballon d'Or in 2013.",
+    "Cristiano Ronaldo won the Ballon d'Or in 2014.",
+    "Lionel Messi won the Ballon d'Or in 2015.",
+    "Cristiano Ronaldo won the Ballon d'Or in 2016.",
+    "Cristiano Ronaldo won the Ballon d'Or in 2017.",
+    "Lionel Messi won the Ballon d'Or in 2019.",
+    "The Ballon d'Or was cancelled in 2020.",
+    "Lionel Messi won the Ballon d'Or in 2021.",
     "Karim Benzema won the men's Ballon d'Or in 2022.",
+    "Lionel Messi won the men's Ballon d'Or in 2023.",
     "Rodri won the men's Ballon d'Or in 2024.",
     "Ousmane Dembele won the men's Ballon d'Or in 2025.",
     "Aitana Bonmati won the women's Ballon d'Or in 2025.",
@@ -213,8 +238,15 @@ function answerFootballKnowledge(text) {
     return facts.join("\n");
 }
 
+function isFootballKnowledgeQuestion(text) {
+    return topicMatches(text, "") === false ||
+        /\b(world cup|fifa world cup|euros?|european championship|champions league|european cup|ballon|d'or|dor|golden boot|golden ball|history|record|trophy|winner)\b/i
+            .test(String(text || ""));
+}
+
 module.exports = {
     FOOTBALL_FACTS,
     answerFootballKnowledge,
-    getRelevantFootballKnowledge
+    getRelevantFootballKnowledge,
+    isFootballKnowledgeQuestion
 };

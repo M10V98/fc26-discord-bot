@@ -6,7 +6,8 @@ const {
     answerQuestion
 } = require("../Services/fakeAI");
 const {
-    answerFootballKnowledge
+    answerFootballKnowledge,
+    isFootballKnowledgeQuestion
 } = require("../Services/footballKnowledge");
 const {
     answerSimpleQuestion
@@ -33,13 +34,24 @@ module.exports = {
                 "question"
             );
 
-        const response =
-            answerSimpleQuestion(question) ||
-            answerFootballKnowledge(question) ||
-            await answerQuestion(
+        const simple =
+            answerSimpleQuestion(question);
+        const knowledge =
+            answerFootballKnowledge(question);
+        const legacy =
+            !simple &&
+            !knowledge &&
+            !isFootballKnowledgeQuestion(question)
+                ? await answerQuestion(
                 interaction.guild.id,
                 question
-            );
+            )
+                : null;
+        const response =
+            simple ||
+            knowledge ||
+            legacy ||
+            "I do not have that football history fact stored yet.";
 
         await interaction.editReply(
             response
