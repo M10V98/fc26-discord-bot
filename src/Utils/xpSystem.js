@@ -19,7 +19,7 @@ const XP_WEIGHTS = {
     motm: 75,
     win: 25,
 
-    redCard: -500
+    redCards: -500
 };
 
 function calculateXPBreakdown(stats) {
@@ -63,7 +63,7 @@ function calculateXPBreakdown(stats) {
             XP_WEIGHTS.win,
 
         redCards:
-            (stats.redCards || 0) *
+            (stats.red_cards || 0) *
             XP_WEIGHTS.redCard
     };
 
