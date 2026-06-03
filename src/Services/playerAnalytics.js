@@ -317,11 +317,30 @@ function compareStoredPlayers(playerA, playerB) {
         return {
             goals: n(player?.goals),
             assists: n(player?.assists),
+            goalContributions:
+                n(player?.goals) + n(player?.assists),
+            secondAssists: n(player?.second_assists),
+            shots: n(player?.shots),
+            saves: n(player?.saves),
+            passes: n(player?.passes),
+            passAttempts: n(player?.pass_attempts),
+            tackles: n(player?.tackles),
+            tackleAttempts: n(player?.tackle_attempts),
+            interceptions: n(player?.interceptions),
+            dribbles: n(player?.dribbles),
+            cleanSheets: n(player?.clean_sheets),
+            motm: n(player?.motm),
+            redCards: n(player?.red_cards),
+            xp: n(player?.xp),
+            level: n(player?.level),
             avgRating,
             winRate:
                 matches && wins
                     ? (wins / matches) * 100
                     : 0,
+            wins,
+            losses: n(player?.losses),
+            draws: n(player?.draws),
             matches
         };
     };

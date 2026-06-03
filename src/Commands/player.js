@@ -115,6 +115,45 @@ function goalRatio(player) {
     return (n(player.goals) / games).toFixed(2);
 }
 
+function perMatch(value, matches) {
+    const apps = n(matches);
+    return apps ? (n(value) / apps).toFixed(2) : "0.00";
+}
+
+function successRate(made, attempts) {
+    const attemptCount = n(attempts);
+    return attemptCount ? (n(made) / attemptCount) * 100 : 0;
+}
+
+function edge(left, right, options = {}) {
+    const higherIsBetter =
+        options.higherIsBetter !== false;
+
+    if (n(left) === n(right)) {
+        return ["", ""];
+    }
+
+    const leftWins =
+        higherIsBetter
+            ? n(left) > n(right)
+            : n(left) < n(right);
+
+    return leftWins
+        ? [" \u{1F3C6}", ""]
+        : ["", " \u{1F3C6}"];
+}
+
+function compareLine(label, left, right, options = {}) {
+    const [leftEdge, rightEdge] =
+        edge(
+            options.rawLeft ?? left,
+            options.rawRight ?? right,
+            options
+        );
+
+    return `${label}: **${left}${leftEdge}** vs **${right}${rightEdge}**`;
+}
+
 function formStatsLines(player) {
     if (!player) {
         return [
@@ -384,10 +423,11 @@ module.exports = {
                     return interaction.editReply("Choose two claimed players to compare.");
                 }
 
-                const [playerA, playerB] =
+                const [playerA, playerB, crestUrl] =
                     await Promise.all([
                         getStoredPlayer(interaction.guild.id, first),
-                        getStoredPlayer(interaction.guild.id, second)
+                        getStoredPlayer(interaction.guild.id, second),
+                        getCrestUrl(club.club_id)
                     ]);
 
                 if (!playerA || !playerB) {
@@ -432,25 +472,99 @@ module.exports = {
                     formB.rows.length
                         ? (formB.wins / formB.rows.length) * 100
                         : comparison.b.winRate;
-                const line = (label, a, b) =>
-                    `**${label}:** ${a} vs ${b}`;
+                const recordA =
+                    `${formA.wins}W ${formA.draws}D ${formA.losses}L`;
+                const recordB =
+                    `${formB.wins}W ${formB.draws}D ${formB.losses}L`;
+                const passRateA =
+                    successRate(
+                        comparison.a.passes,
+                        comparison.a.passAttempts
+                    );
+                const passRateB =
+                    successRate(
+                        comparison.b.passes,
+                        comparison.b.passAttempts
+                    );
+                const tackleRateA =
+                    successRate(
+                        comparison.a.tackles,
+                        comparison.a.tackleAttempts
+                    );
+                const tackleRateB =
+                    successRate(
+                        comparison.b.tackles,
+                        comparison.b.tackleAttempts
+                    );
+                const shotRateA =
+                    successRate(
+                        comparison.a.goals,
+                        comparison.a.shots
+                    );
+                const shotRateB =
+                    successRate(
+                        comparison.b.goals,
+                        comparison.b.shots
+                    );
 
                 const embed =
                     new EmbedBuilder()
-                        .setColor("#ffffff")
+                        .setColor("#f5c542")
                         .setTitle("\u2694\uFE0F Player Comparison")
                         .setDescription(
                             [
-                                `${displayA} vs ${displayB}`,
+                                `${displayA} \u{1F19A} ${displayB}`,
                                 "",
-                                line("Goals", number(comparison.a.goals), number(comparison.b.goals)),
-                                line("Assists", number(comparison.a.assists), number(comparison.b.assists)),
-                                line("Avg rating", number(comparison.a.avgRating, 2), number(comparison.b.avgRating, 2)),
-                                line("Win rate", `${number(comparison.a.winRate, 1)}%`, `${number(comparison.b.winRate, 1)}%`),
-                                line("Matches", number(comparison.a.matches), number(comparison.b.matches))
+                                "\u{1F3C6} = stronger stat"
                             ].join("\n")
                         )
+                        .addFields(
+                            {
+                                name: "\u{1F4CA} Overview",
+                                value: [
+                                    compareLine("\u{1F455} Matches", number(comparison.a.matches), number(comparison.b.matches)),
+                                    compareLine("\u2B50 Avg rating", number(comparison.a.avgRating, 2), number(comparison.b.avgRating, 2)),
+                                    compareLine("\u{1F3C6} Win rate", `${number(comparison.a.winRate, 1)}%`, `${number(comparison.b.winRate, 1)}%`),
+                                    `\u{1F4CB} Recent record: **${recordA}** vs **${recordB}**`,
+                                    compareLine("\u{1F9EA} Level", number(comparison.a.level), number(comparison.b.level)),
+                                    compareLine("\u2728 XP", number(comparison.a.xp), number(comparison.b.xp))
+                                ].join("\n")
+                            },
+                            {
+                                name: "\u26BD Attack",
+                                value: [
+                                    compareLine("\u26BD Goals", number(comparison.a.goals), number(comparison.b.goals)),
+                                    compareLine("\u{1F91D} Assists", number(comparison.a.assists), number(comparison.b.assists)),
+                                    compareLine("\u{1F525} G/A", number(comparison.a.goalContributions), number(comparison.b.goalContributions)),
+                                    compareLine("\u{1F4C8} Goals per match", perMatch(comparison.a.goals, comparison.a.matches), perMatch(comparison.b.goals, comparison.b.matches)),
+                                    compareLine("\u{1F3AF} Shot conversion", `${number(shotRateA, 1)}%`, `${number(shotRateB, 1)}%`, { rawLeft: shotRateA, rawRight: shotRateB }),
+                                    compareLine("\u{1F945} MOTM", number(comparison.a.motm), number(comparison.b.motm))
+                                ].join("\n")
+                            },
+                            {
+                                name: "\u{1F3AF} Passing",
+                                value: [
+                                    compareLine("\u{1F45F} Passes", number(comparison.a.passes), number(comparison.b.passes)),
+                                    compareLine("\u2705 Pass success", `${number(passRateA, 1)}%`, `${number(passRateB, 1)}%`, { rawLeft: passRateA, rawRight: passRateB }),
+                                    compareLine("\u{1F4C8} Passes per match", perMatch(comparison.a.passes, comparison.a.matches), perMatch(comparison.b.passes, comparison.b.matches)),
+                                    compareLine("\u{1F9E0} Second assists", number(comparison.a.secondAssists), number(comparison.b.secondAssists))
+                                ].join("\n")
+                            },
+                            {
+                                name: "\u{1F6E1}\uFE0F Defence",
+                                value: [
+                                    compareLine("\u{1F6E1}\uFE0F Tackles", number(comparison.a.tackles), number(comparison.b.tackles)),
+                                    compareLine("\u2705 Tackle success", `${number(tackleRateA, 1)}%`, `${number(tackleRateB, 1)}%`, { rawLeft: tackleRateA, rawRight: tackleRateB }),
+                                    compareLine("\u{1F575}\uFE0F Interceptions", number(comparison.a.interceptions), number(comparison.b.interceptions)),
+                                    compareLine("\u{1F9E4} Clean sheets", number(comparison.a.cleanSheets), number(comparison.b.cleanSheets)),
+                                    compareLine("\u{1F94A} Saves", number(comparison.a.saves), number(comparison.b.saves)),
+                                    compareLine("\u{1F7E5} Red cards", number(comparison.a.redCards), number(comparison.b.redCards), { higherIsBetter: false })
+                                ].join("\n")
+                            }
+                        )
                         .setFooter(FOOTER);
+
+                if (crestUrl) embed.setThumbnail(crestUrl);
 
                 return interaction.editReply({ embeds: [embed] });
             }
