@@ -319,6 +319,19 @@ client.on(
                 }
 
                 if (
+                    interaction.customId.startsWith("quiz_results:")
+                ) {
+                    const command =
+                        client.commands.get("quiz");
+
+                    if (command?.handleResultsPage) {
+                        await command.handleResultsPage(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("members_page:")
                 ) {
                     const command =

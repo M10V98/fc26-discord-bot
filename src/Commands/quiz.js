@@ -19,6 +19,7 @@ const {
 
 const QUIZ_XP = 100;
 const TIME_LIMIT_SECONDS = 60;
+const RESULTS_PAGE_SIZE = 15;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
 
@@ -470,6 +471,28 @@ function buildButtons(sessionId, questionId) {
     return row;
 }
 
+function buildResultsButtons(sessionId, page, totalPages) {
+    if (totalPages <= 1) {
+        return [];
+    }
+
+    return [
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`quiz_results:${sessionId}:${page - 1}`)
+                    .setLabel("Previous")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page <= 0),
+                new ButtonBuilder()
+                    .setCustomId(`quiz_results:${sessionId}:${page + 1}`)
+                    .setLabel("Next")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(page >= totalPages - 1)
+            )
+    ];
+}
+
 async function awardPlayerXp(guildId, userId, amount) {
     const linked =
         await db.get(
@@ -628,6 +651,134 @@ async function buildResultContent(session, question, reason) {
         "",
         "Next question:"
     ].join("\n").slice(0, 1900);
+}
+
+async function scoreCurrentQuestionOnStop(session) {
+    const answers =
+        await db.all(
+            `
+            SELECT *
+            FROM quiz_answers
+            WHERE session_id = ?
+            AND question_id = ?
+            `,
+            [
+                session.session_id,
+                session.current_question_id
+            ]
+        );
+
+    for (const row of answers) {
+        await recordAttempt(
+            session.guild_id,
+            row.user_id,
+            Boolean(Number(row.correct))
+        );
+    }
+}
+
+async function buildQuizResultsPayload(guildId, sessionId, page = 0) {
+    const [session, rows] =
+        await Promise.all([
+            db.get(
+                `
+                SELECT *
+                FROM quiz_sessions
+                WHERE session_id = ?
+                AND guild_id = ?
+                `,
+                [sessionId, guildId]
+            ),
+            db.all(
+                `
+                SELECT
+                    user_id,
+                    COUNT(*) AS attempts,
+                    SUM(correct) AS correct
+                FROM quiz_answers
+                WHERE session_id = ?
+                AND guild_id = ?
+                GROUP BY user_id
+                HAVING attempts > 0
+                ORDER BY correct DESC, attempts ASC, user_id ASC
+                `,
+                [sessionId, guildId]
+            )
+        ]);
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(rows.length / RESULTS_PAGE_SIZE)
+        );
+    const safePage =
+        Math.max(
+            0,
+            Math.min(
+                Number(page || 0),
+                totalPages - 1
+            )
+        );
+    const pageRows =
+        rows.slice(
+            safePage * RESULTS_PAGE_SIZE,
+            safePage * RESULTS_PAGE_SIZE + RESULTS_PAGE_SIZE
+        );
+    const totalAttempts =
+        rows.reduce(
+            (sum, row) => sum + Number(row.attempts || 0),
+            0
+        );
+    const totalCorrect =
+        rows.reduce(
+            (sum, row) => sum + Number(row.correct || 0),
+            0
+        );
+    const lines =
+        pageRows.length
+            ? pageRows.map((row, index) => {
+                const rank =
+                    safePage * RESULTS_PAGE_SIZE + index + 1;
+                const correct =
+                    Number(row.correct || 0);
+                const attempts =
+                    Number(row.attempts || 0);
+                const percent =
+                    attempts
+                        ? Math.round((correct / attempts) * 100)
+                        : 0;
+
+                return `**#${rank}** <@${row.user_id}> - **${correct}/${attempts}** (${percent}%) - ${number(correct * QUIZ_XP)} XP`;
+            })
+            : ["No one answered any questions."];
+    const embed =
+        new EmbedBuilder()
+            .setColor("#ffffff")
+            .setTitle("\u{1F9E0} Quiz Results")
+            .setDescription(
+                [
+                    `Questions: **${number(session?.asked_count || 0)}**`,
+                    `Players: **${number(rows.length)}**`,
+                    `Answered: **${number(totalAttempts)}**`,
+                    `Correct: **${number(totalCorrect)}**`,
+                    "",
+                    lines.join("\n")
+                ].join("\n")
+            )
+            .setFooter({
+                ...FOOTER,
+                text:
+                    `${FOOTER.text} - Page ${safePage + 1}/${totalPages}`
+            });
+
+    return {
+        embeds: [embed],
+        components: buildResultsButtons(
+            sessionId,
+            safePage,
+            totalPages
+        )
+    };
 }
 
 function clearQuizTimer(sessionId) {
@@ -960,6 +1111,15 @@ module.exports = {
             });
         }
 
+        if (!Number(session.active)) {
+            return interaction.reply({
+                content: "That quiz has already stopped.",
+                ephemeral: true
+            });
+        }
+
+        await scoreCurrentQuestionOnStop(session);
+
         await db.run(
             `
             UPDATE quiz_sessions
@@ -972,11 +1132,30 @@ module.exports = {
 
         clearQuizTimer(sessionId);
 
+        const payload =
+            await buildQuizResultsPayload(
+                interaction.guild.id,
+                sessionId,
+                0
+            );
+
         return interaction.update({
             content: `Quiz stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`,
-            embeds: [],
-            components: []
+            ...payload
         });
+    },
+
+    async handleResultsPage(interaction) {
+        const [, sessionId, pageRaw] =
+            interaction.customId.split(":");
+        const payload =
+            await buildQuizResultsPayload(
+                interaction.guild.id,
+                sessionId,
+                Number(pageRaw || 0)
+            );
+
+        return interaction.update(payload);
     },
 
     async hasActiveQuiz(guildId) {
