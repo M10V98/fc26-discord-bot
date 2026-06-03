@@ -213,6 +213,19 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS ai_message_memory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id TEXT,
+        channel_id TEXT,
+        author_id TEXT,
+        author_name TEXT,
+        content TEXT,
+        intent TEXT,
+        should_reply INTEGER DEFAULT 0,
+        created_at INTEGER
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS scheduled_sessions (
         session_id TEXT PRIMARY KEY,
         guild_id TEXT,

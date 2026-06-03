@@ -1,17 +1,11 @@
 const {
-    answerAutoMessage
-} = require("../Services/fakeAI");
-
-const {
-    getFootballReply
-} = require("../Services/footballBrain");
+    answerSmartMessage
+} = require("../Services/smartAI");
 
 const cooldowns = new Map();
 
 const COOLDOWN_MS = 5000;
 const MAX_INPUT_LENGTH = 500;
-const FOOTBALL_REPLY_CHANCE = 0.25;
-
 module.exports = async message => {
 
     if (
@@ -47,10 +41,7 @@ module.exports = async message => {
     try {
 
         const aiResponse =
-            await answerAutoMessage(
-                guildId,
-                content
-            );
+            await answerSmartMessage(message);
 
         if (aiResponse) {
 
@@ -63,26 +54,6 @@ module.exports = async message => {
                 aiResponse
             );
         }
-
-        const footballReply =
-            getFootballReply(content);
-
-        if (
-            footballReply &&
-            Math.random() <
-                FOOTBALL_REPLY_CHANCE
-        ) {
-
-            cooldowns.set(
-                guildId,
-                Date.now()
-            );
-
-            return await message.reply(
-                footballReply
-            );
-        }
-
     } catch (err) {
 
         console.error(
