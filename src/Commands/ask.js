@@ -5,6 +5,12 @@ const {
 const {
     answerQuestion
 } = require("../Services/fakeAI");
+const {
+    answerFootballKnowledge
+} = require("../Services/footballKnowledge");
+const {
+    answerSimpleQuestion
+} = require("../Services/simpleAnswers");
 
 module.exports = {
 
@@ -28,6 +34,8 @@ module.exports = {
             );
 
         const response =
+            answerSimpleQuestion(question) ||
+            answerFootballKnowledge(question) ||
             await answerQuestion(
                 interaction.guild.id,
                 question

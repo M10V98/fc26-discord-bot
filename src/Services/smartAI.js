@@ -8,6 +8,13 @@ const {
 const {
     getFootballReply
 } = require("./footballBrain");
+const {
+    answerFootballKnowledge,
+    getRelevantFootballKnowledge
+} = require("./footballKnowledge");
+const {
+    answerSimpleQuestion
+} = require("./simpleAnswers");
 
 const AI_MODEL =
     process.env.OPENAI_MODEL ||
@@ -91,7 +98,7 @@ function topicSignals(text) {
             /\b(command|commands|how do i|help|claim|link|quiz|poll|compare|chemistry)\b/i.test(lower) ||
             hasSlashCommandCue(text),
         tactical:
-            /\b(formation|press|low block|counter|cutback|through ball|build up|transition|winger|striker|cdm|cam|defend|attack)\b/i.test(lower),
+            /\b(formation|press|low block|counter|cutback|through ball|build up|transition|winger|striker|cdm|cam|defend|attack|world cup|euros|euro|champions league|ballon|golden boot|golden ball|european cup|history|record|trophy|winner)\b/i.test(lower),
         matchBanter:
             /\b(goal|save|assist|tackle|won|lost|battered|bottled|heads gone|matchday|clubs|divs)\b/i.test(lower),
         moderation:
@@ -427,6 +434,8 @@ async function generateWithOpenAI(message, decision, memory) {
     try {
         const context =
             await clubContext(message.guild.id);
+        const footballKnowledge =
+            getRelevantFootballKnowledge(message.content, 8);
         const response =
             await openai.chat.completions.create({
                 model: AI_MODEL,
@@ -439,7 +448,7 @@ async function generateWithOpenAI(message, decision, memory) {
                     {
                         role: "system",
                         content:
-                            "You are Bella Ciao FC Bot, a sharp but restrained FC Clubs assistant. Reply only because a separate gate has approved it. Be concise, useful, and natural. Mention relevant slash commands where helpful. Do not overdo banter. Avoid replying like a motivational quote unless the user clearly asks for that energy."
+                            "You are Bella Ciao FC Bot, a sharp but restrained FC Clubs assistant. Reply only because a separate gate has approved it. Be concise, useful, and natural. Mention relevant slash commands where helpful. Use supplied footballKnowledge facts as trusted context when relevant. Do not overdo banter. Avoid replying like a motivational quote unless the user clearly asks for that energy."
                     },
                     {
                         role: "user",
@@ -449,6 +458,7 @@ async function generateWithOpenAI(message, decision, memory) {
                             intent: decision.intent,
                             reason: decision.reason,
                             clubContext: context,
+                            footballKnowledge,
                             recentMessages:
                                 memory
                                     .slice()
@@ -525,6 +535,20 @@ async function answerSmartMessage(message) {
 
     if (generated) {
         return generated;
+    }
+
+    const simple =
+        answerSimpleQuestion(content);
+
+    if (simple) {
+        return simple;
+    }
+
+    const knowledge =
+        answerFootballKnowledge(content);
+
+    if (knowledge) {
+        return knowledge;
     }
 
     if (decision.mode === "banter") {
