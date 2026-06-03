@@ -61,11 +61,21 @@ module.exports = {
 
             } else {
 
+                const roleEmojis = {
+                    "Owner": "👑",
+                    "Club Director": "🏛️",
+                    "Manager": "👔",
+                    "Recruitment": "🔎"
+                };
+
                 for (const member of staff) {
+
+                    const emoji =
+                        roleEmojis[member.role] || "📋";
 
                     embed.addFields({
                         name:
-                            `👔 ${member.role || "Staff"}`,
+                            `${emoji} ${member.role || "Staff"}`,
                         value:
                             member.name || "Unknown",
                         inline: true
