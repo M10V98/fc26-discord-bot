@@ -16,6 +16,12 @@ const {
 const {
     getClubName
 } = require("../Utils/scoreboard");
+const {
+    AWARDS,
+    COMPETITIONS,
+    LEAGUES,
+    POSITION_FACTS
+} = require("../Services/footballHistoryData");
 
 const QUIZ_XP = 100;
 const TIME_LIMIT_SECONDS = 60;
@@ -211,12 +217,94 @@ function shuffleAnswers(question, answers, correctIndex) {
 }
 
 function staticQuestion() {
+    if (Math.random() < 0.15) {
+        const position =
+            positionQuestion();
+
+        if (position) {
+            return position;
+        }
+    }
+
+    if (Math.random() < 0.35) {
+        const history =
+            historyQuestion();
+
+        if (history) {
+            return history;
+        }
+    }
+
     const row =
         STATIC_QUESTIONS[
             Math.floor(Math.random() * STATIC_QUESTIONS.length)
         ];
 
     return shuffleAnswers(row[0], row[1], row[2]);
+}
+
+function historyQuestion() {
+    const pools = [
+        ...Object.values(AWARDS),
+        ...Object.values(COMPETITIONS),
+        ...Object.values(LEAGUES)
+    ];
+    const selectedPool =
+        pools[Math.floor(Math.random() * pools.length)];
+    const entries =
+        Object.entries(selectedPool.winners || {});
+
+    if (entries.length < 4) {
+        return null;
+    }
+
+    const [year, winner] =
+        entries[Math.floor(Math.random() * entries.length)];
+    const distractors =
+        entries
+            .map(([, value]) => value)
+            .filter(value => value !== winner)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+
+    if (distractors.length < 3) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        `Who won the ${selectedPool.label} in ${year}?`,
+        [
+            winner,
+            ...distractors
+        ],
+        0
+    );
+}
+
+function positionQuestion() {
+    const entries =
+        Object.entries(POSITION_FACTS);
+    const [position, answer] =
+        entries[Math.floor(Math.random() * entries.length)];
+    const distractors =
+        entries
+            .map(([, value]) => value)
+            .filter(value => value !== answer)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+
+    if (distractors.length < 3) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        `What is the main job of a ${position.toUpperCase()}?`,
+        [
+            answer,
+            ...distractors
+        ],
+        0
+    );
 }
 
 function playerName(stats) {

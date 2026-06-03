@@ -1,3 +1,10 @@
+const {
+    AWARDS,
+    COMPETITIONS,
+    LEAGUES,
+    POSITION_FACTS
+} = require("./footballHistoryData");
+
 const FOOTBALL_FACTS = [
     "Uruguay won the first men's FIFA World Cup in 1930.",
     "Brazil have won the most men's FIFA World Cups.",
@@ -162,6 +169,149 @@ function extractYears(text) {
         .match(/\b(19|20)\d{2}\b/g) || [];
 }
 
+function firstYear(text) {
+    const [year] =
+        extractYears(text);
+
+    return year ? Number(year) : null;
+}
+
+function normalizeTopic(text) {
+    return String(text || "")
+        .toLowerCase()
+        .replace(/d['’]?or/g, "dor")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function competitionFromText(text) {
+    const lower =
+        normalizeTopic(text);
+
+    if (/\b(ballondor|ballon dor|balon dor|dor)\b/.test(lower)) {
+        return {
+            type: "award",
+            key: "ballon dor",
+            data: AWARDS["ballon dor"]
+        };
+    }
+
+    if (lower.includes("golden boot") && lower.includes("world cup")) {
+        return {
+            type: "award",
+            key: "world cup golden boot",
+            data: AWARDS["world cup golden boot"]
+        };
+    }
+
+    if (lower.includes("champions league") || lower.includes("european cup")) {
+        return {
+            type: "competition",
+            key: "champions league",
+            data: COMPETITIONS["champions league"]
+        };
+    }
+
+    if (lower.includes("europa league") || lower.includes("uefa cup")) {
+        return {
+            type: "competition",
+            key: "europa league",
+            data: COMPETITIONS["europa league"]
+        };
+    }
+
+    if (lower.includes("world cup")) {
+        return {
+            type: "competition",
+            key: "world cup",
+            data: COMPETITIONS["world cup"]
+        };
+    }
+
+    if (/\beuro\b|\beuros\b|european championship/.test(lower)) {
+        return {
+            type: "competition",
+            key: "euro",
+            data: COMPETITIONS.euro
+        };
+    }
+
+    if (lower.includes("premier league") || lower.includes("english top flight") || lower.includes("england league")) {
+        return {
+            type: "league",
+            key: "england",
+            data: LEAGUES.england
+        };
+    }
+
+    if (lower.includes("la liga") || lower.includes("spanish league")) {
+        return {
+            type: "league",
+            key: "la liga",
+            data: LEAGUES["la liga"]
+        };
+    }
+
+    if (lower.includes("serie a") || lower.includes("italian league")) {
+        return {
+            type: "league",
+            key: "serie a",
+            data: LEAGUES["serie a"]
+        };
+    }
+
+    if (lower.includes("bundesliga") || lower.includes("german league")) {
+        return {
+            type: "league",
+            key: "bundesliga",
+            data: LEAGUES.bundesliga
+        };
+    }
+
+    if (lower.includes("ligue 1") || lower.includes("french league")) {
+        return {
+            type: "league",
+            key: "ligue 1",
+            data: LEAGUES["ligue 1"]
+        };
+    }
+
+    return null;
+}
+
+function answerStructuredHistory(text) {
+    const year =
+        firstYear(text);
+    const item =
+        competitionFromText(text);
+
+    if (item && year) {
+        const winner =
+            item.data?.winners?.[year];
+
+        if (winner) {
+            return `${winner} won the ${item.data.label} in ${year}.`;
+        }
+
+        return `I do not have a stored ${item.data.label} winner for ${year} yet.`;
+    }
+
+    const lower =
+        normalizeTopic(text);
+    const positionKey =
+        Object.keys(POSITION_FACTS)
+            .find(key =>
+                lower.includes(key)
+            );
+
+    if (positionKey) {
+        return POSITION_FACTS[positionKey];
+    }
+
+    return null;
+}
+
 function topicMatches(text, fact) {
     const lower =
         String(text || "").toLowerCase();
@@ -228,6 +378,13 @@ function getRelevantFootballKnowledge(text, limit = 6) {
 }
 
 function answerFootballKnowledge(text) {
+    const structured =
+        answerStructuredHistory(text);
+
+    if (structured) {
+        return structured;
+    }
+
     const facts =
         getRelevantFootballKnowledge(text, 3);
 
@@ -246,6 +403,7 @@ function isFootballKnowledgeQuestion(text) {
 
 module.exports = {
     FOOTBALL_FACTS,
+    answerStructuredHistory,
     answerFootballKnowledge,
     getRelevantFootballKnowledge,
     isFootballKnowledgeQuestion
