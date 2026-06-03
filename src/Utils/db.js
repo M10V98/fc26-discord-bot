@@ -175,6 +175,33 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS quiz_sessions (
+        session_id TEXT PRIMARY KEY,
+        guild_id TEXT,
+        channel_id TEXT,
+        message_id TEXT,
+        creator_id TEXT,
+        current_question_id TEXT,
+        current_question_json TEXT,
+        active INTEGER DEFAULT 1,
+        asked_count INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS quiz_answers (
+        session_id TEXT,
+        guild_id TEXT,
+        question_id TEXT,
+        user_id TEXT,
+        answer_index INTEGER,
+        correct INTEGER DEFAULT 0,
+        answered_at INTEGER,
+        PRIMARY KEY (session_id, question_id, user_id)
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS mod_infractions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         guild_id TEXT,
@@ -341,6 +368,12 @@ async function init() {
         "xp_seasons",
         "last_finish_count",
         "INTEGER DEFAULT 0"
+    );
+
+    await ensureColumn(
+        "quiz_sessions",
+        "current_question_json",
+        "TEXT"
     );
 
     await backfillXpColumns();

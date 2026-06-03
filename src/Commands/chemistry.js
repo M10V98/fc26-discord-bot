@@ -40,9 +40,7 @@ async function resolve(interaction, prefix) {
         interaction.guild.id,
         {
             userId:
-                interaction.options.getUser(`${prefix}_user`)?.id,
-            playerName:
-                interaction.options.getString(`${prefix}_name`)
+                interaction.options.getUser(prefix)?.id
         }
     );
 }
@@ -53,25 +51,15 @@ module.exports = {
         .setDescription("Show chemistry between two players")
         .addUserOption(option =>
             option
-                .setName("player1_user")
+                .setName("player1")
                 .setDescription("First Discord user")
-        )
-        .addStringOption(option =>
-            option
-                .setName("player1_name")
-                .setDescription("First claimed player name")
-                .setAutocomplete(true)
+                .setRequired(true)
         )
         .addUserOption(option =>
             option
-                .setName("player2_user")
+                .setName("player2")
                 .setDescription("Second Discord user")
-        )
-        .addStringOption(option =>
-            option
-                .setName("player2_name")
-                .setDescription("Second claimed player name")
-                .setAutocomplete(true)
+                .setRequired(true)
         )
         .addStringOption(option =>
             option

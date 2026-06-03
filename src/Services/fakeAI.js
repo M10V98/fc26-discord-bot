@@ -20,7 +20,13 @@ function detectIntent(question) {
         "highest goals",
         "top goalscorer",
         "best goalscorer",
-        "who has most goals"
+        "who has most goals",
+        "who bangs them in",
+        "who is carrying goals",
+        "main goal threat",
+        "biggest goal threat",
+        "who is our finisher",
+        "who scores for us"
     ])) {
         return "top_scorer";
     }
@@ -33,7 +39,13 @@ function detectIntent(question) {
         "who has most assists",
         "best assist",
         "highest assists",
-        "assist king"
+        "assist king",
+        "who creates the most",
+        "chance creator",
+        "creative leader",
+        "who sets up goals",
+        "who feeds the striker",
+        "who is our playmaker"
     ])) {
         return "top_assists";
     }
@@ -46,7 +58,13 @@ function detectIntent(question) {
         "highest rated",
         "best average rating",
         "who has best rating",
-        "top performer"
+        "top performer",
+        "who is performing",
+        "who is playing well",
+        "who is carrying",
+        "best on the pitch",
+        "standout player",
+        "who is in form"
     ])) {
         return "highest_rating";
     }
@@ -58,7 +76,11 @@ function detectIntent(question) {
         "who played most",
         "most games played",
         "highest appearances",
-        "most caps"
+        "most caps",
+        "who plays every game",
+        "most active player",
+        "who is always on",
+        "biggest grinder"
     ])) {
         return "most_matches";
     }
@@ -69,9 +91,54 @@ function detectIntent(question) {
         "goals and assists",
         "most contributions",
         "combined goals",
-        "top contributor"
+        "top contributor",
+        "g/a",
+        "ga leader",
+        "who contributes most",
+        "who is involved in goals"
     ])) {
         return "goal_contributions";
+    }
+
+    if (hasAny(q, [
+        "player form",
+        "my form",
+        "how is my form",
+        "recent form",
+        "rating trend",
+        "am i improving",
+        "last five",
+        "last 5",
+        "last ten",
+        "last 10",
+        "form command"
+    ])) {
+        return "form_help";
+    }
+
+    if (hasAny(q, [
+        "player compare",
+        "compare players",
+        "compare me",
+        "who is better",
+        "head to head",
+        "versus stats",
+        "vs stats",
+        "compare command"
+    ])) {
+        return "compare_help";
+    }
+
+    if (hasAny(q, [
+        "chemistry score",
+        "chemistry command",
+        "who links well",
+        "best duo",
+        "partnership",
+        "strike partnership",
+        "how do we play together"
+    ])) {
+        return "chemistry_command_help";
     }
  
     // Help
@@ -118,6 +185,38 @@ function detectIntent(question) {
         "what commands"
     ])) {
         return "commands_help";
+    }
+
+    if (hasAny(q, [
+        "start a poll",
+        "make a poll",
+        "create poll",
+        "vote on",
+        "poll command"
+    ])) {
+        return "poll_help";
+    }
+
+    if (hasAny(q, [
+        "quiz",
+        "start quiz",
+        "quiz leaderboard",
+        "football questions",
+        "trivia",
+        "xp quiz"
+    ])) {
+        return "quiz_help";
+    }
+
+    if (hasAny(q, [
+        "warn someone",
+        "infractions",
+        "timeout someone",
+        "ban someone",
+        "moderation commands",
+        "mod commands"
+    ])) {
+        return "moderation_help";
     }
  
     // Football Knowledge
@@ -172,7 +271,13 @@ function detectIntent(question) {
         "what formation",
         "best formation",
         "tactical setup",
-        "team shape"
+        "team shape",
+        "how should we line up",
+        "what shape should we play",
+        "best shape for clubs",
+        "formation advice",
+        "is 4231 good",
+        "is 433 good"
     ])) {
         return "formation_help";
     }
@@ -229,9 +334,42 @@ function detectIntent(question) {
         "high press",
         "pressing high",
         "what is high press",
-        "press high"
+        "press high",
+        "press them",
+        "force mistakes",
+        "win it high"
     ])) {
         return "high_press";
+    }
+
+    if (hasAny(q, [
+        "through ball",
+        "balls in behind",
+        "run in behind",
+        "split the defence",
+        "killer pass"
+    ])) {
+        return "through_ball";
+    }
+
+    if (hasAny(q, [
+        "cutback",
+        "pull it back",
+        "byline pass",
+        "sweaty goal",
+        "square it"
+    ])) {
+        return "cutback";
+    }
+
+    if (hasAny(q, [
+        "counter attack",
+        "counter-attacking",
+        "break quickly",
+        "transition attack",
+        "hit them on the break"
+    ])) {
+        return "counter_attack";
     }
  
     if (hasAny(q, [
@@ -586,6 +724,24 @@ async function answerQuestion(guildId, question) {
  
         case "commands_help":
             return "🤖 Popular commands: `/profile`, `/stats`, `/leaderboard`, `/ratings`, `/playerstats`, `/schedule`, `/compplayerstats`, `/claim`.";
+
+        case "form_help":
+            return "📈 Use `/player form` to see recent W/D/L form, rating trend, and the same core player-stat profile as `/playerstats`. It defaults to your claimed player.";
+
+        case "compare_help":
+            return "⚔️ Use `/player compare player1 player2` with two claimed Discord users. It compares goals, assists, average rating, win rate and matches.";
+
+        case "chemistry_command_help":
+            return "🧪 Use `/chemistry player1 player2` to measure how two claimed players perform together: matches, win rate, average rating and Chemistry Score.";
+
+        case "poll_help":
+            return "🗳️ Use `/poll create` with a question and at least two options. The bot posts buttons and keeps the vote count live.";
+
+        case "quiz_help":
+            return "🧠 Use `/quiz start` to begin a server-wide quiz. Each question stays open for 60 seconds, then the bot advances automatically until someone presses Stop.";
+
+        case "moderation_help":
+            return "⚖️ Staff can use `/mod warn`, `/mod infractions`, `/mod timeout`, and `/mod ban`. Three warns triggers an escalation flag.";
  
         case "next_match":
             return "📅 Use `/schedule` to view upcoming fixtures.";
@@ -625,7 +781,16 @@ async function answerQuestion(guildId, question) {
  
         case "high_press":
             return "🔥 A high press attempts to win the ball back close to the opponent's goal by applying immediate pressure.";
- 
+
+        case "through_ball":
+            return "👟 A through ball is a pass into space behind the defence. It works best when the runner goes early and the passer releases it before the back line can turn.";
+
+        case "cutback":
+            return "🎯 A cutback is pulled back from near the byline into a better shooting lane. In Clubs it is deadly because defenders often sprint toward their own goal and lose the late runner.";
+
+        case "counter_attack":
+            return "⚡ A counter attack is about winning it, playing forward quickly, and attacking before the opposition rebuilds their shape. First pass matters.";
+
         case "captain":
             return "🏆 The captain leads the team on and off the pitch and typically wears the armband during matches.";
  

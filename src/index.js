@@ -274,6 +274,19 @@ client.on(
                 }
 
                 if (
+                    interaction.customId.startsWith("quiz_stop:")
+                ) {
+                    const command =
+                        client.commands.get("quiz");
+
+                    if (command?.handleStop) {
+                        await command.handleStop(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("members_page:")
                 ) {
                     const command =

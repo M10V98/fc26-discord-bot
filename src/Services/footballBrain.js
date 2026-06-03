@@ -685,6 +685,142 @@ const footballTriggers = {
     trophy:         ["trophy", "title", "silverware", "cup", "winners", "champions"],
     matchday:       ["matchday", "match day", "game day", "kick off", "kickoff", "fixture today"]
 };
+
+Object.assign(footballReplies, {
+    pressingTrap: [
+        "Pressing only works when the next pass is covered. If one player jumps and the rest watch, it is just cardio.",
+        "That is where the trap has to be set: show them one pass, then collapse on the receiver.",
+        "The press needs a trigger. Bad touch, back-to-goal, loose pass. Then everyone goes together."
+    ],
+    buildUp: [
+        "Build-up needs patience, but not sleepwalking. Move it, bait the press, then punch through the gap.",
+        "If the first pass beats pressure, the whole pitch opens up. That is where composure matters.",
+        "Good build-up is not just short passing. It is creating the next free man."
+    ],
+    transition: [
+        "Transitions decide games. First three seconds after winning it are gold.",
+        "Win it, look forward, attack the space before their shape gets back.",
+        "That moment after a turnover is where the brave pass changes everything."
+    ],
+    cutback: [
+        "Cutbacks are evil in the best way. Defenders face their own goal and the late runner eats.",
+        "Get to the byline, pull it back, finish first time. Simple, brutal, beautiful.",
+        "The cutback is on when everyone crashes the six-yard box too early."
+    ],
+    form: [
+        "Form is not just wins and losses. Rating trend tells you who is actually growing into matches.",
+        "Last five can lie, last ten starts telling the truth.",
+        "If the rating is climbing even in losses, the player is doing something right."
+    ],
+    mentality: [
+        "Stay calm. Bad spells become disasters when everyone starts forcing hero passes.",
+        "The next pass matters more than the last mistake.",
+        "Composure wins tight matches. Panic gives the ball away for free."
+    ]
+});
+
+Object.assign(footballTriggers, {
+    pressingTrap: [
+        "pressing trap",
+        "press trigger",
+        "when do we press",
+        "press as a team",
+        "force them wide",
+        "trap them",
+        "jump the pass",
+        "bad touch press",
+        "close them down together"
+    ],
+    buildUp: [
+        "build up",
+        "play out",
+        "playing out",
+        "out from the back",
+        "beat the press",
+        "first pass",
+        "free man",
+        "recycle possession",
+        "keep the ball moving"
+    ],
+    transition: [
+        "transition",
+        "turnover",
+        "counter attack",
+        "counterattack",
+        "hit them on the break",
+        "break quickly",
+        "win it and go",
+        "attack the space"
+    ],
+    cutback: [
+        "cutback",
+        "pull it back",
+        "byline",
+        "square it",
+        "late runner",
+        "sweaty",
+        "pass across goal"
+    ],
+    form: [
+        "in form",
+        "out of form",
+        "rating trend",
+        "last five",
+        "last 5",
+        "last ten",
+        "last 10",
+        "how is my form",
+        "player form",
+        "playing well lately"
+    ],
+    mentality: [
+        "heads gone",
+        "stay calm",
+        "composure",
+        "tilted",
+        "bottle",
+        "panic",
+        "focus up",
+        "reset",
+        "next goal matters"
+    ]
+});
+
+footballTriggers.goal.push(
+    "what a goal",
+    "finished that",
+    "buried it",
+    "slotted it",
+    "top corner",
+    "near post",
+    "far post"
+);
+footballTriggers.assist.push(
+    "threaded it",
+    "played him in",
+    "laid it off",
+    "through ball",
+    "killer pass",
+    "split the defence"
+);
+footballTriggers.defender.push(
+    "blocked it",
+    "last ditch",
+    "covered him",
+    "read that",
+    "tracked the runner",
+    "won his duel"
+);
+footballTriggers.clubs.push(
+    "club night",
+    "divs",
+    "divisions",
+    "play clubs",
+    "need eleven",
+    "anyone on clubs",
+    "clubs session",
+    "rank up"
+);
  
 function getFootballReply(message) {
 

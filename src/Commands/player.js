@@ -19,6 +19,7 @@ const {
     FOOTER,
     underline,
     number,
+    memberWinRate,
     escapeMarkdown,
     getLinkedRows
 } = require("../Utils/embedStyle");
@@ -83,6 +84,7 @@ async function autocomplete(interaction) {
 
 async function resolvePlayer(interaction, baseName) {
     const user =
+        interaction.options.getUser(baseName) ||
         interaction.options.getUser(`${baseName}_user`) ||
         interaction.options.getUser("user");
     const playerName =
@@ -99,6 +101,47 @@ async function resolvePlayer(interaction, baseName) {
                 null
         }
     );
+}
+
+function n(value) {
+    return Number(value || 0);
+}
+
+function goalRatio(player) {
+    const games = n(player?.gamesPlayed);
+    if (!games) return "0.00";
+    return (n(player.goals) / games).toFixed(2);
+}
+
+function memberStatsLines(player) {
+    if (!player) {
+        return [
+            "No current member stat profile found for this player."
+        ];
+    }
+
+    return [
+        `\u{1F464} **${player.name}**${player.proName ? ` - "${player.proName}"` : ""}`,
+        "",
+        `\u{1F455} Games Played: **${number(player.gamesPlayed)}**`,
+        `\u{1F3C5} Man of the Match: **${number(player.manOfTheMatch)}**`,
+        `\u2B50 Average Rating: **${number(player.ratingAve, 2)}**`,
+        `\u{1F3C6} Win Rate: **${number(memberWinRate(player))}%**`,
+        `\u{1F3AF} Shot Conversion Rate: **${number(player.shotSuccessRate)}%**`,
+        "",
+        `\u26BD Goals: **${number(player.goals)}**`,
+        `xG Per Game: **${goalRatio(player)}**`,
+        `\u{1F91D} Assists: **${number(player.assists)}**`,
+        `xA Per Game: **${n(player.gamesPlayed) ? (n(player.assists) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        `\u{1F45F} Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
+        `xP Per Game: **${n(player.gamesPlayed) ? (n(player.passesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        `\u{1F6E1}\uFE0F Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
+        `xT Per Game: **${n(player.gamesPlayed) ? (n(player.tacklesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        "",
+        `\u{1F6AB} Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
+        `\u{1F945} Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
+        `\u{1F7E5} Red Cards: **${number(player.redCards)}**`
+    ];
 }
 
 async function getClub(interaction) {
@@ -121,12 +164,6 @@ module.exports = {
                         .setName("user")
                         .setDescription("Discord user with a claimed player")
                 )
-                .addStringOption(option =>
-                    option
-                        .setName("player")
-                        .setDescription("Claimed player name")
-                        .setAutocomplete(true)
-                )
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -139,26 +176,11 @@ module.exports = {
                 )
                 .addStringOption(option =>
                     option
-                        .setName("player")
-                        .setDescription("Claimed player name")
-                        .setAutocomplete(true)
-                )
-                .addStringOption(option =>
-                    option
                         .setName("mode")
                         .setDescription("Stat source")
                         .addChoices(
                             { name: "Divisions", value: "divisions" },
                             { name: "Competitive", value: "competitive" }
-                        )
-                )
-                .addIntegerOption(option =>
-                    option
-                        .setName("last")
-                        .setDescription("Recent match window")
-                        .addChoices(
-                            { name: "Last 5 matches", value: 5 },
-                            { name: "Last 10 matches", value: 10 }
                         )
                 )
         )
@@ -168,25 +190,15 @@ module.exports = {
                 .setDescription("Compare two claimed players")
                 .addUserOption(option =>
                     option
-                        .setName("player1_user")
+                        .setName("player1")
                         .setDescription("First Discord user")
-                )
-                .addStringOption(option =>
-                    option
-                        .setName("player1_name")
-                        .setDescription("First claimed player name")
-                        .setAutocomplete(true)
+                        .setRequired(true)
                 )
                 .addUserOption(option =>
                     option
-                        .setName("player2_user")
+                        .setName("player2")
                         .setDescription("Second Discord user")
-                )
-                .addStringOption(option =>
-                    option
-                        .setName("player2_name")
-                        .setDescription("Second claimed player name")
-                        .setAutocomplete(true)
+                        .setRequired(true)
                 )
         ),
 
@@ -265,8 +277,8 @@ module.exports = {
                 const mode =
                     interaction.options.getString("mode") || "divisions";
                 const last =
-                    interaction.options.getInteger("last") || 5;
-                const [matches, info, crestUrl] =
+                    10;
+                const [matches, info, crestUrl, members] =
                     await Promise.all([
                         getModeMatches(
                             interaction.guild.id,
@@ -278,12 +290,19 @@ module.exports = {
                             }
                         ),
                         eaApi.getClubInfo(club.club_id),
-                        getCrestUrl(club.club_id)
+                        getCrestUrl(club.club_id),
+                        eaApi.getMembersStats(club.club_id)
                     ]);
                 const summary =
                     summarizePlayerForm(matches, club.club_id, linked, last);
                 const clubName =
                     info?.[String(club.club_id)]?.name || "Club";
+                const memberPlayer =
+                    (members?.members || [])
+                        .find(member =>
+                            String(member.name).toLowerCase() ===
+                            String(linked.player_name).toLowerCase()
+                        );
 
                 if (!summary.rows.length) {
                     return interaction.editReply(`No ${mode} form data found for that player.`);
@@ -309,7 +328,10 @@ module.exports = {
                                 `Recent record: **${summary.wins}W ${summary.draws}D ${summary.losses}L**`,
                                 `Form: **${summary.formLine}**`,
                                 "",
-                                recentLines
+                                recentLines,
+                                "",
+                                "**Current Player Stats**",
+                                memberStatsLines(memberPlayer).join("\n")
                             ].join("\n").slice(0, 4096)
                         )
                         .setFooter(FOOTER);

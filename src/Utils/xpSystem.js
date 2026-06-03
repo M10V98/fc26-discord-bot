@@ -64,7 +64,7 @@ function calculateXPBreakdown(stats) {
 
         redCards:
             (stats.red_cards || 0) *
-            XP_WEIGHTS.redCard
+            XP_WEIGHTS.redCards
     };
 
     return {
@@ -131,7 +131,7 @@ function calculateXP(stats) {
 
     xp +=
         (stats.redCards || 0) *
-        XP_WEIGHTS.redCard;
+        XP_WEIGHTS.redCards;
 
     return Math.floor(xp);
 }

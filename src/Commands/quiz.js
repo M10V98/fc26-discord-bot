@@ -13,78 +13,207 @@ const {
     escapeMarkdown
 } = require("../Utils/embedStyle");
 
-const QUESTIONS = [
-    ["How many players can a Pro Clubs team control on the pitch?", ["11", "9", "7", "5"], 0],
-    ["What does CAM stand for?", ["Central Attacking Midfielder", "Club Assist Manager", "Counter Attack Mid", "Central Area Marker"], 0],
-    ["Which result gives 3 league points?", ["Win", "Draw", "Loss", "Abandon"], 0],
-    ["What is a clean sheet?", ["Conceding zero goals", "Scoring three goals", "No cards", "100% passing"], 0],
-    ["What does GK stand for?", ["Goalkeeper", "Goal Kick", "Game Key", "General Captain"], 0],
-    ["Which position is usually deepest?", ["CB", "ST", "CAM", "RW"], 0],
-    ["What does MOTM mean?", ["Man of the Match", "Match of the Month", "Most Open Teammate", "Midfield Overload Tactic"], 0],
-    ["A hat trick is usually how many goals?", ["3", "2", "4", "5"], 0],
-    ["Which stat rewards a final pass before a goal?", ["Assist", "Save", "Tackle", "Interception"], 0],
-    ["What does CDM stand for?", ["Central Defensive Midfielder", "Club Defensive Manager", "Counter Direct Mid", "Central Dual Marker"], 0],
-    ["What is a derby?", ["Rivalry match", "Cup final only", "Training game", "Penalty shootout"], 0],
-    ["Which card removes a player from the match?", ["Red card", "Yellow card", "Green card", "Blue card"], 0],
-    ["What does xG estimate?", ["Chance quality", "Sprint speed", "Pass length", "Shot power"], 0],
-    ["Which formation has four defenders, three midfielders, three attackers?", ["4-3-3", "4-4-2", "3-5-2", "5-2-1-2"], 0],
-    ["What is pressing?", ["Closing opponents quickly", "Shooting early", "Standing off", "Time wasting"], 0],
-    ["What does LB stand for?", ["Left Back", "Long Ball", "League Bonus", "Late Block"], 0],
-    ["What does RW stand for?", ["Right Winger", "Rear Wing", "Rating Winner", "Rapid Wide"], 0],
-    ["What is a through ball?", ["Pass into space behind defenders", "Back pass to keeper", "Shot from halfway", "Cross from a corner"], 0],
-    ["What is advantage?", ["Play continues after a foul if beneficial", "Extra goal awarded", "Free substitution", "Automatic corner"], 0],
-    ["What is a false nine?", ["Striker who drops deeper", "Backup goalkeeper", "Wide centre back", "Defensive winger"], 0],
-    ["What is jockeying used for?", ["Defensive positioning", "Celebrations", "Set pieces only", "Changing kit"], 0],
-    ["What is a volley?", ["Shot before the ball lands", "Pass to goalkeeper", "Blocked tackle", "Low cross"], 0],
-    ["What is a brace?", ["Two goals by one player", "Two yellow cards by a team", "Two saves in a row", "Two corners"], 0],
-    ["Which role usually takes corners?", ["Set-piece taker", "Goalkeeper only", "Centre back only", "Referee"], 0],
-    ["What does RB stand for?", ["Right Back", "Rapid Break", "Reserve Bench", "Rating Bonus"], 0]
+const QUIZ_XP = 100;
+const TIME_LIMIT_SECONDS = 60;
+const quizTimers = new Map();
+
+const STATIC_QUESTIONS = [
+    ["In FC Clubs, which stat best shows a player is consistently completing distribution?", ["Pass success rate", "Shot success rate", "Tackle success rate", "Save percentage"], 0],
+    ["What does a high xA usually indicate?", ["Passes are creating high-quality shooting chances", "The player shoots often", "The team keeps clean sheets", "The player wins aerial duels"], 0],
+    ["Why can a low block be hard to break down?", ["It compresses space near goal", "It leaves both centre backs high", "It avoids all marking", "It removes the goalkeeper"], 0],
+    ["What is the main risk of a high defensive line?", ["Space in behind", "Too many attackers", "No passing lanes in midfield", "Automatic offsides"], 0],
+    ["What does a box-to-box midfielder primarily provide?", ["Two-way coverage between both penalty areas", "Only penalty-taking", "Only goalkeeping cover", "Only touchline width"], 0],
+    ["What is a third-man run?", ["A supporting runner receives after a two-player exchange", "A goalkeeper overlap", "A substitute warming up", "A defender clearing long"], 0],
+    ["Why does a false nine drop deep?", ["To pull defenders out and create space", "To stand offside", "To mark the goalkeeper", "To avoid receiving passes"], 0],
+    ["What does counter-pressing try to do immediately after losing possession?", ["Win the ball back before the opponent settles", "Retreat to the penalty box", "Force a throw-in every time", "Switch goalkeepers"], 0],
+    ["What is the clearest sign of strong chemistry between two attackers?", ["Frequent joint goal contributions and wins", "Matching kit numbers", "Same celebration", "Both taking corners"], 0],
+    ["When comparing players, why is average rating useful alongside goals and assists?", ["It captures broader match influence", "It ignores defending", "It only counts penalties", "It replaces appearances"], 0],
+    ["What is a progressive pass?", ["A pass that moves the ball meaningfully closer to goal", "Any backwards pass", "A pass after a foul", "A goalkeeper save"], 0],
+    ["What does rest defence describe?", ["The structure left behind while attacking", "The bench order", "Time wasting after scoring", "A goalkeeper's stamina"], 0],
+    ["Why do teams overload one side?", ["To create space or a free player elsewhere", "To reduce passing options", "To guarantee a red card", "To make offside impossible"], 0],
+    ["What usually makes a press ineffective?", ["No compactness or cover behind it", "Too much communication", "Good passing angles", "A high work rate"], 0],
+    ["What is a cutback?", ["A pass pulled back from near the byline", "A long clearance", "A sliding tackle", "A direct free kick"], 0],
+    ["Which stat pairing best describes attacking output?", ["Goals and assists", "Saves and red cards", "Tackles and fouls", "Pass attempts and cards"], 0],
+    ["What is the main value of a clean sheet for defenders and keepers?", ["It shows the team conceded zero goals", "It proves 100% possession", "It adds three goals", "It guarantees promotion"], 0],
+    ["Why are assists per game useful?", ["They adjust creativity for appearances", "They count only corners", "They remove all context", "They ignore minutes played"], 0],
+    ["What is a switch of play?", ["Moving possession quickly to the opposite side", "Changing the captain", "Replacing the goalkeeper", "Passing only backwards"], 0],
+    ["What does 'between the lines' mean?", ["Receiving in space between defensive units", "Standing on the touchline", "Waiting in the wall", "Sitting on the bench"], 0],
+    ["Why does a team use a holding midfielder?", ["To protect the defence and connect play", "To take every shot", "To stay offside", "To replace the referee"], 0],
+    ["What is an underlap?", ["A run inside a wide teammate", "A run outside a centre back by the goalkeeper", "A kick-off routine", "A penalty save"], 0],
+    ["What is a transition moment?", ["The phase when possession changes", "Half-time only", "A kit change", "A corner flag movement"], 0],
+    ["What should a winger do if doubled up by defenders?", ["Move the ball quickly or combine with support", "Dribble into both every time", "Stop attacking", "Shoot from the halfway line"], 0],
+    ["Why does match sample size matter in form analysis?", ["One match can distort trends", "It removes all wins", "It only helps goalkeepers", "It blocks assists"], 0]
 ];
 
-const QUIZ_XP = 100;
-const TIME_LIMIT_SECONDS = 30;
+function shuffleAnswers(question, answers, correctIndex) {
+    const rows =
+        answers.map((answer, index) => ({
+            answer,
+            correct: index === correctIndex
+        }));
 
-function questionFor(id) {
-    return QUESTIONS[Number(id) % QUESTIONS.length];
+    for (let index = rows.length - 1; index > 0; index--) {
+        const swapIndex =
+            Math.floor(Math.random() * (index + 1));
+        [rows[index], rows[swapIndex]] = [rows[swapIndex], rows[index]];
+    }
+
+    return {
+        question,
+        answers: rows.map(row => row.answer),
+        correct: rows.findIndex(row => row.correct)
+    };
 }
 
-function randomQuestionId() {
-    return Math.floor(Math.random() * QUESTIONS.length);
+function staticQuestion() {
+    const row =
+        STATIC_QUESTIONS[
+            Math.floor(Math.random() * STATIC_QUESTIONS.length)
+        ];
+
+    return shuffleAnswers(row[0], row[1], row[2]);
 }
 
-function buildQuestionEmbed(questionId) {
-    const [question, answers] =
-        questionFor(questionId);
+async function dynamicQuestion(guildId) {
+    const players =
+        await db.all(
+            `
+            SELECT *
+            FROM players
+            WHERE guild_id = ?
+            AND COALESCE(matches, 0) > 0
+            `,
+            [guildId]
+        );
 
+    if (players.length < 2) {
+        return null;
+    }
+
+    const sortedBy = key =>
+        players
+            .slice()
+            .sort((a, b) => Number(b[key] || 0) - Number(a[key] || 0));
+    const topRated =
+        players
+            .filter(player => Number(player.matches || 0) > 0)
+            .slice()
+            .sort((a, b) =>
+                (Number(b.total_rating || 0) / Math.max(Number(b.matches || 0), 1)) -
+                (Number(a.total_rating || 0) / Math.max(Number(a.matches || 0), 1))
+            );
+    const categories = [
+        {
+            question: "Who is currently the team's top tracked goalscorer?",
+            correct: sortedBy("goals")[0]?.player_name
+        },
+        {
+            question: "Who currently leads the team for tracked assists?",
+            correct: sortedBy("assists")[0]?.player_name
+        },
+        {
+            question: "Who has the highest tracked average rating?",
+            correct: topRated[0]?.player_name
+        },
+        {
+            question: "Who has played the most tracked matches?",
+            correct: sortedBy("matches")[0]?.player_name
+        },
+        {
+            question: "Who has recorded the most tracked clean sheets?",
+            correct: sortedBy("clean_sheets")[0]?.player_name
+        },
+        {
+            question: "Who has won the most tracked Man of the Match awards?",
+            correct: sortedBy("motm")[0]?.player_name
+        }
+    ]
+        .filter(row => row.correct);
+
+    if (!categories.length) {
+        return null;
+    }
+
+    const selected =
+        categories[
+            Math.floor(Math.random() * categories.length)
+        ];
+    const distractors =
+        players
+            .map(player => player.player_name)
+            .filter(name => name && name !== selected.correct)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+
+    if (distractors.length < 3) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        selected.question,
+        [
+            selected.correct,
+            ...distractors
+        ],
+        0
+    );
+}
+
+async function nextQuestion(guildId) {
+    const useDynamic =
+        Math.random() < 0.45;
+    const dynamic =
+        useDynamic
+            ? await dynamicQuestion(guildId)
+            : null;
+
+    return dynamic || staticQuestion();
+}
+
+function createQuestionId() {
+    return Math.random()
+        .toString(36)
+        .slice(2, 10);
+}
+
+function buildQuestionEmbed(question, askedCount) {
     return new EmbedBuilder()
         .setColor("#ffffff")
-        .setTitle("\u{1F9E0} Quiz")
+        .setTitle(`\u{1F9E0} Quiz - Question ${askedCount}`)
         .setDescription(
             [
-                escapeMarkdown(question),
+                escapeMarkdown(question.question),
                 "",
-                ...answers.map((answer, index) =>
+                ...question.answers.map((answer, index) =>
                     `**${index + 1}.** ${escapeMarkdown(answer)}`
                 ),
                 "",
-                `You have **${TIME_LIMIT_SECONDS} seconds**. Correct answers earn **${QUIZ_XP} XP**.`
+                `You have **${TIME_LIMIT_SECONDS} seconds**. Correct answers earn **${QUIZ_XP} XP**.`,
+                "Press **Stop** when the room is done."
             ].join("\n")
         )
         .setFooter(FOOTER);
 }
 
-function buildButtons(questionId, userId, expiresAt) {
+function buildButtons(sessionId, questionId) {
     const row =
         new ActionRowBuilder();
 
     for (let index = 0; index < 4; index++) {
         row.addComponents(
             new ButtonBuilder()
-                .setCustomId(`quiz_answer:${userId}:${questionId}:${index}:${expiresAt}`)
+                .setCustomId(`quiz_answer:${sessionId}:${questionId}:${index}`)
                 .setLabel(String(index + 1))
                 .setStyle(ButtonStyle.Secondary)
         );
     }
+
+    row.addComponents(
+        new ButtonBuilder()
+            .setCustomId(`quiz_stop:${sessionId}`)
+            .setLabel("Stop")
+            .setStyle(ButtonStyle.Danger)
+    );
 
     return row;
 }
@@ -129,6 +258,128 @@ async function awardPlayerXp(guildId, userId, amount) {
     return result.changes > 0;
 }
 
+async function recordAttempt(guildId, userId, correct) {
+    await db.run(
+        `
+        INSERT INTO quiz_scores
+        (guild_id, user_id, correct, attempts, xp_awarded, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(guild_id, user_id)
+        DO UPDATE SET
+            correct = correct + ?,
+            attempts = attempts + 1,
+            xp_awarded = xp_awarded + ?,
+            updated_at = excluded.updated_at
+        `,
+        [
+            guildId,
+            userId,
+            correct ? 1 : 0,
+            correct ? QUIZ_XP : 0,
+            Date.now(),
+            correct ? 1 : 0,
+            correct ? QUIZ_XP : 0
+        ]
+    );
+
+    if (correct) {
+        await awardPlayerXp(guildId, userId, QUIZ_XP);
+    }
+}
+
+function clearQuizTimer(sessionId) {
+    const timer =
+        quizTimers.get(sessionId);
+
+    if (timer) {
+        clearTimeout(timer);
+        quizTimers.delete(sessionId);
+    }
+}
+
+async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time") {
+    const session =
+        await db.get(
+            `
+            SELECT *
+            FROM quiz_sessions
+            WHERE session_id = ?
+            `,
+            [sessionId]
+        );
+
+    if (
+        !session ||
+        !Number(session.active) ||
+        session.current_question_id !== expectedQuestionId
+    ) {
+        return;
+    }
+
+    const current =
+        JSON.parse(session.current_question_json || "{}");
+    const next =
+        await nextQuestion(session.guild_id);
+    const nextQuestionId =
+        createQuestionId();
+    const nextCount =
+        Number(session.asked_count || 0) + 1;
+    const message =
+        await client.channels
+            .fetch(session.channel_id)
+            .then(channel => channel.messages.fetch(session.message_id))
+            .catch(() => null);
+
+    await db.run(
+        `
+        UPDATE quiz_sessions
+        SET current_question_id = ?,
+            current_question_json = ?,
+            asked_count = ?,
+            updated_at = ?
+        WHERE session_id = ?
+        `,
+        [
+            nextQuestionId,
+            JSON.stringify(next),
+            nextCount,
+            Date.now(),
+            sessionId
+        ]
+    );
+
+    if (message) {
+        await message.edit({
+            content:
+                reason === "time"
+                    ? `Time. Correct answer: ${current.answers?.[current.correct] || "unknown"}. Next question:`
+                    : "Next question:",
+            embeds: [buildQuestionEmbed(next, nextCount)],
+            components: [buildButtons(sessionId, nextQuestionId)]
+        });
+    }
+
+    scheduleQuizAdvance(client, sessionId, nextQuestionId);
+}
+
+function scheduleQuizAdvance(client, sessionId, expectedQuestionId) {
+    clearQuizTimer(sessionId);
+
+    const timer =
+        setTimeout(() => {
+            advanceQuiz(
+                client,
+                sessionId,
+                expectedQuestionId,
+                "time"
+            ).catch(err =>
+                console.error("quiz advance error:", err)
+            );
+        }, TIME_LIMIT_SECONDS * 1000);
+
+    quizTimers.set(sessionId, timer);
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("quiz")
@@ -136,7 +387,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("start")
-                .setDescription("Start a timed quiz question")
+                .setDescription("Start a continuous timed quiz")
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -178,96 +429,175 @@ module.exports = {
             return interaction.editReply({ embeds: [embed] });
         }
 
+        const sessionId =
+            interaction.id;
+        const question =
+            await nextQuestion(interaction.guild.id);
         const questionId =
-            randomQuestionId();
-        const expiresAt =
-            Date.now() + (TIME_LIMIT_SECONDS * 1000);
+            createQuestionId();
 
-        return interaction.reply({
-            embeds: [buildQuestionEmbed(questionId)],
-            components: [buildButtons(questionId, interaction.user.id, expiresAt)]
-        });
+        await db.run(
+            `
+            INSERT INTO quiz_sessions
+            (session_id, guild_id, channel_id, message_id, creator_id, current_question_id, current_question_json, active, asked_count, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
+            `,
+            [
+                sessionId,
+                interaction.guild.id,
+                interaction.channel.id,
+                null,
+                interaction.user.id,
+                questionId,
+                JSON.stringify(question),
+                Date.now(),
+                Date.now()
+            ]
+        );
+
+        const reply =
+            await interaction.reply({
+                embeds: [buildQuestionEmbed(question, 1)],
+                components: [buildButtons(sessionId, questionId)],
+                fetchReply: true
+            });
+
+        await db.run(
+            `UPDATE quiz_sessions SET message_id = ? WHERE session_id = ?`,
+            [reply.id, sessionId]
+        );
+
+        scheduleQuizAdvance(
+            interaction.client,
+            sessionId,
+            questionId
+        );
     },
 
     async handleAnswer(interaction) {
-        const [, userId, questionIdRaw, answerRaw, expiresAtRaw] =
+        const [, sessionId, clickedQuestionId, answerRaw] =
             interaction.customId.split(":");
+        const session =
+            await db.get(
+                `
+                SELECT *
+                FROM quiz_sessions
+                WHERE session_id = ?
+                AND guild_id = ?
+                `,
+                [sessionId, interaction.guild.id]
+            );
 
-        if (interaction.user.id !== userId) {
+        if (!session || !Number(session.active)) {
             return interaction.reply({
-                content: "That quiz question belongs to someone else.",
+                content: "That quiz has already stopped.",
                 ephemeral: true
             });
         }
 
-        if (Date.now() > Number(expiresAtRaw)) {
-            return interaction.update({
-                content: "Time is up.",
-                embeds: [],
-                components: []
+        if (session.current_question_id !== clickedQuestionId) {
+            return interaction.reply({
+                content: "That question has already moved on.",
+                ephemeral: true
             });
         }
 
-        const questionId =
-            Number(questionIdRaw);
+        const question =
+            JSON.parse(session.current_question_json || "{}");
         const answer =
             Number(answerRaw);
-        const [, answers, correct] =
-            questionFor(questionId);
         const isCorrect =
-            answer === correct;
-
-        if (isCorrect) {
-            await db.run(
+            answer === Number(question.correct);
+        const alreadyAnswered =
+            await db.get(
                 `
-                INSERT INTO quiz_scores
-                (guild_id, user_id, correct, attempts, xp_awarded, updated_at)
-                VALUES (?, ?, 1, 1, ?, ?)
-                ON CONFLICT(guild_id, user_id)
-                DO UPDATE SET
-                    correct = correct + 1,
-                    attempts = attempts + 1,
-                    xp_awarded = xp_awarded + ?,
-                    updated_at = excluded.updated_at
+                SELECT *
+                FROM quiz_answers
+                WHERE session_id = ?
+                AND question_id = ?
+                AND user_id = ?
                 `,
                 [
-                    interaction.guild.id,
-                    interaction.user.id,
-                    QUIZ_XP,
-                    Date.now(),
-                    QUIZ_XP
+                    sessionId,
+                    clickedQuestionId,
+                    interaction.user.id
                 ]
             );
 
-            await awardPlayerXp(
-                interaction.guild.id,
-                interaction.user.id,
-                QUIZ_XP
-            );
-        } else {
-            await db.run(
-                `
-                INSERT INTO quiz_scores
-                (guild_id, user_id, correct, attempts, xp_awarded, updated_at)
-                VALUES (?, ?, 0, 1, 0, ?)
-                ON CONFLICT(guild_id, user_id)
-                DO UPDATE SET
-                    attempts = attempts + 1,
-                    updated_at = excluded.updated_at
-                `,
-                [
-                    interaction.guild.id,
-                    interaction.user.id,
-                    Date.now()
-                ]
-            );
+        if (alreadyAnswered) {
+            return interaction.reply({
+                content: "You have already answered this question.",
+                ephemeral: true
+            });
         }
 
-        return interaction.update({
+        await db.run(
+            `
+            INSERT INTO quiz_answers
+            (session_id, guild_id, question_id, user_id, answer_index, correct, answered_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                sessionId,
+                interaction.guild.id,
+                clickedQuestionId,
+                interaction.user.id,
+                answer,
+                isCorrect ? 1 : 0,
+                Date.now()
+            ]
+        );
+
+        await recordAttempt(
+            interaction.guild.id,
+            interaction.user.id,
+            isCorrect
+        );
+
+        return interaction.reply({
             content:
                 isCorrect
                     ? `Correct. You earned ${QUIZ_XP} XP.`
-                    : `Incorrect. Correct answer: ${answers[correct]}.`,
+                    : "Answer submitted.",
+            ephemeral: true
+        });
+    },
+
+    async handleStop(interaction) {
+        const [, sessionId] =
+            interaction.customId.split(":");
+        const session =
+            await db.get(
+                `
+                SELECT *
+                FROM quiz_sessions
+                WHERE session_id = ?
+                AND guild_id = ?
+                `,
+                [sessionId, interaction.guild.id]
+            );
+
+        if (!session) {
+            return interaction.reply({
+                content: "That quiz session no longer exists.",
+                ephemeral: true
+            });
+        }
+
+        await db.run(
+            `
+            UPDATE quiz_sessions
+            SET active = 0,
+                updated_at = ?
+            WHERE session_id = ?
+            `,
+            [Date.now(), sessionId]
+        );
+
+        clearQuizTimer(sessionId);
+
+        return interaction.update({
+            content: `Quiz stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`,
             embeds: [],
             components: []
         });
