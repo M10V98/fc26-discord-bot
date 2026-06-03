@@ -1,6 +1,7 @@
 const {
     SlashCommandBuilder,
     EmbedBuilder,
+    MessageFlags,
     PermissionFlagsBits
 } = require("discord.js");
 
@@ -12,6 +13,12 @@ const {
 } = require("../Utils/embedStyle");
 
 const DEFAULT_TIMEOUT_MINUTES = 60;
+
+const ACTION_LABELS = {
+    warn: "Warn",
+    timeout: "Timeout",
+    ban: "Ban"
+};
 
 async function warnCount(guildId, userId) {
     const row =
@@ -60,6 +67,108 @@ async function recordInfraction(interaction, type, user, reason) {
             Date.now()
         ]
     );
+}
+
+function targetLine(action, user) {
+    return `✅ ${user.username} [${user.id}]`;
+}
+
+function actionSummary(action, user, options = {}) {
+    if (action === "warn") {
+        return `Warned ${user.username}. Total warns: **${number(options.warns)}**.`;
+    }
+
+    if (action === "timeout") {
+        return `Timed out ${user.username} for **${number(options.minutes)}** minute${options.minutes === 1 ? "" : "s"}.`;
+    }
+
+    if (action === "ban") {
+        return `Banned ${user.username}.`;
+    }
+
+    return `${ACTION_LABELS[action] || "Moderation"} action completed for ${user.username}.`;
+}
+
+function actionEmbed(interaction, action, user, reason, options = {}) {
+    const label =
+        ACTION_LABELS[action] || "Moderation";
+    const dmStatus =
+        options.dmSent
+            ? "✅ User notified by DM"
+            : "⚠️ Could not DM user";
+    const escalation =
+        options.escalation
+            ? "\n🚩 Auto-escalation flag: this user has 3+ warnings."
+            : "";
+    const duration =
+        action === "timeout"
+            ? `\n⏱️ Duration: ${number(options.minutes)} minute${options.minutes === 1 ? "" : "s"}`
+            : "";
+
+    return new EmbedBuilder()
+        .setColor("#2b2d31")
+        .setTitle(`${label} result:`)
+        .setDescription(
+            [
+                `📋 **Reason:** ${escapeMarkdown(reason || "No reason provided")}`,
+                `👥 **Moderator:** <@${interaction.user.id}>`,
+                duration.trim(),
+                "",
+                `**${action === "timeout" ? "Timed out" : action === "ban" ? "Banned" : "Warned"}:**`,
+                targetLine(action, user),
+                "",
+                dmStatus,
+                escalation
+            ]
+                .filter(line => line !== "")
+                .join("\n")
+                .slice(0, 4096)
+        )
+        .setFooter(FOOTER);
+}
+
+function dmEmbed(interaction, action, reason, options = {}) {
+    const label =
+        ACTION_LABELS[action] || "Moderation";
+    const duration =
+        action === "timeout"
+            ? `\n⏱️ Duration: ${number(options.minutes)} minute${options.minutes === 1 ? "" : "s"}`
+            : "";
+
+    return new EmbedBuilder()
+        .setColor("#2b2d31")
+        .setTitle(`${label} notice`)
+        .setDescription(
+            [
+                `You have received a **${label.toLowerCase()}** in **${interaction.guild.name}**.`,
+                "",
+                `📋 **Reason:** ${escapeMarkdown(reason || "No reason provided")}`,
+                `👥 **Moderator:** ${interaction.user.tag}`,
+                duration.trim()
+            ]
+                .filter(Boolean)
+                .join("\n")
+        )
+        .setFooter(FOOTER);
+}
+
+async function notifyUser(interaction, user, action, reason, options = {}) {
+    try {
+        await user.send({
+            embeds: [
+                dmEmbed(
+                    interaction,
+                    action,
+                    reason,
+                    options
+                )
+            ]
+        });
+
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 module.exports = {
@@ -134,7 +243,7 @@ module.exports = {
 
     async execute(interaction) {
         await interaction.deferReply({
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         try {
@@ -170,14 +279,37 @@ module.exports = {
 
                 const warns =
                     await warnCount(interaction.guild.id, user.id);
+                const dmSent =
+                    await notifyUser(
+                        interaction,
+                        user,
+                        "warn",
+                        reason,
+                        { warns }
+                    );
                 const escalation =
-                    warns >= 3
-                        ? "\nAuto-escalation flag: this user has 3+ warnings. Consider a timeout or ban."
-                        : "";
+                    warns >= 3;
 
-                return interaction.editReply(
-                    `Warned ${user.tag}. Total warns: **${number(warns)}**.${escalation}`
-                );
+                return interaction.editReply({
+                    content: actionSummary(
+                        "warn",
+                        user,
+                        { warns }
+                    ),
+                    embeds: [
+                        actionEmbed(
+                            interaction,
+                            "warn",
+                            user,
+                            reason,
+                            {
+                                warns,
+                                dmSent,
+                                escalation
+                            }
+                        )
+                    ]
+                });
             }
 
             const member =
@@ -195,6 +327,14 @@ module.exports = {
                         interaction.options.getInteger("minutes") ||
                         DEFAULT_TIMEOUT_MINUTES
                     );
+                const dmSent =
+                    await notifyUser(
+                        interaction,
+                        user,
+                        "timeout",
+                        reason,
+                        { minutes }
+                    );
 
                 await member.timeout(
                     minutes * 60 * 1000,
@@ -202,20 +342,53 @@ module.exports = {
                 );
                 await recordInfraction(interaction, "timeout", user, reason);
 
-                return interaction.editReply(
-                    `Timed out ${user.tag} for ${number(minutes)} minute${minutes === 1 ? "" : "s"}.`
-                );
+                return interaction.editReply({
+                    content: actionSummary(
+                        "timeout",
+                        user,
+                        { minutes }
+                    ),
+                    embeds: [
+                        actionEmbed(
+                            interaction,
+                            "timeout",
+                            user,
+                            reason,
+                            {
+                                minutes,
+                                dmSent
+                            }
+                        )
+                    ]
+                });
             }
 
             if (subcommand === "ban") {
+                const dmSent =
+                    await notifyUser(
+                        interaction,
+                        user,
+                        "ban",
+                        reason
+                    );
+
                 await recordInfraction(interaction, "ban", user, reason);
                 await member.ban({
                     reason
                 });
 
-                return interaction.editReply(
-                    `Banned ${user.tag}.`
-                );
+                return interaction.editReply({
+                    content: actionSummary("ban", user),
+                    embeds: [
+                        actionEmbed(
+                            interaction,
+                            "ban",
+                            user,
+                            reason,
+                            { dmSent }
+                        )
+                    ]
+                });
             }
 
             return interaction.editReply("Unknown moderation action.");
