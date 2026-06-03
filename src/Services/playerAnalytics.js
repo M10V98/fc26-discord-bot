@@ -196,7 +196,9 @@ function summarizePlayerForm(matches, clubId, player, limit) {
                     rating: n(entry.stats.rating),
                     goals: n(entry.stats.goals),
                     assists: n(entry.stats.assists),
-                    result: getResult(match, clubId)
+                    result: getResult(match, clubId),
+                    goalsFor: n(getOurClub(match, clubId)?.goals),
+                    goalsAgainst: n(getOpponentClub(match, clubId)?.goals)
                 };
             })
             .filter(Boolean)

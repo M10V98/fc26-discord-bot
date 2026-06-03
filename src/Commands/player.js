@@ -18,8 +18,10 @@ const {
 } = require("../Services/playerAnalytics");
 const {
     FOOTER,
+    buildLinkedMaps,
     underline,
     number,
+    displayName,
     escapeMarkdown,
     getLinkedRows
 } = require("../Utils/embedStyle");
@@ -233,6 +235,16 @@ module.exports = {
                     return interaction.editReply("No tracked stats found for that player yet.");
                 }
 
+                const linkedMaps =
+                    buildLinkedMaps(
+                        await getLinkedRows(db, interaction.guild.id)
+                    );
+                const display =
+                    displayName(
+                        player.player_name,
+                        linkedMaps,
+                        player.player_id
+                    );
                 const achievements =
                     achievementDefinitions(player);
                 const earned =
@@ -250,9 +262,11 @@ module.exports = {
                 const embed =
                     new EmbedBuilder()
                         .setColor("#ffffff")
-                        .setTitle(`\u{1F3C5} ${escapeMarkdown(player.player_name)} Achievements`)
+                        .setTitle("\u{1F3C5} Player Achievements")
                         .setDescription(
                             [
+                                `Player: ${display}`,
+                                "",
                                 `Unlocked **${earned.length}/${achievements.length}** achievements.`,
                                 "",
                                 earnedLines.join("\n"),
@@ -285,7 +299,7 @@ module.exports = {
                     interaction.options.getString("mode") || "divisions";
                 const last =
                     interaction.options.getInteger("matches") || 10;
-                const [matches, info, crestUrl] =
+                const [matches, info, crestUrl, linkedRows] =
                     await Promise.all([
                         getModeMatches(
                             interaction.guild.id,
@@ -297,8 +311,17 @@ module.exports = {
                             }
                         ),
                         eaApi.getClubInfo(club.club_id),
-                        getCrestUrl(club.club_id)
+                        getCrestUrl(club.club_id),
+                        getLinkedRows(db, interaction.guild.id)
                     ]);
+                const linkedMaps =
+                    buildLinkedMaps(linkedRows);
+                const display =
+                    displayName(
+                        linked.player_name,
+                        linkedMaps,
+                        linked.player_id
+                    );
                 const summary =
                     summarizePlayerForm(matches, club.club_id, linked, last);
                 const clubName =
@@ -313,16 +336,17 @@ module.exports = {
                 const recentLines =
                     summary.rows
                         .map(row =>
-                            `${row.result || "?"} - ${number(row.rating, 1)} rating, ${number(row.goals)}G/${number(row.assists)}A`
+                            `${row.result || "?"} ${number(row.goalsFor)}-${number(row.goalsAgainst)} - ${number(row.rating, 1)} rating, ${number(row.goals)}G/${number(row.assists)}A`
                         )
                         .join("\n");
 
                 const embed =
                     new EmbedBuilder()
                         .setColor("#ffffff")
-                        .setTitle(`\u{1F4C8} ${escapeMarkdown(linked.player_name)} Form for ${underline(clubName)}`)
+                        .setTitle(`\u{1F4C8} Player Form for ${underline(clubName)}`)
                         .setDescription(
                             [
+                                `Player: ${display}`,
                                 `Mode: **${mode === "competitive" ? "Competitive friendlies" : "Divisions"}**`,
                                 `Window: **Last ${summary.rows.length} matches**`,
                                 "",
@@ -372,6 +396,22 @@ module.exports = {
 
                 const comparison =
                     compareStoredPlayers(playerA, playerB);
+                const linkedMaps =
+                    buildLinkedMaps(
+                        await getLinkedRows(db, interaction.guild.id)
+                    );
+                const displayA =
+                    displayName(
+                        playerA.player_name,
+                        linkedMaps,
+                        playerA.player_id
+                    );
+                const displayB =
+                    displayName(
+                        playerB.player_name,
+                        linkedMaps,
+                        playerB.player_id
+                    );
                 const recentMatches =
                     await eaApi.getRecentMatches(
                         club.club_id,
@@ -398,9 +438,11 @@ module.exports = {
                 const embed =
                     new EmbedBuilder()
                         .setColor("#ffffff")
-                        .setTitle(`\u2694\uFE0F ${escapeMarkdown(playerA.player_name)} vs ${escapeMarkdown(playerB.player_name)}`)
+                        .setTitle("\u2694\uFE0F Player Comparison")
                         .setDescription(
                             [
+                                `${displayA} vs ${displayB}`,
+                                "",
                                 line("Goals", number(comparison.a.goals), number(comparison.b.goals)),
                                 line("Assists", number(comparison.a.assists), number(comparison.b.assists)),
                                 line("Avg rating", number(comparison.a.avgRating, 2), number(comparison.b.avgRating, 2)),

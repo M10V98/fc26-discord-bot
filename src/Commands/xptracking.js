@@ -10,6 +10,9 @@ const {
 } = require("../Utils/xpSystem");
 const {
     FOOTER,
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows,
     number
 } = require("../Utils/embedStyle");
 
@@ -65,12 +68,23 @@ module.exports = {
 
         const breakdown =
             calculateXPBreakdown(player);
+        const linkedMaps =
+            buildLinkedMaps(
+                await getLinkedRows(db, interaction.guild.id)
+            );
+        const display =
+            displayName(
+                player.player_name,
+                linkedMaps,
+                player.player_id
+            );
         const embed =
             new EmbedBuilder()
                 .setColor("#f5c542")
-                .setTitle(`XP Tracking - ${player.player_name}`)
+                .setTitle("XP Tracking")
                 .setDescription(
                     [
+                        `Player: ${display}`,
                         `Total tracked XP: **${number(player.xp)}**`,
                         `Breakdown total from current weights: **${number(breakdown.total)}**`,
                         "",

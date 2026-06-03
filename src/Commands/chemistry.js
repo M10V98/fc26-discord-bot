@@ -11,8 +11,9 @@ const {
 } = require("../Services/playerAnalytics");
 const {
     FOOTER,
+    buildLinkedMaps,
+    displayName,
     number,
-    escapeMarkdown,
     getLinkedRows
 } = require("../Utils/embedStyle");
 
@@ -109,15 +110,33 @@ module.exports = {
                         limit: 100
                     }
                 );
+            const linkedMaps =
+                buildLinkedMaps(
+                    await getLinkedRows(db, interaction.guild.id)
+                );
+            const displayFirst =
+                displayName(
+                    first.player_name,
+                    linkedMaps,
+                    first.player_id
+                );
+            const displaySecond =
+                displayName(
+                    second.player_name,
+                    linkedMaps,
+                    second.player_id
+                );
             const summary =
                 chemistry(matches, club.club_id, first, second);
 
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`\u{1F9EA} ${escapeMarkdown(first.player_name)} + ${escapeMarkdown(second.player_name)}`)
+                    .setTitle("\u{1F9EA} Player Chemistry")
                     .setDescription(
                         [
+                            `${displayFirst} + ${displaySecond}`,
+                            "",
                             `Mode: **${mode === "competitive" ? "Competitive friendlies" : "Divisions"}**`,
                             "",
                             `Matches played together: **${number(summary.matches)}**`,

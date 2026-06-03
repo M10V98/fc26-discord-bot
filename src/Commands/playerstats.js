@@ -153,7 +153,7 @@ module.exports = {
                 player.proName ? ` - "${player.proName}"` : "";
 
             const description = [
-                `👤 **${player.name}**${proName}`,
+                `👤 ${display}${proName}`,
                 "",
                 `👕 Games Played: **${number(player.gamesPlayed)}**`,
                 `🏅 Man of the Match: **${number(player.manOfTheMatch)}**`,
@@ -179,7 +179,7 @@ module.exports = {
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`${player.name}'s Player Statistics for ${underline(clubName)}`)
+                    .setTitle(`Player Statistics for ${underline(clubName)}`)
                     .setDescription(description.slice(0, 4096))
                     .setFooter(FOOTER);
 

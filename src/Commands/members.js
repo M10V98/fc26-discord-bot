@@ -57,8 +57,8 @@ function memberBlock(member, linkedMaps) {
             : null;
 
     return [
-        `**${playerName}**`,
         `${EMOJI_USER} ${linkedName}`,
+        linkedName !== playerName ? `EA ID: **${playerName}**` : null,
         `${EMOJI_PIN} ${overall} ${position}`,
         `${EMOJI_SHIELD} GP: ${number(member.gamesPlayed)}`,
         `${EMOJI_STAR} AMR: ${amr}`,
@@ -259,4 +259,3 @@ module.exports = {
 
     handleMembersPageButton
 };
-

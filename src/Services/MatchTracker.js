@@ -1,4 +1,10 @@
 const eaApi = require("./eaApi");
+const db = require("../Utils/db");
+const {
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
 
 const activeTrackers = new Map();
 
@@ -38,11 +44,15 @@ module.exports = function startTracker(client) {
 
                 const ourClub = clubs[clubId];
                 const opponent = clubs[opponentId];
+                const linkedMaps =
+                    buildLinkedMaps(
+                        await getLinkedRows(db, guildId)
+                    );
 
                 const playerText =
-                    Object.values(latest.players?.[clubId] || {})
-                        .map(stats =>
-                            `**${stats.playername}** | Goals ${stats.goals || 0} | Assists ${stats.assists || 0} | Rating ${stats.rating || "0.0"}`
+                    Object.entries(latest.players?.[clubId] || {})
+                        .map(([playerId, stats]) =>
+                            `${displayName(stats.playername, linkedMaps, playerId)} | Goals ${stats.goals || 0} | Assists ${stats.assists || 0} | Rating ${stats.rating || "0.0"}`
                         )
                         .join("\n");
 

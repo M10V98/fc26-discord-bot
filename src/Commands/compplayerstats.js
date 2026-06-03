@@ -198,7 +198,7 @@ const description = [
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`${player.name}'s Competitive Statistics for ${underline(clubName)}`)
+                    .setTitle(`Competitive Player Statistics for ${underline(clubName)}`)
                     .setDescription(description.slice(0, 4096))
                     .setFooter(FOOTER);
 

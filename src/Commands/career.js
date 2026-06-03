@@ -152,7 +152,7 @@ module.exports = {
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
-                    .setTitle(`${player.name}'s All-time Statistics`)
+                    .setTitle("All-time Player Statistics")
                     .setDescription(description.slice(0, 4096))
                     .setFooter(FOOTER);
 

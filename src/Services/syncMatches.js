@@ -15,6 +15,11 @@ const {
     formatScoreboard,
     getClubName
 } = require("../Utils/scoreboard");
+const {
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
 
 const {
     processMatchXP
@@ -49,7 +54,7 @@ function getResult(home, away) {
         : "Draw";
 }
 
-function buildFallbackEmbed(match, ourClubId) {
+async function buildFallbackEmbed(match, ourClubId, guildId) {
 
     const clubsObj = match.clubs || {};
     const clubIds = Object.keys(clubsObj);
@@ -73,10 +78,14 @@ function buildFallbackEmbed(match, ourClubId) {
 
     const ourPlayers =
         match.players?.[ourId] || {};
+    const linkedMaps =
+        buildLinkedMaps(
+            await getLinkedRows(db, guildId)
+        );
 
     const playerLines =
-        Object.values(ourPlayers)
-            .map(p => {
+        Object.entries(ourPlayers)
+            .map(([playerId, p]) => {
 
                 const archetype =
                     archetypes[p.archetypeid] ||
@@ -92,7 +101,7 @@ function buildFallbackEmbed(match, ourClubId) {
                         : "";
 
                 return (
-                    `${mom}**${p.playername}** (${archetype})\n` +
+                    `${mom}${displayName(p.playername, linkedMaps, playerId)} (${archetype})\n` +
                     `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists}\n` +
                     `${p.passesmade}/${p.passattempts} passes\n` +
                     `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
@@ -176,7 +185,8 @@ async function sendMatchPost(guildId, channel, match, clubId) {
         return;
     }
 
-    const embed = buildFallbackEmbed(match, clubId);
+    const embed =
+        await buildFallbackEmbed(match, clubId, guildId);
 
     await channel.send({
         content: embed

@@ -5,6 +5,11 @@ const {
 
 const db = require("../Utils/db");
 const archetypes = require("../Utils/archetypes");
+const {
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
 
 const {
     getLevelFromXP,
@@ -73,6 +78,17 @@ module.exports = {
             );
         }
 
+        const linkedMaps =
+            buildLinkedMaps(
+                await getLinkedRows(db, interaction.guild.id)
+            );
+        const display =
+            displayName(
+                player.player_name,
+                linkedMaps,
+                player.player_id
+            );
+
         const currentLevel =
             getLevelFromXP(player.xp || 0);
 
@@ -108,8 +124,9 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setColor("#ffaa00")
-            .setTitle(player.player_name)
+            .setTitle("Player Profile")
             .setDescription(
+                `👤 ${display}\n` +
                 `${EMOJIS.POSITION} **Position:** ${position}\n` +
                 `${EMOJIS.ARCHETYPE} **Archetype:** ${archetype}`
             )

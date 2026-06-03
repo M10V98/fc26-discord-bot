@@ -1,4 +1,9 @@
 const db = require("../Utils/db");
+const {
+    buildLinkedMaps,
+    displayName,
+    getLinkedRows
+} = require("../Utils/embedStyle");
  
 function hasAny(text, words) {
     return words.some(word => text.includes(word));
@@ -632,13 +637,23 @@ async function answerAutoMessage(guildId, message) {
 async function answerQuestion(guildId, question) {
  
     const intent = detectIntent(question);
+    const linkedMaps =
+        buildLinkedMaps(
+            await getLinkedRows(db, guildId)
+        );
+    const shown = player =>
+        displayName(
+            player?.player_name,
+            linkedMaps,
+            player?.player_id
+        );
  
     switch (intent) {
  
         case "top_scorer": {
  
             const player = await db.get(`
-                SELECT player_name, goals
+                SELECT player_id, player_name, goals
                 FROM players
                 WHERE guild_id = ?
                 ORDER BY goals DESC
@@ -647,13 +662,13 @@ async function answerQuestion(guildId, question) {
  
             if (!player) return "⚽ No player statistics found.";
  
-            return `⚽ ${player.player_name} is the club's top scorer with ${player.goals} goals.`;
+            return `⚽ ${shown(player)} is the club's top scorer with ${player.goals} goals.`;
         }
  
         case "top_assists": {
  
             const player = await db.get(`
-                SELECT player_name, assists
+                SELECT player_id, player_name, assists
                 FROM players
                 WHERE guild_id = ?
                 ORDER BY assists DESC
@@ -662,13 +677,13 @@ async function answerQuestion(guildId, question) {
  
             if (!player) return "👟 No player statistics found.";
  
-            return `👟 ${player.player_name} leads the club with ${player.assists} assists.`;
+            return `👟 ${shown(player)} leads the club with ${player.assists} assists.`;
         }
  
         case "highest_rating": {
  
             const player = await db.get(`
-                SELECT player_name, total_rating, matches
+                SELECT player_id, player_name, total_rating, matches
                 FROM players
                 WHERE guild_id = ?
                 AND matches > 0
@@ -680,13 +695,13 @@ async function answerQuestion(guildId, question) {
  
             const rating = (player.total_rating / player.matches).toFixed(2);
  
-            return `⭐ ${player.player_name} has the highest average rating (${rating}).`;
+            return `⭐ ${shown(player)} has the highest average rating (${rating}).`;
         }
  
         case "most_matches": {
  
             const player = await db.get(`
-                SELECT player_name, matches
+                SELECT player_id, player_name, matches
                 FROM players
                 WHERE guild_id = ?
                 ORDER BY matches DESC
@@ -695,13 +710,13 @@ async function answerQuestion(guildId, question) {
  
             if (!player) return "🎮 No match data available.";
  
-            return `🎮 ${player.player_name} has played the most matches (${player.matches}).`;
+            return `🎮 ${shown(player)} has played the most matches (${player.matches}).`;
         }
  
         case "goal_contributions": {
  
             const player = await db.get(`
-                SELECT player_name, goals, assists, (goals + assists) AS contributions
+                SELECT player_id, player_name, goals, assists, (goals + assists) AS contributions
                 FROM players
                 WHERE guild_id = ?
                 ORDER BY contributions DESC
@@ -710,7 +725,7 @@ async function answerQuestion(guildId, question) {
  
             if (!player) return "⚽ No contribution data available.";
  
-            return `🔥 ${player.player_name} leads the club with ${player.contributions} goal contributions (${player.goals} goals, ${player.assists} assists).`;
+            return `🔥 ${shown(player)} leads the club with ${player.contributions} goal contributions (${player.goals} goals, ${player.assists} assists).`;
         }
  
         case "claim_help":
