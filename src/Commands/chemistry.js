@@ -5,6 +5,9 @@ const {
 
 const db = require("../Utils/db");
 const {
+    getCrestUrl
+} = require("../Services/crests");
+const {
     findLinkedPlayer,
     getModeMatches,
     chemistry
@@ -44,6 +47,21 @@ async function resolve(interaction, prefix) {
                 interaction.options.getUser(prefix)?.id
         }
     );
+}
+
+function chemistryTier(score) {
+    const value = Number(score || 0);
+
+    if (value >= 90) return "\u{1F525} Elite link";
+    if (value >= 75) return "\u{1F4AA} Strong link";
+    if (value >= 60) return "\u2705 Reliable link";
+    if (value >= 40) return "\u{1F9EA} Developing link";
+    return "\u{1F527} Needs minutes";
+}
+
+function perMatch(value, matches) {
+    const apps = Number(matches || 0);
+    return apps ? (Number(value || 0) / apps).toFixed(2) : "0.00";
 }
 
 module.exports = {
@@ -100,20 +118,22 @@ module.exports = {
 
             const mode =
                 interaction.options.getString("mode") || "divisions";
-            const matches =
-                await getModeMatches(
-                    interaction.guild.id,
-                    club.club_id,
-                    mode,
-                    {
-                        forceRefresh: true,
-                        limit: 100
-                    }
-                );
+            const [matches, linkedRows, crestUrl] =
+                await Promise.all([
+                    getModeMatches(
+                        interaction.guild.id,
+                        club.club_id,
+                        mode,
+                        {
+                            forceRefresh: true,
+                            limit: 100
+                        }
+                    ),
+                    getLinkedRows(db, interaction.guild.id),
+                    getCrestUrl(club.club_id).catch(() => null)
+                ]);
             const linkedMaps =
-                buildLinkedMaps(
-                    await getLinkedRows(db, interaction.guild.id)
-                );
+                buildLinkedMaps(linkedRows);
             const displayFirst =
                 displayName(
                     first.player_name,
@@ -128,24 +148,61 @@ module.exports = {
                 );
             const summary =
                 chemistry(matches, club.club_id, first, second);
+            const modeLabel =
+                mode === "competitive"
+                    ? "Competitive friendlies"
+                    : "Divisions";
 
             const embed =
                 new EmbedBuilder()
-                    .setColor("#ffffff")
+                    .setColor("#41f5b3")
                     .setTitle("\u{1F9EA} Player Chemistry")
                     .setDescription(
                         [
-                            `${displayFirst} + ${displaySecond}`,
+                            `${displayFirst} \u{1F91D} ${displaySecond}`,
                             "",
-                            `Mode: **${mode === "competitive" ? "Competitive friendlies" : "Divisions"}**`,
-                            "",
-                            `Matches played together: **${number(summary.matches)}**`,
-                            `Win rate together: **${number(summary.winRate, 1)}%**`,
-                            `Avg rating together: **${number(summary.avgRating, 2)}**`,
-                            `Chemistry Score: **${number(summary.score)}/100**`
+                            `Mode: **${modeLabel}**`,
+                            `Chemistry Score: **${number(summary.score)}/100** - ${chemistryTier(summary.score)}`
                         ].join("\n")
                     )
                     .setFooter(FOOTER);
+
+            if (crestUrl) {
+                embed.setThumbnail(crestUrl);
+            }
+
+            embed.addFields(
+                {
+                    name: "\u{1F4CA} Together",
+                    value: [
+                        `\u{1F455} Matches together: **${number(summary.matches)}**`,
+                        `\u{1F3C6} Record together: **${summary.wins}W ${summary.draws}D ${summary.losses}L**`,
+                        `\u{1F4C8} Win rate: **${number(summary.winRate, 1)}%**`,
+                        `\u2B50 Avg pair rating: **${number(summary.avgRating, 2)}**`,
+                        `\u{1F525} Best pair rating: **${number(summary.bestCombinedRating, 2)}**`,
+                        `\u{1F4CB} Recent pair form: **${summary.formLine}**`
+                    ].join("\n")
+                },
+                {
+                    name: "\u26BD Pair Output",
+                    value: [
+                        `\u26BD Combined goals: **${number(summary.goals)}**`,
+                        `\u{1F91D} Combined assists: **${number(summary.assists)}**`,
+                        `\u{1F525} Combined G/A: **${number(summary.goalContrib)}**`,
+                        `\u{1F4C8} G/A per match: **${perMatch(summary.goalContrib, summary.matches)}**`,
+                        `\u{1F945} MOTM between them: **${number(summary.motm)}**`
+                    ].join("\n")
+                },
+                {
+                    name: "\u{1F3DF}\uFE0F Team Impact When Both Play",
+                    value: [
+                        `\u{1F7E2} Team goals: **${number(summary.goalsFor)}** (${number(summary.goalsForPerMatch, 2)} per match)`,
+                        `\u{1F534} Goals conceded: **${number(summary.goalsAgainst)}** (${number(summary.goalsAgainstPerMatch, 2)} per match)`,
+                        `\u{1F9E4} Clean sheets together: **${number(summary.cleanSheets)}**`,
+                        `\u2705 Clean sheet rate: **${number(summary.cleanSheetRate, 1)}%**`
+                    ].join("\n")
+                }
+            );
 
             return interaction.editReply({ embeds: [embed] });
         } catch (err) {

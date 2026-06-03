@@ -360,21 +360,53 @@ function chemistry(matches, clubId, playerA, playerB) {
 
                 if (!a || !b) return null;
 
+                const goalsFor = n(getOurClub(match, clubId)?.goals);
+                const goalsAgainst = n(getOpponentClub(match, clubId)?.goals);
+                const goals =
+                    n(a.stats.goals) +
+                    n(b.stats.goals);
+                const assists =
+                    n(a.stats.assists) +
+                    n(b.stats.assists);
+
                 return {
                     result: getResult(match, clubId),
+                    goalsFor,
+                    goalsAgainst,
                     rating:
                         (n(a.stats.rating) + n(b.stats.rating)) / 2,
-                    goalContrib:
-                        n(a.stats.goals) +
-                        n(a.stats.assists) +
-                        n(b.stats.goals) +
-                        n(b.stats.assists)
+                    goals,
+                    assists,
+                    goalContrib: goals + assists,
+                    motm:
+                        a.stats.mom === "1" ||
+                        b.stats.mom === "1",
+                    cleanSheet:
+                        goalsAgainst === 0
                 };
             })
             .filter(Boolean);
 
     const wins =
         together.filter(row => row.result === "W").length;
+    const losses =
+        together.filter(row => row.result === "L").length;
+    const draws =
+        together.filter(row => row.result === "D").length;
+    const goals =
+        together.reduce((sum, row) => sum + row.goals, 0);
+    const assists =
+        together.reduce((sum, row) => sum + row.assists, 0);
+    const goalContrib =
+        goals + assists;
+    const goalsFor =
+        together.reduce((sum, row) => sum + row.goalsFor, 0);
+    const goalsAgainst =
+        together.reduce((sum, row) => sum + row.goalsAgainst, 0);
+    const cleanSheets =
+        together.filter(row => row.cleanSheet).length;
+    const motm =
+        together.filter(row => row.motm).length;
     const avgRating =
         together.length
             ? together.reduce((sum, row) => sum + row.rating, 0) / together.length
@@ -385,23 +417,49 @@ function chemistry(matches, clubId, playerA, playerB) {
             : 0;
     const avgContrib =
         together.length
-            ? together.reduce((sum, row) => sum + row.goalContrib, 0) / together.length
+            ? goalContrib / together.length
+            : 0;
+    const cleanSheetRate =
+        together.length
+            ? (cleanSheets / together.length) * 100
             : 0;
     const score =
         Math.min(
             100,
             Math.round(
-                (winRate * 0.45) +
-                (avgRating * 6) +
-                (avgContrib * 8)
+                (winRate * 0.38) +
+                (avgRating * 5.5) +
+                (avgContrib * 8) +
+                (cleanSheetRate * 0.12)
             )
         );
 
     return {
         matches: together.length,
         wins,
+        losses,
+        draws,
         winRate,
         avgRating,
+        goals,
+        assists,
+        goalContrib,
+        avgContrib,
+        goalsFor,
+        goalsAgainst,
+        goalsForPerMatch:
+            together.length ? goalsFor / together.length : 0,
+        goalsAgainstPerMatch:
+            together.length ? goalsAgainst / together.length : 0,
+        cleanSheets,
+        cleanSheetRate,
+        motm,
+        bestCombinedRating:
+            together.length
+                ? Math.max(...together.map(row => row.rating))
+                : 0,
+        formLine:
+            together.slice(0, 10).map(row => row.result || "?").join(" ") || "-",
         score
     };
 }
