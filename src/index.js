@@ -7,6 +7,7 @@ const {
     Client,
     Collection,
     GatewayIntentBits,
+    PermissionFlagsBits,
     Events
 } = require("discord.js");
 
@@ -402,6 +403,31 @@ client.on(
                     return interaction.reply({
                         content:
                             "That AutoMode button belongs to another server.",
+                        ephemeral: true
+                    });
+                }
+
+                const automode =
+                    await db.get(
+                        `
+                        SELECT started_by
+                        FROM automode
+                        WHERE guild_id = ?
+                        `,
+                        [guildId]
+                    );
+                const isStarter =
+                    automode?.started_by &&
+                    String(automode.started_by) === String(interaction.user.id);
+                const isAdmin =
+                    interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator
+                    );
+
+                if (!isStarter && !isAdmin) {
+                    return interaction.reply({
+                        content:
+                            "Only the person who started AutoMode or an administrator can stop it.",
                         ephemeral: true
                     });
                 }

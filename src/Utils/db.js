@@ -347,6 +347,12 @@ async function init() {
     );
 
     await ensureColumn(
+        "automode",
+        "started_by",
+        "TEXT"
+    );
+
+    await ensureColumn(
         "scheduled_sessions",
         "league",
         "TEXT"

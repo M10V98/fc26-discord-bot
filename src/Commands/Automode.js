@@ -59,15 +59,17 @@ module.exports = {
                     channel_id,
                     last_match_id,
                     started_at,
-                    last_activity_at
+                    last_activity_at,
+                    started_by
                 )
-                VALUES (?, ?, NULL, ?, ?)
+                VALUES (?, ?, NULL, ?, ?, ?)
                 `,
                 [
                     interaction.guild.id,
                     interaction.channel.id,
                     Date.now(),
-                    Date.now()
+                    Date.now(),
+                    interaction.user.id
                 ]
             );
 
