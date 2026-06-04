@@ -1058,6 +1058,67 @@ async function buildResultContent(session, question, reason) {
     ].join("\n").slice(0, 1900);
 }
 
+async function getCurrentQuestionAnswerCount(session) {
+    const row =
+        await db.get(
+            `
+            SELECT COUNT(*) AS count
+            FROM quiz_answers
+            WHERE session_id = ?
+            AND question_id = ?
+            `,
+            [
+                session.session_id,
+                session.current_question_id
+            ]
+        );
+
+    return Number(row?.count || 0);
+}
+
+async function stopQuizForNoAnswers(client, session, question) {
+    await db.run(
+        `
+        UPDATE quiz_sessions
+        SET active = 0,
+            updated_at = ?
+        WHERE session_id = ?
+        `,
+        [
+            Date.now(),
+            session.session_id
+        ]
+    );
+
+    clearQuizTimer(session.session_id);
+
+    const message =
+        await client.channels
+            .fetch(session.channel_id)
+            .then(channel => channel.messages.fetch(session.message_id))
+            .catch(() => null);
+    const correctAnswer =
+        question.answers?.[question.correct] || "unknown";
+    const payload =
+        await buildQuizResultsPayload(
+            session.guild_id,
+            session.session_id,
+            0
+        );
+
+    if (message) {
+        await message.edit({
+            content:
+                [
+                    "Quiz stopped because no one answered the last question.",
+                    `Correct answer: **${escapeMarkdown(correctAnswer)}**`,
+                    `Stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`
+                ].join("\n"),
+            ...payload
+        });
+    }
+}
+
 async function scoreCurrentQuestionOnStop(session) {
     const answers =
         await db.all(
@@ -1229,6 +1290,21 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
     try {
         const current =
             JSON.parse(session.current_question_json || "{}");
+        const answerCount =
+            await getCurrentQuestionAnswerCount(session);
+
+        if (
+            reason === "time" &&
+            answerCount === 0
+        ) {
+            await stopQuizForNoAnswers(
+                client,
+                session,
+                current
+            );
+            return;
+        }
+
         const next =
             await nextQuestion(session.guild_id);
         const nextQuestionId =
