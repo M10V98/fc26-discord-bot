@@ -19,6 +19,9 @@ const {
     displayName,
     getLinkedRows
 } = require("../Utils/embedStyle");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 function n(value) {
     return Number(value || 0);
@@ -92,7 +95,8 @@ module.exports = {
                 );
 
             if (!club) {
-                return interaction.editReply(
+                return privateReply(
+                    interaction,
                     "No club linked. Use /linkclub first."
                 );
             }
@@ -112,7 +116,8 @@ module.exports = {
                     );
 
                 if (!linked) {
-                    return interaction.editReply(
+                    return privateReply(
+                        interaction,
                         user
                             ? "That Discord user has not claimed a player."
                             : "Use /claim first, or choose a player."
@@ -138,7 +143,8 @@ module.exports = {
                     );
 
             if (!player) {
-                return interaction.editReply(
+                return privateReply(
+                    interaction,
                     "No current member stats found for that player."
                 );
             }
@@ -193,7 +199,8 @@ module.exports = {
         } catch (err) {
             console.error("playerstats error:", err);
 
-            await interaction.editReply(
+            await privateReply(
+                interaction,
                 "Failed to load player stats."
             );
         }

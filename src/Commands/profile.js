@@ -9,6 +9,9 @@ const {
     getLevelFromXP,
     getTotalXPForLevel
 } = require("../Utils/xpSystem");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 function formatPositionCounts(value) {
     let counts = {};
@@ -130,7 +133,8 @@ module.exports = {
             );
 
         if (!linked) {
-            return interaction.editReply(
+            return privateReply(
+                interaction,
                 "Use /claim first."
             );
         }

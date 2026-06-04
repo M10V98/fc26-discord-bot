@@ -15,6 +15,9 @@ const {
     getLinkedRows,
     number
 } = require("../Utils/embedStyle");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,7 +42,7 @@ module.exports = {
             );
 
         if (!linked) {
-            return interaction.editReply("Use /claim first.");
+            return privateReply(interaction, "Use /claim first.");
         }
 
         const player =
@@ -61,7 +64,8 @@ module.exports = {
             );
 
         if (!player) {
-            return interaction.editReply(
+            return privateReply(
+                interaction,
                 "No tracked XP found yet. XP is added when live matches are picked up by auto sync or match commands."
             );
         }

@@ -20,6 +20,9 @@ const {
     displayName,
     getLinkedRows
 } = require("../Utils/embedStyle");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 function n(value) {
     return Number(value || 0);
@@ -90,7 +93,7 @@ module.exports = {
                 );
 
             if (!club) {
-                return interaction.editReply("No club linked. Use /linkclub first.");
+                return privateReply(interaction, "No club linked. Use /linkclub first.");
             }
 
             const user =
@@ -109,7 +112,8 @@ module.exports = {
                     );
 
                 if (!linked) {
-                    return interaction.editReply(
+                    return privateReply(
+                        interaction,
                         user
                             ? "That Discord user has not claimed a player."
                             : "Use /claim first, or choose a player."
@@ -145,7 +149,7 @@ module.exports = {
                 );
 
             if (!player) {
-                return interaction.editReply("No competitive friendly stats found for that player.");
+                return privateReply(interaction, "No competitive friendly stats found for that player.");
             }
 
             const clubId = String(club.club_id);
@@ -207,7 +211,7 @@ const description = [
             await interaction.editReply({ embeds: [embed] });
         } catch (err) {
             console.error("compplayerstats error:", err);
-            await interaction.editReply("Failed to load competitive player stats.");
+            await privateReply(interaction, "Failed to load competitive player stats.");
         }
     }
 };

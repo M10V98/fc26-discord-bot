@@ -25,6 +25,9 @@ const {
     escapeMarkdown,
     getLinkedRows
 } = require("../Utils/embedStyle");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 function achievementDefinitions(player) {
     const matches = Number(player.matches || 0);
@@ -264,14 +267,14 @@ module.exports = {
                     await resolvePlayer(interaction, "player");
 
                 if (!linked) {
-                    return interaction.editReply("Use /claim first, mention a claimed user, or choose a player.");
+                    return privateReply(interaction, "Use /claim first, mention a claimed user, or choose a player.");
                 }
 
                 const player =
                     await getStoredPlayer(interaction.guild.id, linked);
 
                 if (!player) {
-                    return interaction.editReply("No tracked stats found for that player yet.");
+                    return privateReply(interaction, "No tracked stats found for that player yet.");
                 }
 
                 const linkedMaps =
@@ -324,14 +327,14 @@ module.exports = {
                     await getClub(interaction);
 
                 if (!club) {
-                    return interaction.editReply("No club linked. Use /linkclub first.");
+                    return privateReply(interaction, "No club linked. Use /linkclub first.");
                 }
 
                 const linked =
                     await resolvePlayer(interaction, "player");
 
                 if (!linked) {
-                    return interaction.editReply("Use /claim first, mention a claimed user, or choose a player.");
+                    return privateReply(interaction, "Use /claim first, mention a claimed user, or choose a player.");
                 }
 
                 const mode =
@@ -369,7 +372,7 @@ module.exports = {
                     aggregateFormStats(summary.rows);
 
                 if (!summary.rows.length) {
-                    return interaction.editReply(`No ${mode} form data found for that player.`);
+                    return privateReply(interaction, `No ${mode} form data found for that player.`);
                 }
 
                 const recentLines =
@@ -411,7 +414,7 @@ module.exports = {
                     await getClub(interaction);
 
                 if (!club) {
-                    return interaction.editReply("No club linked. Use /linkclub first.");
+                    return privateReply(interaction, "No club linked. Use /linkclub first.");
                 }
 
                 const first =
@@ -420,7 +423,7 @@ module.exports = {
                     await resolvePlayer(interaction, "player2");
 
                 if (!first || !second) {
-                    return interaction.editReply("Choose two claimed players to compare.");
+                    return privateReply(interaction, "Choose two claimed players to compare.");
                 }
 
                 const [playerA, playerB, crestUrl] =
@@ -431,7 +434,7 @@ module.exports = {
                     ]);
 
                 if (!playerA || !playerB) {
-                    return interaction.editReply("Both players need tracked stats before they can be compared.");
+                    return privateReply(interaction, "Both players need tracked stats before they can be compared.");
                 }
 
                 const comparison =
@@ -569,10 +572,10 @@ module.exports = {
                 return interaction.editReply({ embeds: [embed] });
             }
 
-            return interaction.editReply("Unknown player command.");
+            return privateReply(interaction, "Unknown player command.");
         } catch (err) {
             console.error("player command error:", err);
-            return interaction.editReply("Failed to load player information.");
+            return privateReply(interaction, "Failed to load player information.");
         }
     }
 };

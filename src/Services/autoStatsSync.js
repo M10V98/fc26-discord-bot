@@ -9,59 +9,16 @@ const {
     syncCompetitiveMatches
 } = require("./compStats");
 
-const DEFAULT_LIMIT = 25;
+const DEFAULT_LIMIT = 100;
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const MATCH_TYPES = [
+    "leagueMatch",
+    "playoffMatch",
+    "friendlyMatch"
+];
 
 let interval = null;
 let isSyncing = false;
-
-function normalizeMatchType(match) {
-    const club =
-        Object.values(match?.clubs || {})[0];
-
-    return String(
-        match?.matchType ||
-        match?.matchtype ||
-        club?.matchType ||
-        club?.matchtype ||
-        ""
-    )
-        .toLowerCase()
-        .replace(/[\s_-]/g, "");
-}
-
-function isLeagueOrPlayoff(match) {
-    const type =
-        normalizeMatchType(match);
-
-    return type === "leaguematch" ||
-        type === "playoffmatch";
-}
-
-function isAfterStart(match, startedAt = 0) {
-    const start =
-        Number(startedAt || 0);
-
-    if (!start) {
-        return true;
-    }
-
-    return Number(match?.timestamp || 0) * 1000 >= start;
-}
-
-async function getStatsStartedAt(guildId) {
-    const row =
-        await db.get(
-            `
-            SELECT stats_started_at
-            FROM clubs
-            WHERE guild_id = ?
-            `,
-            [guildId]
-        );
-
-    return Number(row?.stats_started_at || 0);
-}
 
 async function syncGuildStats(guildId, clubId, options = {}) {
 
@@ -69,23 +26,37 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         options.limit ||
         DEFAULT_LIMIT;
     const statsStartedAt =
-        Number(options.statsStartedAt || 0) ||
-        await getStatsStartedAt(guildId);
+        Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
+            ? Number(options.statsStartedAt || 0)
+            : 0;
 
     const matches =
-        (await eaApi.getRecentMatches(
-            clubId,
-            {
-                forceRefresh: Boolean(options.forceRefresh),
-                limit: Math.max(limit, 100),
-                maxResultCount: Math.max(limit, 100)
-            }
-        ))
-            .filter(match =>
-                isLeagueOrPlayoff(match) &&
-                isAfterStart(match, statsStartedAt)
+        (
+            await Promise.all(
+                MATCH_TYPES.map(type =>
+                    eaApi.getMatches(
+                        clubId,
+                        type,
+                        {
+                            forceRefresh: Boolean(options.forceRefresh),
+                            maxResultCount: limit
+                        }
+                    ).catch(err => {
+                        console.error(
+                            `${type} auto sync fetch failed for guild ${guildId}:`,
+                            err
+                        );
+                        return [];
+                    })
+                )
             )
-            .slice(0, limit);
+        )
+            .flat()
+            .filter(match => match?.matchId)
+            .sort((a, b) =>
+                Number(a.timestamp || 0) -
+                Number(b.timestamp || 0)
+            );
 
     const overallStats =
         await eaApi.getOverallStats(
@@ -107,6 +78,7 @@ async function syncGuildStats(guildId, clubId, options = {}) {
             clubId,
             {
                 forceRefresh: Boolean(options.forceRefresh),
+                maxResultCount: limit,
                 statsStartedAt
             }
         ).catch(err => {
@@ -135,6 +107,7 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         clubId,
         {
             forceRefresh: Boolean(options.forceRefresh),
+            maxResultCount: limit,
             statsStartedAt
         }
     ).catch(err => {
@@ -145,9 +118,7 @@ async function syncGuildStats(guildId, clubId, options = {}) {
     });
 
     // Replay oldest -> newest so XP accumulates in the right order.
-    const ordered = matches.slice().reverse();
-
-    for (const match of ordered) {
+    for (const match of matches) {
         const didProcess =
             await processMatchXP(
                 match,
@@ -155,7 +126,8 @@ async function syncGuildStats(guildId, clubId, options = {}) {
                 {
                     clubId,
                     overallStats,
-                    force: Boolean(options.force)
+                    force: Boolean(options.force),
+                    includeFriendlyStats: true
                 }
             );
 
@@ -165,7 +137,7 @@ async function syncGuildStats(guildId, clubId, options = {}) {
     }
 
     return {
-        checked: ordered.length,
+        checked: matches.length,
         processed
     };
 }
@@ -287,14 +259,16 @@ function startAutoStatsSync() {
     }
 
     syncAllLinkedClubs({
-        forceRefresh: true
+        forceRefresh: true,
+        statsStartedAt: 0
     });
 
     interval =
         setInterval(
             () => {
                 syncAllLinkedClubs({
-                    forceRefresh: true
+                    forceRefresh: true,
+                    statsStartedAt: 0
                 });
             },
             SYNC_INTERVAL_MS

@@ -17,6 +17,9 @@ const {
     displayName,
     getLinkedRows
 } = require("../Utils/embedStyle");
+const {
+    privateReply
+} = require("../Utils/privateReply");
 
 async function linkedPlayer(guildId, discordId) {
     return db.get(
@@ -78,7 +81,8 @@ module.exports = {
                 );
 
             if (!club) {
-                return interaction.editReply(
+                return privateReply(
+                    interaction,
                     "No club linked. Use /linkclub first."
                 );
             }
@@ -97,7 +101,8 @@ module.exports = {
                     );
 
                 if (!linked) {
-                    return interaction.editReply(
+                    return privateReply(
+                        interaction,
                         user
                             ? "That Discord user has not claimed a player."
                             : "Use /claim first, or choose a player."
@@ -122,7 +127,8 @@ module.exports = {
                     );
 
             if (!player) {
-                return interaction.editReply(
+                return privateReply(
+                    interaction,
                     "No career stats found for that player."
                 );
             }
@@ -133,9 +139,7 @@ module.exports = {
                 displayName(player.name, linkedMaps);
 
             const description = [
-                `Showing EA career totals only - ${display} does not have Premium.`,
-                "Premium includes OurProClub historical tracking, including passes, tackles, ratings, clean sheets, XP, and more.",
-                "Get OurProClub Premium",
+                `Player: ${display}`,
                 "",
                 "**EA ID**",
                 player.name,
@@ -166,7 +170,8 @@ module.exports = {
         } catch (err) {
             console.error("career error:", err);
 
-            await interaction.editReply(
+            await privateReply(
+                interaction,
                 "Failed to load career stats."
             );
         }
