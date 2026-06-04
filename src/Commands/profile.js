@@ -6,12 +6,6 @@ const {
 const db = require("../Utils/db");
 const archetypes = require("../Utils/archetypes");
 const {
-    buildLinkedMaps,
-    displayName,
-    getLinkedRows
-} = require("../Utils/embedStyle");
-
-const {
     getLevelFromXP,
     getTotalXPForLevel
 } = require("../Utils/xpSystem");
@@ -34,6 +28,88 @@ function formatPositionCounts(value) {
     return lines.length ? lines.join("\n") : "No position data tracked yet.";
 }
 
+function buildProfileEmbed(player) {
+    const currentLevel =
+        getLevelFromXP(player.xp || 0);
+    const nextLevelXP =
+        getTotalXPForLevel(currentLevel + 1);
+    const avgRating =
+        Number(player.matches || 0) > 0
+            ? (
+                Number(player.total_rating || 0) /
+                Math.max(Number(player.matches || 0), 1)
+            ).toFixed(2)
+            : "0.00";
+    const archetype =
+        archetypes[player.archetype] ||
+        player.archetype ||
+        "Unknown";
+    const position =
+        player.position &&
+        String(player.position).toLowerCase() !== "null"
+            ? player.position
+            : archetype;
+
+    const EMOJIS = {
+        POSITION: "\u{1F4CD}",
+        ARCHETYPE: "\u{1F3AF}",
+        LEVEL: "\u{1F3C6}",
+        XP: "\u{1F4C8}",
+        MATCHES: "\u26BD",
+        GOALS: "\u{1F945}",
+        ASSISTS: "\u{1F45F}",
+        RATING: "\u2B50"
+    };
+
+    return new EmbedBuilder()
+        .setColor("#ffaa00")
+        .setTitle(player.player_name || "Player Profile")
+        .setDescription(
+            `${EMOJIS.POSITION} **Position:** ${position}\n` +
+            `${EMOJIS.ARCHETYPE} **Archetype:** ${archetype}`
+        )
+        .addFields(
+            {
+                name: `${EMOJIS.LEVEL} Level`,
+                value: `${currentLevel}`,
+                inline: true
+            },
+            {
+                name: `${EMOJIS.XP} XP`,
+                value: `${player.xp || 0} / ${nextLevelXP}`,
+                inline: true
+            },
+            {
+                name: `${EMOJIS.MATCHES} Matches`,
+                value: `${player.matches || 0}`,
+                inline: true
+            },
+            {
+                name: `${EMOJIS.GOALS} Goals`,
+                value: `${player.goals || 0}`,
+                inline: true
+            },
+            {
+                name: `${EMOJIS.ASSISTS} Assists`,
+                value: `${player.assists || 0}`,
+                inline: true
+            },
+            {
+                name: `${EMOJIS.RATING} Avg Rating`,
+                value: `${avgRating}`,
+                inline: true
+            },
+            {
+                name: "Positions Played",
+                value: formatPositionCounts(player.position_counts),
+                inline: false
+            }
+        )
+        .setFooter({
+            text: `Level ${currentLevel} Player Profile`
+        });
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("profile")
@@ -42,15 +118,16 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
 
-        const linked = await db.get(
-            `SELECT * FROM linked_players
-             WHERE guild_id = ?
-             AND discord_id = ?`,
-            [
-                interaction.guild.id,
-                interaction.user.id
-            ]
-        );
+        const linked =
+            await db.get(
+                `SELECT * FROM linked_players
+                 WHERE guild_id = ?
+                 AND discord_id = ?`,
+                [
+                    interaction.guild.id,
+                    interaction.user.id
+                ]
+            );
 
         if (!linked) {
             return interaction.editReply(
@@ -58,156 +135,38 @@ module.exports = {
             );
         }
 
-        const linkedMaps =
-            buildLinkedMaps(
-                await getLinkedRows(db, interaction.guild.id)
+        const player =
+            await db.get(
+                `SELECT * FROM players
+                 WHERE guild_id = ?
+                 AND (
+                    player_id = ?
+                    OR player_name = ?
+                 )`,
+                [
+                    interaction.guild.id,
+                    linked.player_id,
+                    linked.player_name
+                ]
             );
-        const player = await db.get(
-            `SELECT * FROM players
-             WHERE guild_id = ?
-             AND (
-                player_id = ?
-                OR player_name = ?
-             )`,
-            [
-                interaction.guild.id,
-                linked.player_id,
-                linked.player_name
+
+        return interaction.editReply({
+            embeds: [
+                buildProfileEmbed(
+                    player || {
+                        player_id: linked.player_id,
+                        player_name: linked.player_name,
+                        xp: 0,
+                        matches: 0,
+                        goals: 0,
+                        assists: 0,
+                        total_rating: 0,
+                        position: "Unknown",
+                        archetype: "Unknown",
+                        position_counts: "{}"
+                    }
+                )
             ]
-        );
-
-        if (!player) {
-            const display =
-                displayName(
-                    linked.player_name,
-                    linkedMaps,
-                    linked.player_id
-                );
-            const embed =
-                new EmbedBuilder()
-                    .setColor("#ffaa00")
-                    .setTitle("Player Profile")
-                    .setDescription(
-                        `👤 ${display}\n` +
-                        "This player is claimed, but no tracked League/Playoff stats have been processed yet."
-                    )
-                    .addFields(
-                        {
-                            name: "Level",
-                            value: "1",
-                            inline: true
-                        },
-                        {
-                            name: "XP",
-                            value: "0",
-                            inline: true
-                        },
-                        {
-                            name: "Matches",
-                            value: "0",
-                            inline: true
-                        }
-                    )
-                    .setFooter({
-                        text: "Stats will appear after AutoMode or /syncstats processes League/Playoff matches."
-                    });
-
-            return interaction.editReply({
-                embeds: [embed]
-            });
-        }
-
-        const display =
-            displayName(
-                player.player_name,
-                linkedMaps,
-                player.player_id
-            );
-
-        const currentLevel =
-            getLevelFromXP(player.xp || 0);
-
-        const nextLevelXP =
-            getTotalXPForLevel(currentLevel + 1);
-
-        const avgRating = (
-            player.total_rating /
-            Math.max(player.matches, 1)
-        ).toFixed(2);
-
-        const archetype =
-            archetypes[player.archetype] ||
-            player.archetype ||
-            "Unknown";
-
-        const position =
-            player.position &&
-            String(player.position).toLowerCase() !== "null"
-                ? player.position
-                : archetype;
-
-        const EMOJIS = {
-            POSITION: "\u{1F4CD}",   // 📍
-            ARCHETYPE: "\u{1F3AF}",  // 🎯
-            LEVEL: "\u{1F3C6}",      // 🏆
-            XP: "\u{1F4C8}",         // 📈
-            MATCHES: "\u26BD",       // ⚽
-            GOALS: "\u{1F945}",      // 🥅
-            ASSISTS: "\u{1F45F}",    // 👟
-            RATING: "\u2B50"         // ⭐
-        };
-
-        const embed = new EmbedBuilder()
-            .setColor("#ffaa00")
-            .setTitle("Player Profile")
-            .setDescription(
-                `👤 ${display}\n` +
-                `${EMOJIS.POSITION} **Position:** ${position}\n` +
-                `${EMOJIS.ARCHETYPE} **Archetype:** ${archetype}`
-            )
-            .addFields(
-                {
-                    name: `${EMOJIS.LEVEL} Level`,
-                    value: `${currentLevel}`,
-                    inline: true
-                },
-                {
-                    name: `${EMOJIS.XP} XP`,
-                    value: `${player.xp} / ${nextLevelXP}`,
-                    inline: true
-                },
-                {
-                    name: `${EMOJIS.MATCHES} Matches`,
-                    value: `${player.matches}`,
-                    inline: true
-                },
-                {
-                    name: `${EMOJIS.GOALS} Goals`,
-                    value: `${player.goals}`,
-                    inline: true
-                },
-                {
-                    name: `${EMOJIS.ASSISTS} Assists`,
-                    value: `${player.assists}`,
-                    inline: true
-                },
-                {
-                    name: `${EMOJIS.RATING} Avg Rating`,
-                    value: `${avgRating}`,
-                    inline: true
-                },
-                {
-                    name: "Positions Played",
-                    value: formatPositionCounts(player.position_counts),
-                    inline: false
-                }
-            )
-            .setFooter({
-                text: `Level ${currentLevel} Player Profile`
-            });
-
-        await interaction.editReply({
-            embeds: [embed]
         });
     }
 };

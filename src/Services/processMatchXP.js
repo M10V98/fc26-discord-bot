@@ -208,17 +208,20 @@ async function processMatchXP(match, guildId, options = {}) {
         return false;
     }
 
-    if (processingMatches.has(matchId)) {
+    const processedKey =
+        `${guildId}:${matchId}`;
+
+    if (processingMatches.has(processedKey)) {
         return false;
     }
 
-    processingMatches.add(matchId);
+    processingMatches.add(processedKey);
 
     try {
 
         const exists = await db.get(
             `SELECT * FROM processed_matches WHERE match_id = ?`,
-            [matchId]
+            [processedKey]
         );
 
         if (exists && !options.force) return false;
@@ -433,13 +436,13 @@ async function processMatchXP(match, guildId, options = {}) {
 
         await db.run(
             `INSERT OR IGNORE INTO processed_matches (match_id) VALUES (?)`,
-            [matchId]
+            [processedKey]
         );
 
         return true;
 
     } finally {
-        processingMatches.delete(matchId);
+        processingMatches.delete(processedKey);
     }
 }
 

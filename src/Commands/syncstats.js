@@ -10,37 +10,15 @@ const db = require("../Utils/db");
 const {
     processMatchXP
 } = require("../Services/processMatchXP");
+const {
+    syncCompetitiveMatches
+} = require("../Services/compStats");
 
-function normalizeMatchType(match) {
-    const club =
-        Object.values(match?.clubs || {})[0];
-
-    return String(
-        match?.matchType ||
-        match?.matchtype ||
-        club?.matchType ||
-        club?.matchtype ||
-        ""
-    )
-        .toLowerCase()
-        .replace(/[\s_-]/g, "");
-}
-
-function shouldSyncNormalStats(match, statsStartedAt) {
-    const type =
-        normalizeMatchType(match);
-    const timestampMs =
-        Number(match?.timestamp || 0) * 1000;
-
-    return (
-        type === "leaguematch" ||
-        type === "playoffmatch"
-    ) &&
-        (
-            !Number(statsStartedAt || 0) ||
-            timestampMs >= Number(statsStartedAt || 0)
-        );
-}
+const MATCH_TYPES = [
+    "leagueMatch",
+    "playoffMatch",
+    "friendlyMatch"
+];
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -50,9 +28,9 @@ module.exports = {
         .addIntegerOption(option =>
             option
                 .setName("matches")
-                .setDescription("How many recent matches to process")
+                .setDescription("How many matches per EA match type to process")
                 .setMinValue(1)
-                .setMaxValue(25)
+                .setMaxValue(100)
         )
         .addBooleanOption(option =>
             option
@@ -90,26 +68,39 @@ module.exports = {
 
             const limit =
                 interaction.options.getInteger("matches") ||
-                10;
+                100;
 
             const force =
                 interaction.options.getBoolean("force") ||
                 false;
 
-            const statsStartedAt =
-                Number(club.stats_started_at || 0);
             const matches =
-                (await eaApi.getRecentMatches(
-                    club.club_id,
-                    {
-                        limit: Math.max(limit, 100),
-                        maxResultCount: 100
-                    }
-                ))
-                    .filter(match =>
-                        shouldSyncNormalStats(match, statsStartedAt)
+                (
+                    await Promise.all(
+                        MATCH_TYPES.map(type =>
+                            eaApi.getMatches(
+                                club.club_id,
+                                type,
+                                {
+                                    forceRefresh: true,
+                                    maxResultCount: limit
+                                }
+                            ).catch(err => {
+                                console.error(
+                                    `${type} sync fetch failed:`,
+                                    err
+                                );
+                                return [];
+                            })
+                        )
                     )
-                    .slice(0, limit);
+                )
+                    .flat()
+                    .filter(match => match?.matchId)
+                    .sort((a, b) =>
+                        Number(a.timestamp || 0) -
+                        Number(b.timestamp || 0)
+                    );
 
             const overallStats =
                 await eaApi.getOverallStats(
@@ -127,20 +118,31 @@ module.exports = {
 
             if (!matches?.length) {
                 return interaction.editReply(
-                    "No matches found for this club."
+                    "No matches found from the EA league, playoff, or friendly match APIs."
                 );
             }
 
+            await syncCompetitiveMatches(
+                interaction.guild.id,
+                club.club_id,
+                {
+                    forceRefresh: true,
+                    maxResultCount: limit,
+                    statsStartedAt: 0
+                }
+            );
+
             let processed = 0;
 
-            for (const match of matches.slice(0, limit).reverse()) {
+            for (const match of matches) {
                 const didProcess = await processMatchXP(
                     match,
                     interaction.guild.id,
                     {
                         clubId: club.club_id,
                         overallStats,
-                        force
+                        force,
+                        includeFriendlyStats: true
                     }
                 );
 
@@ -150,7 +152,7 @@ module.exports = {
             }
 
             await interaction.editReply(
-                `Synced ${processed} match${processed === 1 ? "" : "es"}. Try /playerstats again.`
+                `Synced ${processed} new match${processed === 1 ? "" : "es"} from ${matches.length} EA match record${matches.length === 1 ? "" : "s"} checked. Try /profile, /leaderboard, or /playerstats again.`
             );
 
         } catch (err) {

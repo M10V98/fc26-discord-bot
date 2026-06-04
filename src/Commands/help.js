@@ -98,9 +98,9 @@ module.exports = {
                 "`/profile` shows your tracked XP profile.",
                 "`/xptracking` explains where your tracked XP came from.",
                 "`/automode` posts new matches and processes League/Playoff XP automatically.",
-                isAdmin && "`/syncstats` backfills recent League/Playoff matches manually.",
+                isAdmin && "`/syncstats` backfills League, Playoff, and Friendly match history from EA manually.",
                 isAdmin && "`/resetstats` can reset XP only or reset all tracked server stats after confirmation.",
-                "Friendly matches feed the competitive commands only.",
+                "Friendly matches also feed the competitive commands.",
                 "`/quiz start` starts a continuous 60-second football quiz for the whole server.",
                 "`/quiz leaderboard` shows the server quiz table."
             ]

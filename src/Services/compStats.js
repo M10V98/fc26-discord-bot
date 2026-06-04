@@ -37,8 +37,9 @@ async function syncCompetitiveMatches(guildId, clubId, options = {}) {
     const maxResultCount =
         options.maxResultCount || 100;
     const statsStartedAt =
-        Number(options.statsStartedAt || 0) ||
-        await getStatsStartedAt(guildId);
+        Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
+            ? Number(options.statsStartedAt || 0)
+            : await getStatsStartedAt(guildId);
 
     const matches =
         await eaApi.getMatches(
@@ -88,8 +89,9 @@ async function getStoredCompetitiveMatches(guildId, clubId, options = {}) {
     const limit =
         options.limit || 500;
     const statsStartedAt =
-        Number(options.statsStartedAt || 0) ||
-        await getStatsStartedAt(guildId);
+        Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
+            ? Number(options.statsStartedAt || 0)
+            : await getStatsStartedAt(guildId);
 
     const rows =
         await db.all(

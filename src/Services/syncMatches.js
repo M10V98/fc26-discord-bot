@@ -147,23 +147,10 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
 
 async function ensureMatchProcessed(match, guildId, clubId, overallStats = null) {
 
-    const processed =
-        await db.get(
-            `SELECT * FROM processed_matches
-             WHERE match_id = ?`,
-            [match.matchId]
-        );
-
-    if (processed) {
-        return false;
-    }
-
-    await processMatchXP(match, guildId, {
+    return processMatchXP(match, guildId, {
         clubId,
         overallStats
     });
-
-    return true;
 }
 
 async function sendMatchPost(guildId, channel, match, clubId) {
