@@ -18,6 +18,10 @@ const {
     isFootballKnowledgeQuestion
 } = require("./footballKnowledge");
 const {
+    answerClubKnowledge,
+    isClubKnowledgeQuestion
+} = require("./clubKnowledge");
+const {
     answerSimpleQuestion
 } = require("./simpleAnswers");
 
@@ -85,7 +89,21 @@ function isPlanningOrAdminChat(text) {
         "let everyone know",
         "announcement",
         "server update",
-        "admin decision"
+        "admin decision",
+        "adding all these",
+        "still adding",
+        "new ideas",
+        "quiz questions",
+        "updating the bot",
+        "introduce the bot",
+        "xp system",
+        "for the sake of",
+        "i'll be home",
+        "i will be home",
+        "about an hour",
+        "today is start",
+        "start of new in game season",
+        "new in game season"
     ];
 
     return planningPhrases.some(phrase =>
@@ -100,8 +118,10 @@ function topicSignals(text) {
         clubStats:
             /\b(top scorer|goals|assists|rating|leaderboard|stats|form|matches|win rate|clean sheet|motm|last game|latest match|recent match|best player)\b/i.test(lower),
         botHelp:
-            /\b(command|commands|how do i|help|claim|link|quiz|poll|compare|chemistry)\b/i.test(lower) ||
+            /\b(command|commands|how do i|help|claim|link|start quiz|quiz leaderboard|poll command|compare command|chemistry command)\b/i.test(lower) ||
             hasSlashCommandCue(text),
+        clubLore:
+            isClubKnowledgeQuestion(text),
         tactical:
             /\b(formation|press|low block|counter|cutback|through ball|build up|transition|winger|striker|cdm|cam|defend|attack|world cup|euros|euro|champions league|ballon|golden boot|golden ball|european cup|history|record|trophy|winner)\b/i.test(lower),
         matchBanter:
@@ -184,7 +204,7 @@ function classifyRuleBased(message, memory = []) {
     if (
         longStatement &&
         !signals.clubStats &&
-        !signals.botHelp
+        !signals.clubLore
     ) {
         return {
             shouldReply: false,
@@ -207,8 +227,20 @@ function classifyRuleBased(message, memory = []) {
         };
     }
 
+    if (signals.clubLore && direct) {
+        return {
+            shouldReply: true,
+            mode: "helpful",
+            intent: "club_lore",
+            confidence: 0.9,
+            reason: "Direct club lore question.",
+            situation
+        };
+    }
+
     if (
         intent !== "unknown" &&
+        !signals.botHelp &&
         Math.random() < PASSIVE_REPLY_CHANCE
     ) {
         return {
@@ -517,6 +549,13 @@ async function answerSmartMessage(message) {
     }
 
     if (decision.mode === "helpful" || decision.mode === "analysis") {
+        const clubKnowledge =
+            answerClubKnowledge(content);
+
+        if (clubKnowledge) {
+            return clubKnowledge;
+        }
+
         const clubMatch =
             matchContextIntent(content)
                 ? await answerClubMatchQuestion(

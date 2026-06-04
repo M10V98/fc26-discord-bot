@@ -13,6 +13,9 @@ const {
     isFootballKnowledgeQuestion
 } = require("../Services/footballKnowledge");
 const {
+    answerClubKnowledge
+} = require("../Services/clubKnowledge");
+const {
     answerSimpleQuestion
 } = require("../Services/simpleAnswers");
 
@@ -37,21 +40,28 @@ module.exports = {
                 "question"
             );
 
+        const clubKnowledge =
+            answerClubKnowledge(question);
         const simple =
-            answerSimpleQuestion(question);
+            !clubKnowledge
+                ? answerSimpleQuestion(question)
+                : null;
         const clubMatch =
-            !simple
+            !simple &&
+            !clubKnowledge
                 ? await answerClubMatchQuestion(
                     interaction.guild.id,
                     question
                 )
                 : null;
         const knowledge =
+            !clubKnowledge &&
             !clubMatch
                 ? answerFootballKnowledge(question)
                 : null;
         const legacy =
             !simple &&
+            !clubKnowledge &&
             !clubMatch &&
             !knowledge &&
             !isFootballKnowledgeQuestion(question)
@@ -62,6 +72,7 @@ module.exports = {
                 : null;
         const response =
             simple ||
+            clubKnowledge ||
             clubMatch ||
             knowledge ||
             legacy ||

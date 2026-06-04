@@ -24,6 +24,9 @@ const {
     LEAGUES,
     POSITION_FACTS
 } = require("../Services/footballHistoryData");
+const {
+    CLUB_LORE_QUIZ_QUESTIONS
+} = require("../Services/clubKnowledge");
 
 const QUIZ_XP = 100;
 const TIME_LIMIT_SECONDS = 60;
@@ -32,6 +35,7 @@ const quizTimers = new Map();
 const advancingQuestions = new Set();
 
 const STATIC_QUESTIONS = [
+    ...CLUB_LORE_QUIZ_QUESTIONS,
     ["In Clubs data, what does pass success rate tell you better than raw completed passes?", ["How efficiently a player keeps possession when attempting distribution", "How many shots a player should have taken", "Whether a player was offside", "How many saves the goalkeeper made"], 0],
     ["What does a high expected assists profile usually suggest about a player?", ["They are creating valuable chances for teammates", "They are avoiding forward passes", "They are mostly making defensive clearances", "They are guaranteed to score next game"], 0],
     ["Why is average rating useful when judging a player beyond goals and assists?", ["It captures broader match influence across several actions", "It ignores defensive work completely", "It only counts penalties", "It replaces the need to watch games"], 0],

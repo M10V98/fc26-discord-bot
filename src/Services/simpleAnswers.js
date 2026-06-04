@@ -147,8 +147,15 @@ function answerSimpleQuestion(question) {
         return `It is **${countdown(nextChristmas())}** until Christmas.`;
     }
 
+    const looksLikeSeason =
+        /\b\d{2}\/\d{2}\b/.test(text);
+    const asksForMath =
+        /\b(calculate|work out|maths?|what is|what's|equals?|=)\b/.test(text);
     const expression =
-        safeMathExpression(text);
+        looksLikeSeason &&
+        !asksForMath
+            ? null
+            : safeMathExpression(text);
 
     if (expression) {
         const result =
