@@ -58,6 +58,10 @@ module.exports = {
             );
         }
 
+        const linkedMaps =
+            buildLinkedMaps(
+                await getLinkedRows(db, interaction.guild.id)
+            );
         const player = await db.get(
             `SELECT * FROM players
              WHERE guild_id = ?
@@ -73,15 +77,46 @@ module.exports = {
         );
 
         if (!player) {
-            return interaction.editReply(
-                "No profile found."
-            );
+            const display =
+                displayName(
+                    linked.player_name,
+                    linkedMaps,
+                    linked.player_id
+                );
+            const embed =
+                new EmbedBuilder()
+                    .setColor("#ffaa00")
+                    .setTitle("Player Profile")
+                    .setDescription(
+                        `👤 ${display}\n` +
+                        "This player is claimed, but no tracked League/Playoff stats have been processed yet."
+                    )
+                    .addFields(
+                        {
+                            name: "Level",
+                            value: "1",
+                            inline: true
+                        },
+                        {
+                            name: "XP",
+                            value: "0",
+                            inline: true
+                        },
+                        {
+                            name: "Matches",
+                            value: "0",
+                            inline: true
+                        }
+                    )
+                    .setFooter({
+                        text: "Stats will appear after AutoMode or /syncstats processes League/Playoff matches."
+                    });
+
+            return interaction.editReply({
+                embeds: [embed]
+            });
         }
 
-        const linkedMaps =
-            buildLinkedMaps(
-                await getLinkedRows(db, interaction.guild.id)
-            );
         const display =
             displayName(
                 player.player_name,

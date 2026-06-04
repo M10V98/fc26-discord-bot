@@ -77,7 +77,7 @@ function handleOpenAIError(err, label) {
 
         if (Date.now() >= aiBackoffLoggedUntil) {
             console.warn(
-                `${label}: OpenAI quota/rate limit hit. AI calls paused for ${Math.round(AI_BACKOFF_MS / 60000)} minutes.`
+                `${label}: AI quota/rate limit hit. AI calls paused for ${Math.round(AI_BACKOFF_MS / 60000)} minutes.`
             );
             aiBackoffLoggedUntil = aiDisabledUntil;
         }
