@@ -534,6 +534,11 @@ async function init() {
             );
         }
     );
+
+    await runOnce(
+        "xp_recalc_pass_5_quiz_1_v1",
+        recalculateStoredXpTotals
+    );
 }
 
 async function backfillXpColumns() {
@@ -550,6 +555,90 @@ async function backfillXpColumns() {
         WHERE COALESCE(season_xp, 0) = 0
         AND COALESCE(xp, 0) > 0
     `);
+}
+
+async function recalculateStoredXpTotals() {
+    const {
+        calculateXPBreakdown,
+        getLevelFromXP
+    } = require("./xpSystem");
+
+    await run(`
+        UPDATE quiz_scores
+        SET xp_awarded = COALESCE(correct, 0) * 1
+    `);
+
+    const players =
+        await all(`
+            SELECT *
+            FROM players
+            ORDER BY guild_id, player_name
+        `);
+
+    let updated = 0;
+    let beforeTotal = 0;
+    let afterTotal = 0;
+
+    for (const player of players) {
+        const quiz =
+            await get(
+                `
+                SELECT COALESCE(SUM(q.xp_awarded), 0) AS xp
+                FROM quiz_scores q
+                JOIN linked_players l
+                  ON l.guild_id = q.guild_id
+                 AND l.discord_id = q.user_id
+                WHERE l.guild_id = ?
+                AND (
+                    l.player_id = ?
+                    OR LOWER(l.player_name) = LOWER(?)
+                )
+                `,
+                [
+                    player.guild_id,
+                    player.player_id,
+                    player.player_name
+                ]
+            );
+        const matchXp =
+            calculateXPBreakdown(player).total;
+        const quizXp =
+            Number(quiz?.xp || 0);
+        const totalXp =
+            Math.max(
+                0,
+                Math.floor(matchXp + quizXp)
+            );
+
+        beforeTotal += Number(player.xp || 0);
+        afterTotal += totalXp;
+
+        await run(
+            `
+            UPDATE players
+            SET xp = ?,
+                season_xp = ?,
+                all_time_xp = ?,
+                level = ?
+            WHERE guild_id = ?
+            AND player_id = ?
+            `,
+            [
+                totalXp,
+                totalXp,
+                totalXp,
+                getLevelFromXP(totalXp),
+                player.guild_id,
+                player.player_id
+            ]
+        );
+
+        updated += 1;
+    }
+
+    console.log(
+        `XP migration recalculated ${updated} players. Total XP ${beforeTotal} -> ${afterTotal}.`
+    );
 }
 
 async function migrateLinkedPlayersTable() {

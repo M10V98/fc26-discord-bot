@@ -28,7 +28,7 @@ const {
     CLUB_LORE_QUIZ_QUESTIONS
 } = require("../Services/clubKnowledge");
 
-const QUIZ_XP = 100;
+const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 60;
 const RESULTS_PAGE_SIZE = 15;
 const quizTimers = new Map();

@@ -12,7 +12,7 @@ async function quizXpForPlayer(player) {
     const row =
         await db.get(
             `
-            SELECT COALESCE(SUM(q.xp_awarded), 0) AS xp
+            SELECT COALESCE(SUM(q.correct), 0) AS xp
             FROM quiz_scores q
             JOIN linked_players l
               ON l.guild_id = q.guild_id
@@ -44,6 +44,11 @@ async function main() {
             ORDER BY guild_id, player_name
             `
         );
+
+    await db.run(`
+        UPDATE quiz_scores
+        SET xp_awarded = COALESCE(correct, 0) * 1
+    `);
 
     let updated = 0;
     let beforeTotal = 0;
