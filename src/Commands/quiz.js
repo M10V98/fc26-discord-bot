@@ -19,6 +19,8 @@ const {
 const {
     AWARDS,
     COMPETITIONS,
+    LEAGUE_AWARDS,
+    LEAGUE_TABLES,
     LEAGUES,
     POSITION_FACTS
 } = require("../Services/footballHistoryData");
@@ -244,6 +246,20 @@ function staticQuestion() {
 }
 
 function historyQuestion() {
+    const table =
+        leagueTableQuestion();
+
+    if (table) {
+        return table;
+    }
+
+    const domesticAward =
+        leagueAwardQuestion();
+
+    if (domesticAward) {
+        return domesticAward;
+    }
+
     const pools = [
         ...Object.values(AWARDS),
         ...Object.values(COMPETITIONS),
@@ -277,6 +293,141 @@ function historyQuestion() {
             winner,
             ...distractors
         ],
+        0
+    );
+}
+
+function ordinalSuffix(value) {
+    const numberValue =
+        Number(value);
+    const mod100 =
+        numberValue % 100;
+
+    if (mod100 >= 11 && mod100 <= 13) {
+        return "th";
+    }
+
+    switch (numberValue % 10) {
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
+    }
+}
+
+function ordinalLabel(value) {
+    return `${value}${ordinalSuffix(value)}`;
+}
+
+function leagueTableQuestion() {
+    const leagueEntries =
+        Object.entries(LEAGUE_TABLES || {})
+            .flatMap(([leagueKey, seasons]) =>
+                Object.entries(seasons || {})
+                    .map(([year, table]) => ({
+                        leagueKey,
+                        year,
+                        table
+                    }))
+            )
+            .filter(row =>
+                Array.isArray(row.table) &&
+                row.table.length >= 4
+            );
+
+    if (!leagueEntries.length) {
+        return null;
+    }
+
+    const selected =
+        leagueEntries[Math.floor(Math.random() * leagueEntries.length)];
+    const place =
+        Math.floor(Math.random() * selected.table.length) + 1;
+    const team =
+        selected.table[place - 1];
+    const distractors =
+        selected.table
+            .filter(value => value !== team)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+    const label =
+        LEAGUES[selected.leagueKey]?.label || selected.leagueKey;
+
+    if (distractors.length < 3) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        `Who finished ${ordinalLabel(place)} in the ${label} in ${selected.year}?`,
+        [
+            team,
+            ...distractors
+        ],
+        0
+    );
+}
+
+function leagueAwardQuestion() {
+    const entries =
+        Object.entries(LEAGUE_AWARDS || {})
+            .flatMap(([leagueKey, awards]) =>
+                Object.entries(awards || {})
+                    .flatMap(([, seasons]) =>
+                        Object.entries(seasons || {})
+                            .map(([year, award]) => ({
+                                leagueKey,
+                                year,
+                                award
+                            }))
+                    )
+            )
+            .filter(row =>
+                row.award?.winners?.length
+            );
+
+    if (!entries.length) {
+        return null;
+    }
+
+    const selected =
+        entries[Math.floor(Math.random() * entries.length)];
+    const correct =
+        selected.award.winners.join(" and ");
+    const distractors =
+        entries
+            .map(row => row.award.winners.join(" and "))
+            .filter(value => value !== correct)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+    const fallbackDistractors = [
+        "Gerd Muller",
+        "Robert Lewandowski",
+        "Karl-Heinz Rummenigge",
+        "Jupp Heynckes",
+        "Klaus Fischer",
+        "Pierre-Emerick Aubameyang"
+    ]
+        .filter(value => value !== correct);
+    const answers =
+        uniqueAnswers(
+            correct,
+            [
+                ...distractors,
+                ...fallbackDistractors
+            ]
+        );
+
+    if (!answers) {
+        return null;
+    }
+
+    return shuffleAnswers(
+        `Who won the ${selected.award.label} in ${selected.year}?`,
+        answers,
         0
     );
 }

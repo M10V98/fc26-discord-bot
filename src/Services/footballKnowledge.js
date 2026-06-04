@@ -1,6 +1,8 @@
 const {
     AWARDS,
     COMPETITIONS,
+    LEAGUE_AWARDS,
+    LEAGUE_TABLES,
     LEAGUES,
     POSITION_FACTS
 } = require("./footballHistoryData");
@@ -185,6 +187,76 @@ function normalizeTopic(text) {
         .trim();
 }
 
+function normalizeEntity(text) {
+    return String(text || "")
+        .toLowerCase()
+        .replace(/&/g, "and")
+        .replace(/[^a-z0-9]/g, "");
+}
+
+function ordinalSuffix(number) {
+    const value =
+        Number(number);
+    const mod100 =
+        value % 100;
+
+    if (mod100 >= 11 && mod100 <= 13) {
+        return "th";
+    }
+
+    switch (value % 10) {
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
+    }
+}
+
+function ordinalLabel(number) {
+    return `${number}${ordinalSuffix(number)}`;
+}
+
+function extractOrdinal(text) {
+    const lower =
+        normalizeTopic(text);
+    const numeric =
+        lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+
+    if (numeric) {
+        return Number(numeric[1]);
+    }
+
+    const words = {
+        first: 1,
+        second: 2,
+        third: 3,
+        fourth: 4,
+        fifth: 5,
+        sixth: 6,
+        seventh: 7,
+        eighth: 8,
+        ninth: 9,
+        tenth: 10,
+        eleventh: 11,
+        twelfth: 12,
+        thirteenth: 13,
+        fourteenth: 14,
+        fifteenth: 15,
+        sixteenth: 16,
+        seventeenth: 17,
+        eighteenth: 18,
+        nineteenth: 19,
+        twentieth: 20
+    };
+
+    return Object.entries(words)
+        .find(([word]) => lower.includes(word))?.[1] || null;
+}
+
 function competitionFromText(text) {
     const lower =
         normalizeTopic(text);
@@ -288,11 +360,160 @@ function competitionFromText(text) {
     return null;
 }
 
+function leagueLabel(leagueKey) {
+    return LEAGUES[leagueKey]?.label || leagueKey;
+}
+
+function teamAliasKeys(team) {
+    const key =
+        normalizeEntity(team);
+    const aliases = {
+        wolves: "wolverhamptonwanderers",
+        wolverhampton: "wolverhamptonwanderers",
+        mancity: "manchestercity",
+        city: "manchestercity",
+        manutd: "manchesterunited",
+        united: "manchesterunited",
+        spurs: "tottenhamhotspur",
+        tottenham: "tottenhamhotspur",
+        bvb: "borussiadortmund"
+    };
+
+    return [
+        key,
+        aliases[key]
+    ].filter(Boolean);
+}
+
+function findMentionedTeam(text, table) {
+    const normalizedText =
+        normalizeEntity(text);
+
+    return table.find(team =>
+        teamAliasKeys(team).some(key =>
+            normalizedText.includes(key)
+        )
+    );
+}
+
+function getCandidateTables(text) {
+    const item =
+        competitionFromText(text);
+
+    if (item?.type === "league" && LEAGUE_TABLES[item.key]) {
+        return [
+            {
+                key: item.key,
+                tables: LEAGUE_TABLES[item.key]
+            }
+        ];
+    }
+
+    return Object.entries(LEAGUE_TABLES)
+        .map(([key, tables]) => ({
+            key,
+            tables
+        }));
+}
+
+function answerLeagueTableQuestion(text, year) {
+    if (!year) {
+        return null;
+    }
+
+    const lower =
+        normalizeTopic(text);
+
+    if (!/\b(finish|finished|place|placed|position|table)\b/.test(lower)) {
+        return null;
+    }
+
+    const ordinal =
+        extractOrdinal(text);
+
+    for (const league of getCandidateTables(text)) {
+        const table =
+            league.tables?.[year];
+
+        if (!Array.isArray(table)) {
+            continue;
+        }
+
+        if (ordinal && /\bwho\b/.test(lower)) {
+            const team =
+                table[ordinal - 1];
+
+            if (team) {
+                return `${team} finished ${ordinalLabel(ordinal)} in the ${leagueLabel(league.key)} in ${year}.`;
+            }
+        }
+
+        const team =
+            findMentionedTeam(text, table);
+
+        if (team) {
+            const place =
+                table.indexOf(team) + 1;
+
+            return `${team} finished ${ordinalLabel(place)} in the ${leagueLabel(league.key)} in ${year}.`;
+        }
+    }
+
+    return null;
+}
+
+function answerLeagueAwardQuestion(text, year) {
+    if (!year) {
+        return null;
+    }
+
+    const lower =
+        normalizeTopic(text);
+    const item =
+        competitionFromText(text);
+
+    if (
+        !item ||
+        item.type !== "league" ||
+        !/\b(golden boot|top scorer|top goalscorer|torjagerkanone)\b/.test(lower)
+    ) {
+        return null;
+    }
+
+    const award =
+        LEAGUE_AWARDS[item.key]?.goldenBoot?.[year];
+
+    if (!award) {
+        return null;
+    }
+
+    const winners =
+        award.winners.join(" and ");
+    const goals =
+        award.goals
+            ? ` with ${award.goals} goals`
+            : "";
+
+    return `${winners} won the ${award.label} in ${year}${goals}.`;
+}
+
 function answerStructuredHistory(text) {
     const year =
         firstYear(text);
     const item =
         competitionFromText(text);
+    const tableAnswer =
+        answerLeagueTableQuestion(text, year);
+    const leagueAwardAnswer =
+        answerLeagueAwardQuestion(text, year);
+
+    if (tableAnswer) {
+        return tableAnswer;
+    }
+
+    if (leagueAwardAnswer) {
+        return leagueAwardAnswer;
+    }
 
     if (item && year) {
         const winner =
@@ -405,7 +626,7 @@ function answerFootballKnowledge(text) {
 
 function isFootballKnowledgeQuestion(text) {
     return topicMatches(text, "") === false ||
-        /\b(world cup|fifa world cup|euros?|european championship|champions league|european cup|ballon|d'or|dor|golden boot|golden ball|history|record|trophy|winner)\b/i
+        /\b(world cup|fifa world cup|euros?|european championship|champions league|european cup|premier league|english top flight|la liga|serie a|bundesliga|ligue 1|ballon|d'or|dor|golden boot|top scorer|top goalscorer|torjagerkanone|golden ball|finished|finish|position|table|history|record|trophy|winner)\b/i
             .test(String(text || ""));
 }
 

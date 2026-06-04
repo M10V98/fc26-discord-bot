@@ -1,5 +1,66 @@
 const HISTORY_START_YEAR = 1966;
 
+const KNOWLEDGE_COVERAGE = {
+    targetStartYear: 1966,
+    majorLeagues: [
+        "England: Premier League/English top flight",
+        "Spain: La Liga",
+        "Italy: Serie A",
+        "Germany: Bundesliga",
+        "France: Ligue 1"
+    ],
+    europeanClubCompetitions: [
+        "UEFA Champions League/European Cup",
+        "UEFA Europa League/UEFA Cup",
+        "UEFA Conference League"
+    ],
+    internationalCompetitions: [
+        "FIFA World Cup",
+        "UEFA European Championship",
+        "Copa America",
+        "Africa Cup of Nations",
+        "AFC Asian Cup",
+        "CONCACAF Gold Cup",
+        "UEFA Nations League",
+        "Olympic football"
+    ],
+    individualAwards: [
+        "Ballon d'Or",
+        "Ballon d'Or Feminin",
+        "The Best FIFA Men's Player",
+        "The Best FIFA Women's Player",
+        "European Golden Shoe",
+        "UEFA Men's Player of the Year",
+        "UEFA Women's Player of the Year",
+        "FIFA Puskas Award",
+        "Kopa Trophy",
+        "Golden Boy",
+        "World Cup Golden Boot",
+        "EURO Golden Boot",
+        "Premier League Player of the Season",
+        "Premier League Young Player of the Season",
+        "Premier League Golden Boot",
+        "Premier League Playmaker",
+        "Premier League Golden Glove",
+        "La Liga Player of the Season",
+        "Trofeo Pichichi",
+        "Trofeo Zamora",
+        "Serie A MVP",
+        "Capocannoniere",
+        "Bundesliga Player of the Season",
+        "Torjagerkanone",
+        "Ligue 1 Player of the Year"
+    ],
+    queryTypes: [
+        "competition winners by year",
+        "league winners by season-ending year",
+        "league final table positions by season-ending year",
+        "team finishing position by season-ending year",
+        "individual award winners by year",
+        "domestic top scorers by year"
+    ]
+};
+
 const AWARDS = {
     "ballon dor": {
         label: "Ballon d'Or",
@@ -607,10 +668,77 @@ const POSITION_FACTS = {
     "false nine": "A false nine starts as a striker but drops into midfield to drag defenders out and open space for runners."
 };
 
+const LEAGUE_TABLES = {
+    england: {
+        2004: [
+            "Arsenal",
+            "Chelsea",
+            "Manchester United",
+            "Liverpool",
+            "Newcastle United",
+            "Aston Villa",
+            "Charlton Athletic",
+            "Bolton Wanderers",
+            "Fulham",
+            "Birmingham City",
+            "Middlesbrough",
+            "Southampton",
+            "Portsmouth",
+            "Tottenham Hotspur",
+            "Blackburn Rovers",
+            "Manchester City",
+            "Everton",
+            "Leicester City",
+            "Leeds United",
+            "Wolverhampton Wanderers"
+        ],
+        2010: [
+            "Chelsea",
+            "Manchester United",
+            "Arsenal",
+            "Tottenham Hotspur",
+            "Manchester City",
+            "Aston Villa",
+            "Liverpool",
+            "Everton",
+            "Birmingham City",
+            "Blackburn Rovers",
+            "Stoke City",
+            "Fulham",
+            "Sunderland",
+            "Bolton Wanderers",
+            "Wolverhampton Wanderers",
+            "Wigan Athletic",
+            "West Ham United",
+            "Burnley",
+            "Hull City",
+            "Portsmouth"
+        ]
+    }
+};
+
+const LEAGUE_AWARDS = {
+    bundesliga: {
+        goldenBoot: {
+            1993: {
+                label: "Bundesliga top scorer",
+                winners: [
+                    "Ulf Kirsten",
+                    "Anthony Yeboah"
+                ],
+                goals: 20
+            }
+        }
+    }
+};
+
 module.exports = {
     AWARDS,
     COMPETITIONS,
     HISTORY_START_YEAR,
+    KNOWLEDGE_COVERAGE,
+    LEAGUE_AWARDS,
+    LEAGUE_TABLES,
     LEAGUES,
     POSITION_FACTS
 };
