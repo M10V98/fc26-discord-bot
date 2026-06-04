@@ -86,8 +86,8 @@ module.exports = {
             description,
             "Competitive Friendly Stats",
             [
-                "`/compmatches`, `/compplayerstats`, `/compratings`, `/comptop`, `/compin-form` use Friendly Match data only.",
-                "Friendly matches are stored locally as they are seen, so older competitive data is not lost when EA rotates API results."
+                "`/compmatches`, `/compplayerstats`, `/compratings`, `/comptop`, `/compin-form`, `/compstats` use Friendly Match data only.",
+                "Friendly matches are stored locally from the server tracking start point, so competitive data stays separate from league and playoff stats."
             ]
         );
 
@@ -97,10 +97,10 @@ module.exports = {
             [
                 "`/profile` shows your tracked XP profile.",
                 "`/xptracking` explains where your tracked XP came from.",
-                "`/automode` posts new matches and processes XP automatically.",
-                isAdmin && "`/syncstats` backfills recent matches manually.",
-                isAdmin && "`/resetstats` clears tracked server stats after confirmation.",
-                "Friendly matches award double XP.",
+                "`/automode` posts new matches and processes League/Playoff XP automatically.",
+                isAdmin && "`/syncstats` backfills recent League/Playoff matches manually.",
+                isAdmin && "`/resetstats` can reset XP only or reset all tracked server stats after confirmation.",
+                "Friendly matches feed the competitive commands only.",
                 "`/quiz start` starts a continuous 60-second football quiz for the whole server.",
                 "`/quiz leaderboard` shows the server quiz table."
             ]
