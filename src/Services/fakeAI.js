@@ -148,14 +148,9 @@ function detectIntent(question) {
  
     // Help
  
-    if (hasAny(q, [
-        "claim",
-        "link my account",
-        "link account",
-        "how do i claim",
-        "register",
-        "how to claim"
-    ])) {
+    if (
+        /\b(how do i claim|how to claim|link my account|link account|register)\b/.test(q)
+    ) {
         return "claim_help";
     }
  
@@ -576,15 +571,7 @@ function detectIntent(question) {
         return "who_are_you";
     }
  
-    if (hasAny(q, [
-        "hello",
-        "hi bot",
-        "hey",
-        "hi there",
-        "morning",
-        "good morning",
-        "alright bot"
-    ])) {
+    if (/\b(hello|hi bot|hey|hi there|morning|good morning|alright bot)\b/.test(q)) {
         return "hello";
     }
  

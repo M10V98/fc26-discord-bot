@@ -39,8 +39,8 @@ const openai =
 
 const MAX_MEMORY = 8;
 const MEMORY_TTL_MS = 60 * 60 * 1000;
-const PASSIVE_REPLY_CHANCE = 0.12;
-const FOOTBALL_BANTER_CHANCE = 0.10;
+const PASSIVE_REPLY_CHANCE = 0;
+const FOOTBALL_BANTER_CHANCE = 0;
 const AI_BACKOFF_MS =
     Number(process.env.AI_BACKOFF_MS || 30 * 60 * 1000);
 
@@ -93,7 +93,29 @@ function hasQuestion(text) {
         .test(text);
 }
 
-function mentionsBot(message) {
+function isDirectBotAddress(message) {
+    const ownId =
+        message.client?.user?.id;
+    const text =
+        normalize(message.content).toLowerCase();
+
+    const mentioned =
+        Boolean(
+        ownId &&
+        message.mentions?.users?.has(ownId)
+    );
+
+    if (mentioned) {
+        return true;
+    }
+
+    return (
+        /^(yo|hi|hello|hey|alright)\s+(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text) ||
+        /^(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text)
+    );
+}
+
+function hasBotCue(message) {
     const ownId =
         message.client?.user?.id;
 
@@ -101,7 +123,34 @@ function mentionsBot(message) {
         ownId &&
         message.mentions?.users?.has(ownId)
     ) ||
-    /\b(bot|bella|assistant|ourproclub)\b/i.test(message.content || "");
+    /\b(bella\s+ciao\s+bot|bella\s+bot|ourproclub|assistant|bot)\b/i
+        .test(message.content || "");
+}
+
+function isBotAddressedByLanguage(text) {
+    const lower =
+        normalize(text).toLowerCase();
+    const botName =
+        "(?:bella\\s+ciao\\s+bot|bella\\s+bot|ourproclub|assistant|bot)";
+    const afterBotRequest =
+        "(?:can you|could you|would you|will you|do you|are you|did you|have you|how|what|why|when|where|who|which|tell me|show me|check|find|explain|answer|reply|help|say)";
+    const beforeBotRequest =
+        "(?:can you|could you|would you|will you|do you|are you|did you|have you|tell me|show me)";
+
+    return (
+        new RegExp(`\\b${botName}\\b.{0,80}\\b${afterBotRequest}\\b`, "i").test(lower) ||
+        new RegExp(`\\b${beforeBotRequest}\\b.{0,80}\\b${botName}\\b`, "i").test(lower)
+    );
+}
+
+function isBotMetaChat(text) {
+    return /\b(this bot|the bot|that bot|it should|it shouldn't|it shouldnt|doesn't understand|doesnt understand|random timer|spam replies|stupid responses|auto response|auto-response|speaking to the bot|talking to the bot)\b/i
+        .test(text);
+}
+
+function isBotGreeting(text) {
+    return /\b(hello|hi|hey|yo|alright|how are you|how you doing|you good)\b/i
+        .test(text);
 }
 
 function hasSlashCommandCue(text) {
@@ -184,9 +233,13 @@ function topicSignals(text) {
 function classifyRuleBased(message, memory = []) {
     const text =
         normalize(message.content);
+    const directAddress =
+        isDirectBotAddress(message) ||
+        isBotAddressedByLanguage(text);
+    const botCue =
+        hasBotCue(message);
     const direct =
-        mentionsBot(message) ||
-        hasQuestion(text) ||
+        directAddress ||
         hasSlashCommandCue(text);
     const signals =
         topicSignals(text);
@@ -197,7 +250,7 @@ function classifyRuleBased(message, memory = []) {
     const longStatement =
         text.length > 120 &&
         !hasQuestion(text) &&
-        !mentionsBot(message);
+        !directAddress;
     const recentBotReply =
         memory.some(row =>
             Number(row.should_reply || 0) === 1 &&
@@ -210,6 +263,8 @@ function classifyRuleBased(message, memory = []) {
         recentBotReply,
         intent,
         signals,
+        botCue,
+        directAddress,
         usefulness:
             direct
                 ? 0.8
@@ -237,6 +292,34 @@ function classifyRuleBased(message, memory = []) {
             intent: "planning_admin_chat",
             confidence: 0.95,
             reason: "Planning/admin conversation, bot reply would interrupt.",
+            situation
+        };
+    }
+
+    if (
+        isBotMetaChat(text) &&
+        !directAddress
+    ) {
+        return {
+            shouldReply: false,
+            mode: "silent",
+            intent: "bot_meta_chat",
+            confidence: 0.95,
+            reason: "People are discussing the bot, not asking it to reply.",
+            situation
+        };
+    }
+
+    if (
+        directAddress &&
+        isBotGreeting(text)
+    ) {
+        return {
+            shouldReply: true,
+            mode: "helpful",
+            intent: "bot_greeting",
+            confidence: 0.9,
+            reason: "Direct greeting to the bot.",
             situation
         };
     }
@@ -399,6 +482,13 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
         return ruleDecision;
     }
 
+    if (
+        !ruleDecision.situation?.direct &&
+        !ruleDecision.situation?.botCue
+    ) {
+        return ruleDecision;
+    }
+
     try {
         const response =
             await openai.chat.completions.create({
@@ -443,7 +533,11 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
         }
 
         if (
-            ruleDecision.intent === "planning_admin_chat" &&
+            [
+                "planning_admin_chat",
+                "bot_meta_chat",
+                "long_human_statement"
+            ].includes(ruleDecision.intent) &&
             parsed.shouldReply
         ) {
             return ruleDecision;
@@ -588,6 +682,10 @@ async function answerSmartMessage(message) {
         return null;
     }
 
+    if (decision.intent === "bot_greeting") {
+        return "I'm good. Keeping an eye on the club stats.";
+    }
+
     if (decision.mode === "helpful" || decision.mode === "analysis") {
         const clubKnowledge =
             answerClubKnowledge(content);
@@ -655,10 +753,14 @@ async function answerSmartMessage(message) {
         return getFootballReply(content);
     }
 
-    return answerQuestion(
-        message.guild.id,
-        content
-    );
+    if (detectIntent(content) !== "unknown") {
+        return answerQuestion(
+            message.guild.id,
+            content
+        );
+    }
+
+    return null;
 }
 
 module.exports = {
