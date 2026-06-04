@@ -12,7 +12,9 @@ const CLUB_LORE_QUIZ_QUESTIONS = [
     ["When did Bella Ciao start 11s Leagues?", ["December 2025", "September 2023", "January 2026", "December 2024"], 0],
     ["What caused half the team to leave to Sainsbury's FC?", ["Pigeon", "iced out camera incident", "found out what Schnitzler was doing", "they weren't good enough"], 0],
     ["Which player has crosses named after him?", ["Fyzo", "Lynxy", "Connor", "Dirk"], 0],
-    ["Who tried to shoot H411ison 9 times but missed every shot?", ["Spoondoodle 1", "Boys FC", "Crayden cottage guy", "Lynxzy"], 0]
+    ["Who tried to shoot H411ison 9 times but missed every shot?", ["Spoondoodle 1", "Boys FC", "Crayden cottage guy", "Lynxzy"], 0],
+    ["What was Bean's signature shot?", ["Power Shot+ Volley", "Finesse Shot", "Rainbow Flick Bicycle Kick Combo", "Bullet Headers"], 0],
+    ["What was Gollum's signature shot?", ["Finesse Shot", "Power Shot+ Volley", "Rainbow Flick Bicycle Kick Combo", "Bullet Headers"], 0]
 ];
 
 const CLUB_LORE_FACTS = [
@@ -187,6 +189,34 @@ const CLUB_LORE_FACTS = [
             ["9", "nine"]
         ],
         answer: "Spoondoodle 1 tried to shoot H411ison 9 times but missed every shot."
+    },
+    {
+        patterns: [
+            /\bbean'?s?\b.*\bsignature shot\b/,
+            /\bbean'?s?\b.*\bsigniture shot\b/,
+            /\bsignature shot\b.*\bbean\b/,
+            /\bsigniture shot\b.*\bbean\b/
+        ],
+        keywords: [
+            ["bean"],
+            ["signature shot", "signiture shot", "shot"],
+            ["what", "which"]
+        ],
+        answer: "Bean's signature shot was Power Shot+ Volley."
+    },
+    {
+        patterns: [
+            /\bgollum'?s?\b.*\bsignature shot\b/,
+            /\bgollum'?s?\b.*\bsigniture shot\b/,
+            /\bsignature shot\b.*\bgollum\b/,
+            /\bsigniture shot\b.*\bgollum\b/
+        ],
+        keywords: [
+            ["gollum"],
+            ["signature shot", "signiture shot", "shot"],
+            ["what", "which"]
+        ],
+        answer: "Gollum's signature shot was Finesse Shot."
     }
 ];
 
