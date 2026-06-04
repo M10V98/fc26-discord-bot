@@ -945,7 +945,8 @@ async function recordAttempt(guildId, userId, correct) {
 }
 
 async function getActiveQuiz(guildId) {
-    return db.get(
+    const session =
+        await db.get(
         `
         SELECT *
         FROM quiz_sessions
@@ -955,6 +956,28 @@ async function getActiveQuiz(guildId) {
         `,
         [guildId]
     );
+
+    if (
+        session &&
+        !quizTimers.has(session.session_id)
+    ) {
+        await db.run(
+            `
+            UPDATE quiz_sessions
+            SET active = 0,
+                updated_at = ?
+            WHERE session_id = ?
+            `,
+            [
+                Date.now(),
+                session.session_id
+            ]
+        );
+
+        return null;
+    }
+
+    return session;
 }
 
 async function getEligibleAnswerCount(guild) {
