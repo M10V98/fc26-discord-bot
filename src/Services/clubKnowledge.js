@@ -7,7 +7,12 @@ const CLUB_LORE_QUIZ_QUESTIONS = [
     ["What does CPL stand for?", ["Competitive Pro League", "Nothing", "Competitive Premier League", "Cup Professionally Rigged league"], 0],
     ["Who manages Boys FC?", ["penguin", "Roy Keane", "Pigeon", "Gazz bryant"], 0],
     ["Who \"hates this stadium\"?", ["H411ison", "AOG", "FYZO", "NICOLE"], 0],
-    ["Who is the club director of Bella Ciao FC?", ["OlaPola", "Olats", "King", "Gary"], 0]
+    ["Who is the club director of Bella Ciao FC?", ["OlaPola", "Olats", "King", "Gary"], 0],
+    ["Where did Gollum go for his retirement?", ["factories in Scumthorpe", "Real Madrid", "Bradford", "Sainsbury's FC"], 0],
+    ["When did Bella Ciao start 11s Leagues?", ["December 2025", "September 2023", "January 2026", "December 2024"], 0],
+    ["What caused half the team to leave to Sainsbury's FC?", ["Pigeon", "iced out camera incident", "found out what Schnitzler was doing", "they weren't good enough"], 0],
+    ["Which player has crosses named after him?", ["Fyzo", "Lynxy", "Connor", "Dirk"], 0],
+    ["Who tried to shoot H411ison 9 times but missed every shot?", ["Spoondoodle 1", "Boys FC", "Crayden cottage guy", "Lynxzy"], 0]
 ];
 
 const CLUB_LORE_FACTS = [
@@ -117,6 +122,71 @@ const CLUB_LORE_FACTS = [
             ["bella ciao", "bella"]
         ],
         answer: "OlaPola is the club director of Bella Ciao FC."
+    },
+    {
+        patterns: [
+            /\bgollum\b.*\bretirement\b/,
+            /\bretirement\b.*\bgollum\b/,
+            /\bwhere did gollum go\b/
+        ],
+        keywords: [
+            ["gollum"],
+            ["retirement", "retire", "retired"],
+            ["where", "go", "went"]
+        ],
+        answer: "Gollum went to factories in Scumthorpe for his retirement."
+    },
+    {
+        patterns: [
+            /\bbella ciao\b.*\bstart\b.*\b11s leagues?\b/,
+            /\b11s leagues?\b.*\bbella ciao\b.*\bstart\b/,
+            /\bwhen\b.*\bbella ciao\b.*\b11s\b/
+        ],
+        keywords: [
+            ["bella ciao", "bella"],
+            ["11s", "11s league", "11s leagues"],
+            ["start", "started", "begin", "began", "when"]
+        ],
+        answer: "Bella Ciao started 11s Leagues in December 2025."
+    },
+    {
+        patterns: [
+            /\bhalf the team\b.*\bleave\b.*\bsainsbury'?s fc\b/,
+            /\bsainsbury'?s fc\b.*\bhalf the team\b.*\bleave\b/,
+            /\bwhat caused\b.*\bsainsbury'?s fc\b/
+        ],
+        keywords: [
+            ["sainsbury's fc", "sainsburys fc", "sainsbury"],
+            ["leave", "left", "caused"],
+            ["half the team", "team"]
+        ],
+        answer: "Pigeon caused half the team to leave to Sainsbury's FC."
+    },
+    {
+        patterns: [
+            /\bcrosses\b.*\bnamed after\b/,
+            /\bnamed after\b.*\bcrosses\b/,
+            /\bwhose crosses\b/
+        ],
+        keywords: [
+            ["crosses", "cross"],
+            ["named after", "named"],
+            ["player", "whose", "who"]
+        ],
+        answer: "Fyzo has crosses named after him."
+    },
+    {
+        patterns: [
+            /\bshoot\b.*\bh411ison\b.*\b9 times\b/,
+            /\bh411ison\b.*\bshoot\b.*\b9 times\b/,
+            /\bmissed every shot\b/
+        ],
+        keywords: [
+            ["h411ison"],
+            ["shoot", "shot", "missed"],
+            ["9", "nine"]
+        ],
+        answer: "Spoondoodle 1 tried to shoot H411ison 9 times but missed every shot."
     }
 ];
 
