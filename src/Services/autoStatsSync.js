@@ -15,20 +15,77 @@ const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 let interval = null;
 let isSyncing = false;
 
+function normalizeMatchType(match) {
+    const club =
+        Object.values(match?.clubs || {})[0];
+
+    return String(
+        match?.matchType ||
+        match?.matchtype ||
+        club?.matchType ||
+        club?.matchtype ||
+        ""
+    )
+        .toLowerCase()
+        .replace(/[\s_-]/g, "");
+}
+
+function isLeagueOrPlayoff(match) {
+    const type =
+        normalizeMatchType(match);
+
+    return type === "leaguematch" ||
+        type === "playoffmatch";
+}
+
+function isAfterStart(match, startedAt = 0) {
+    const start =
+        Number(startedAt || 0);
+
+    if (!start) {
+        return true;
+    }
+
+    return Number(match?.timestamp || 0) * 1000 >= start;
+}
+
+async function getStatsStartedAt(guildId) {
+    const row =
+        await db.get(
+            `
+            SELECT stats_started_at
+            FROM clubs
+            WHERE guild_id = ?
+            `,
+            [guildId]
+        );
+
+    return Number(row?.stats_started_at || 0);
+}
+
 async function syncGuildStats(guildId, clubId, options = {}) {
 
     const limit =
         options.limit ||
         DEFAULT_LIMIT;
+    const statsStartedAt =
+        Number(options.statsStartedAt || 0) ||
+        await getStatsStartedAt(guildId);
 
     const matches =
-        await eaApi.getRecentMatches(
+        (await eaApi.getRecentMatches(
             clubId,
             {
                 forceRefresh: Boolean(options.forceRefresh),
-                limit
+                limit: Math.max(limit, 100),
+                maxResultCount: Math.max(limit, 100)
             }
-        );
+        ))
+            .filter(match =>
+                isLeagueOrPlayoff(match) &&
+                isAfterStart(match, statsStartedAt)
+            )
+            .slice(0, limit);
 
     const overallStats =
         await eaApi.getOverallStats(
@@ -49,7 +106,8 @@ async function syncGuildStats(guildId, clubId, options = {}) {
             guildId,
             clubId,
             {
-                forceRefresh: Boolean(options.forceRefresh)
+                forceRefresh: Boolean(options.forceRefresh),
+                statsStartedAt
             }
         ).catch(err => {
             console.error(
@@ -76,7 +134,8 @@ async function syncGuildStats(guildId, clubId, options = {}) {
         guildId,
         clubId,
         {
-            forceRefresh: Boolean(options.forceRefresh)
+            forceRefresh: Boolean(options.forceRefresh),
+            statsStartedAt
         }
     ).catch(err => {
         console.error(

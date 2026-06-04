@@ -11,6 +11,37 @@ const {
     processMatchXP
 } = require("../Services/processMatchXP");
 
+function normalizeMatchType(match) {
+    const club =
+        Object.values(match?.clubs || {})[0];
+
+    return String(
+        match?.matchType ||
+        match?.matchtype ||
+        club?.matchType ||
+        club?.matchtype ||
+        ""
+    )
+        .toLowerCase()
+        .replace(/[\s_-]/g, "");
+}
+
+function shouldSyncNormalStats(match, statsStartedAt) {
+    const type =
+        normalizeMatchType(match);
+    const timestampMs =
+        Number(match?.timestamp || 0) * 1000;
+
+    return (
+        type === "leaguematch" ||
+        type === "playoffmatch"
+    ) &&
+        (
+            !Number(statsStartedAt || 0) ||
+            timestampMs >= Number(statsStartedAt || 0)
+        );
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("syncstats")
@@ -65,11 +96,20 @@ module.exports = {
                 interaction.options.getBoolean("force") ||
                 false;
 
+            const statsStartedAt =
+                Number(club.stats_started_at || 0);
             const matches =
-                await eaApi.getRecentMatches(
+                (await eaApi.getRecentMatches(
                     club.club_id,
-                    { limit }
-                );
+                    {
+                        limit: Math.max(limit, 100),
+                        maxResultCount: 100
+                    }
+                ))
+                    .filter(match =>
+                        shouldSyncNormalStats(match, statsStartedAt)
+                    )
+                    .slice(0, limit);
 
             const overallStats =
                 await eaApi.getOverallStats(

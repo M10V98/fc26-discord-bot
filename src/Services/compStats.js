@@ -5,9 +5,40 @@ function n(value) {
     return Number(value || 0);
 }
 
+function isAfterStart(match, startedAt = 0) {
+    const start =
+        Number(startedAt || 0);
+
+    if (!start) {
+        return true;
+    }
+
+    const timestampMs =
+        Number(match?.timestamp || 0) * 1000;
+
+    return timestampMs >= start;
+}
+
+async function getStatsStartedAt(guildId) {
+    const row =
+        await db.get(
+            `
+            SELECT stats_started_at
+            FROM clubs
+            WHERE guild_id = ?
+            `,
+            [guildId]
+        );
+
+    return Number(row?.stats_started_at || 0);
+}
+
 async function syncCompetitiveMatches(guildId, clubId, options = {}) {
     const maxResultCount =
         options.maxResultCount || 100;
+    const statsStartedAt =
+        Number(options.statsStartedAt || 0) ||
+        await getStatsStartedAt(guildId);
 
     const matches =
         await eaApi.getMatches(
@@ -23,6 +54,7 @@ async function syncCompetitiveMatches(guildId, clubId, options = {}) {
 
     for (const match of matches || []) {
         if (!match?.matchId) continue;
+        if (!isAfterStart(match, statsStartedAt)) continue;
 
         const result =
             await db.run(
@@ -55,6 +87,9 @@ async function syncCompetitiveMatches(guildId, clubId, options = {}) {
 async function getStoredCompetitiveMatches(guildId, clubId, options = {}) {
     const limit =
         options.limit || 500;
+    const statsStartedAt =
+        Number(options.statsStartedAt || 0) ||
+        await getStatsStartedAt(guildId);
 
     const rows =
         await db.all(
@@ -81,7 +116,10 @@ async function getStoredCompetitiveMatches(guildId, clubId, options = {}) {
                 return null;
             }
         })
-        .filter(Boolean);
+        .filter(match =>
+            match &&
+            isAfterStart(match, statsStartedAt)
+        );
 }
 
 async function refreshAndGetCompetitiveMatches(guildId, clubId, options = {}) {

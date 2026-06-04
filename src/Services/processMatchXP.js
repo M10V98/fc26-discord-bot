@@ -237,6 +237,13 @@ async function processMatchXP(match, guildId, options = {}) {
         const ourClub =
             match.clubs?.[ourClubId];
 
+        if (
+            isFriendlyMatch(match, ourClub) &&
+            !options.includeFriendlyStats
+        ) {
+            return false;
+        }
+
         const oppClubEntry =
             Object.entries(match.clubs || {})
                 .find(([id]) => id !== ourClubId);

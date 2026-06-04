@@ -314,6 +314,21 @@ async function init() {
     await migrateLinkedPlayersTable();
 
     await ensureColumn(
+        "clubs",
+        "stats_started_at",
+        "INTEGER DEFAULT 0"
+    );
+
+    await run(
+        `
+        UPDATE clubs
+        SET stats_started_at = ?
+        WHERE COALESCE(stats_started_at, 0) = 0
+        `,
+        [Date.now()]
+    );
+
+    await ensureColumn(
         "automode",
         "last_match_id",
         "TEXT"

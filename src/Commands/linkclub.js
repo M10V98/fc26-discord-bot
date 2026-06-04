@@ -18,12 +18,13 @@ async function linkById(interaction, clubId) {
     await db.run(
         `
         INSERT OR REPLACE INTO clubs
-        (guild_id, club_id)
-        VALUES (?, ?)
+        (guild_id, club_id, stats_started_at)
+        VALUES (?, ?, ?)
         `,
         [
             interaction.guild.id,
-            clubId
+            clubId,
+            Date.now()
         ]
     );
 
