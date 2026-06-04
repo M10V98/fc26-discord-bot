@@ -6,6 +6,9 @@ const {
     answerQuestion
 } = require("../Services/fakeAI");
 const {
+    answerClubMatchQuestion
+} = require("../Services/clubMatchQuestions");
+const {
     answerFootballKnowledge,
     isFootballKnowledgeQuestion
 } = require("../Services/footballKnowledge");
@@ -36,10 +39,20 @@ module.exports = {
 
         const simple =
             answerSimpleQuestion(question);
+        const clubMatch =
+            !simple
+                ? await answerClubMatchQuestion(
+                    interaction.guild.id,
+                    question
+                )
+                : null;
         const knowledge =
-            answerFootballKnowledge(question);
+            !clubMatch
+                ? answerFootballKnowledge(question)
+                : null;
         const legacy =
             !simple &&
+            !clubMatch &&
             !knowledge &&
             !isFootballKnowledgeQuestion(question)
                 ? await answerQuestion(
@@ -49,6 +62,7 @@ module.exports = {
                 : null;
         const response =
             simple ||
+            clubMatch ||
             knowledge ||
             legacy ||
             "I do not have that football history fact stored yet.";

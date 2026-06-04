@@ -6,6 +6,10 @@ const {
     detectIntent
 } = require("./fakeAI");
 const {
+    answerClubMatchQuestion,
+    matchContextIntent
+} = require("./clubMatchQuestions");
+const {
     getFootballReply
 } = require("./footballBrain");
 const {
@@ -94,7 +98,7 @@ function topicSignals(text) {
         text.toLowerCase();
     const signals = {
         clubStats:
-            /\b(top scorer|goals|assists|rating|leaderboard|stats|form|matches|win rate|clean sheet|motm)\b/i.test(lower),
+            /\b(top scorer|goals|assists|rating|leaderboard|stats|form|matches|win rate|clean sheet|motm|last game|latest match|recent match|best player)\b/i.test(lower),
         botHelp:
             /\b(command|commands|how do i|help|claim|link|quiz|poll|compare|chemistry)\b/i.test(lower) ||
             hasSlashCommandCue(text),
@@ -513,6 +517,18 @@ async function answerSmartMessage(message) {
     }
 
     if (decision.mode === "helpful" || decision.mode === "analysis") {
+        const clubMatch =
+            matchContextIntent(content)
+                ? await answerClubMatchQuestion(
+                    message.guild.id,
+                    content
+                )
+                : null;
+
+        if (clubMatch) {
+            return clubMatch;
+        }
+
         const legacy =
             await answerQuestion(
                 message.guild.id,
