@@ -14,7 +14,7 @@ const CLUB_LORE_QUIZ_QUESTIONS = [
     ["Which player has crosses named after him?", ["Fyzo", "Lynxy", "Connor", "Dirk"], 0],
     ["Who tried to shoot H411ison 9 times but missed every shot?", ["Spoondoodle 1", "Boys FC", "Crayden cottage guy", "Lynxzy"], 0],
     ["What was Bean's signature shot?", ["Power Shot+ Volley", "Finesse Shot", "Rainbow Flick Bicycle Kick Combo", "Bullet Headers"], 0],
-    ["What was Gollum's signature shot?", ["Finesse Shot", "Power Shot+ Volley", "Rainbow Flick Bicycle Kick Combo", "Bullet Headers"], 0]
+    ["What was Gollum's signature shot?", ["Finesse Shot", "Power Shot", "Wide of Post Shot", "Bicycle Kick + Power Shot"], 0]
 ];
 
 const CLUB_LORE_FACTS = [
