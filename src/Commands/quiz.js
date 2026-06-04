@@ -31,8 +31,10 @@ const {
 const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 60;
 const RESULTS_PAGE_SIZE = 15;
+const RECENT_QUESTION_MEMORY = 30;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
+const recentQuizQuestions = new Map();
 
 const STATIC_QUESTIONS = [
     ...CLUB_LORE_QUIZ_QUESTIONS,
@@ -795,20 +797,83 @@ async function dynamicQuestion(guildId) {
 }
 
 async function nextQuestion(guildId) {
-    const useDynamic =
-        Math.random() < 0.45;
-    const dynamic =
-        useDynamic
-            ? await dynamicQuestion(guildId)
-            : null;
+    let fallback = null;
 
-    return dynamic || staticQuestion();
+    if (Math.random() < 0.25) {
+        const dynamic =
+            await dynamicQuestion(guildId);
+
+        if (
+            dynamic &&
+            !wasRecentlyAsked(guildId, dynamic)
+        ) {
+            rememberQuestion(guildId, dynamic);
+            return dynamic;
+        }
+
+        fallback = dynamic;
+    }
+
+    for (let attempt = 0; attempt < 40; attempt++) {
+        const candidate =
+            staticQuestion();
+
+        fallback =
+            fallback || candidate;
+
+        if (!wasRecentlyAsked(guildId, candidate)) {
+            rememberQuestion(guildId, candidate);
+            return candidate;
+        }
+    }
+
+    rememberQuestion(guildId, fallback);
+    return fallback;
 }
 
 function createQuestionId() {
     return Math.random()
         .toString(36)
         .slice(2, 10);
+}
+
+function questionKey(question) {
+    return String(question?.question || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function wasRecentlyAsked(guildId, question) {
+    const key =
+        questionKey(question);
+
+    if (!key) {
+        return false;
+    }
+
+    return (recentQuizQuestions.get(guildId) || [])
+        .includes(key);
+}
+
+function rememberQuestion(guildId, question) {
+    const key =
+        questionKey(question);
+
+    if (!key) {
+        return;
+    }
+
+    const recent =
+        recentQuizQuestions.get(guildId) || [];
+
+    recent.unshift(key);
+
+    recentQuizQuestions.set(
+        guildId,
+        [...new Set(recent)]
+            .slice(0, RECENT_QUESTION_MEMORY)
+    );
 }
 
 function buildQuestionEmbed(question, askedCount) {
@@ -1092,11 +1157,6 @@ async function stopQuizForNoAnswers(client, session, question) {
 
     clearQuizTimer(session.session_id);
 
-    const message =
-        await client.channels
-            .fetch(session.channel_id)
-            .then(channel => channel.messages.fetch(session.message_id))
-            .catch(() => null);
     const correctAnswer =
         question.answers?.[question.correct] || "unknown";
     const payload =
@@ -1106,8 +1166,10 @@ async function stopQuizForNoAnswers(client, session, question) {
             0
         );
 
-    if (message) {
-        await message.edit({
+    await postReplacementQuizMessage(
+        client,
+        session,
+        {
             content:
                 [
                     "Quiz stopped because no one answered the last question.",
@@ -1115,8 +1177,8 @@ async function stopQuizForNoAnswers(client, session, question) {
                     `Stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`
                 ].join("\n"),
             ...payload
-        });
-    }
+        }
+    );
 }
 
 async function scoreCurrentQuestionOnStop(session) {
@@ -1257,6 +1319,45 @@ function clearQuizTimer(sessionId) {
     }
 }
 
+async function postReplacementQuizMessage(client, session, payload) {
+    const channel =
+        await client.channels
+            .fetch(session.channel_id)
+            .catch(() => null);
+
+    if (!channel) {
+        return null;
+    }
+
+    const previous =
+        session.message_id
+            ? await channel.messages
+                .fetch(session.message_id)
+                .catch(() => null)
+            : null;
+    const sent =
+        await channel.send(payload)
+            .catch(err => {
+                console.error("quiz repost error:", err);
+                return null;
+            });
+
+    if (sent) {
+        if (previous) {
+            await previous.delete().catch(() => null);
+        }
+
+        return sent;
+    }
+
+    if (previous) {
+        await previous.edit(payload).catch(() => null);
+        return previous;
+    }
+
+    return null;
+}
+
 async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time") {
     const advanceKey =
         `${sessionId}:${expectedQuestionId}`;
@@ -1311,13 +1412,18 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
             createQuestionId();
         const nextCount =
             Number(session.asked_count || 0) + 1;
-        const message =
-            await client.channels
-                .fetch(session.channel_id)
-                .then(channel => channel.messages.fetch(session.message_id))
-                .catch(() => null);
         const resultContent =
             await buildResultContent(session, current, reason);
+        const message =
+            await postReplacementQuizMessage(
+                client,
+                session,
+                {
+                    content: resultContent,
+                    embeds: [buildQuestionEmbed(next, nextCount)],
+                    components: [buildButtons(sessionId, nextQuestionId)]
+                }
+            );
 
         await db.run(
             `
@@ -1325,6 +1431,7 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
             SET current_question_id = ?,
                 current_question_json = ?,
                 asked_count = ?,
+                message_id = ?,
                 updated_at = ?
             WHERE session_id = ?
             `,
@@ -1332,18 +1439,11 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
                 nextQuestionId,
                 JSON.stringify(next),
                 nextCount,
+                message?.id || session.message_id,
                 Date.now(),
                 sessionId
             ]
         );
-
-        if (message) {
-            await message.edit({
-                content: resultContent,
-                embeds: [buildQuestionEmbed(next, nextCount)],
-                components: [buildButtons(sessionId, nextQuestionId)]
-            });
-        }
 
         scheduleQuizAdvance(client, sessionId, nextQuestionId);
     } finally {
