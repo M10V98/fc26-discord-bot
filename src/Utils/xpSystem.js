@@ -13,7 +13,7 @@ const XP_WEIGHTS = {
     tackle: 25,
     save: 30,
 
-    pass: 15,
+    pass: 5,
 
     cleanSheet: 50,
     motm: 75,
