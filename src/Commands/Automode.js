@@ -1,7 +1,8 @@
 const {
     SlashCommandBuilder,
     EmbedBuilder,
-    MessageFlags
+    MessageFlags,
+    PermissionFlagsBits
 } = require("discord.js");
 
 const {
@@ -9,6 +10,23 @@ const {
     startAutoMode
 } = require("../Services/syncMatches");
 const db = require("../Utils/db");
+
+function missingBotPermissions(interaction) {
+    const permissions =
+        interaction.channel.permissionsFor(
+            interaction.guild.members.me
+        );
+    const required = [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.EmbedLinks
+    ];
+
+    return required.filter(permission =>
+        !permissions?.has(permission)
+    );
+}
 
 module.exports = {
 
@@ -23,6 +41,15 @@ module.exports = {
             await interaction.deferReply({
                 flags: MessageFlags.Ephemeral
             });
+
+            const missing =
+                missingBotPermissions(interaction);
+
+            if (missing.length) {
+                return interaction.editReply(
+                    "I cannot start AutoMode in this channel yet. I need View Channel, Send Messages, Attach Files, and Embed Links permissions here."
+                );
+            }
 
             await db.run(
                 `
@@ -93,6 +120,14 @@ module.exports = {
                 await interaction.followUp({
                     content:
                         "AutoMode is on, but the first backend check failed. I will keep checking every 15 seconds.",
+                    ephemeral: true
+                });
+            }
+
+            if (result?.status === "missing_access") {
+                await interaction.followUp({
+                    content:
+                        "AutoMode stopped because I lost access to post in this channel. Please check my channel permissions and start AutoMode again.",
                     ephemeral: true
                 });
             }

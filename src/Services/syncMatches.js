@@ -391,6 +391,20 @@ async function syncGuild(guildId, channel, options = {}) {
             err
         );
 
+        if (err?.code === 50001) {
+            await stopAutoMode(guildId).catch(stopErr => {
+                console.error(
+                    "failed to stop inaccessible automode:",
+                    stopErr
+                );
+            });
+
+            return {
+                status: "missing_access",
+                error: err
+            };
+        }
+
         return {
             status: "error",
             error: err
