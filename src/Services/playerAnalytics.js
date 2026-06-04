@@ -3,6 +3,9 @@ const eaApi = require("./eaApi");
 const {
     refreshAndGetCompetitiveMatches
 } = require("./compStats");
+const {
+    saves: saveCount
+} = require("../Utils/apiStats");
 
 function n(value) {
     return Number(value || 0);
@@ -274,7 +277,7 @@ function aggregateFormStats(rows) {
         aggregate.passAttempts += n(stats.passattempts);
         aggregate.tacklesMade += n(stats.tacklesmade);
         aggregate.tackleAttempts += n(stats.tackleattempts);
-        aggregate.saves += n(stats.saves);
+        aggregate.saves += saveCount(stats);
         aggregate.cleanSheetsDef += stats.cleansheetsdef === "1" ? 1 : 0;
         aggregate.cleanSheetsGK += stats.cleansheetsgk === "1" ? 1 : 0;
         aggregate.redCards += stats.redcards === "1" ? 1 : 0;

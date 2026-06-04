@@ -1,5 +1,8 @@
 const eaApi = require("./eaApi");
 const db = require("../Utils/db");
+const {
+    saves: saveCount
+} = require("../Utils/apiStats");
 
 function n(value) {
     return Number(value || 0);
@@ -176,7 +179,7 @@ function addPlayer(aggregate, playerId, player) {
     current.tackleAttempts += n(player.tackleattempts);
     current.dribbles += n(player.dribbles);
     current.interceptions += n(player.interceptions);
-    current.saves += n(player.saves);
+    current.saves += saveCount(player);
     current.shots += n(player.shots);
     current.motm += player.mom === "1" ? 1 : 0;
     current.cleanSheets +=

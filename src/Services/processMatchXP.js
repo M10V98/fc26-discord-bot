@@ -7,6 +7,9 @@ const {
     calculateXP,
     getLevelFromXP
 } = require("../Utils/xpSystem");
+const {
+    saves: saveCount
+} = require("../Utils/apiStats");
 
 const processingMatches = new Set();
 
@@ -269,6 +272,8 @@ async function processMatchXP(match, guildId, options = {}) {
         );
 
         for (const [playerId, p] of Object.entries(ourPlayers)) {
+            const saves =
+                saveCount(p);
 
             const cleanSheet =
                 p.cleansheetsdef === "1" ||
@@ -280,7 +285,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 secondAssists: 0,
                 tackles: Number(p.tacklesmade),
                 interceptions: 0,
-                saves: Number(p.saves),
+                saves,
                 passes: Number(p.passesmade),
                 dribbles: 0,
                 cleanSheet,
@@ -412,7 +417,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 0,
 
                 existing?.saves,
-                Number(p.saves || 0),
+                saves,
 
                 existing?.clean_sheets,
                 cleanSheet ? 1 : 0,

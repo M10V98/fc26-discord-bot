@@ -20,6 +20,9 @@ const {
     displayName,
     getLinkedRows
 } = require("../Utils/embedStyle");
+const {
+    saves: saveCount
+} = require("../Utils/apiStats");
 
 const {
     processMatchXP
@@ -116,7 +119,7 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
 
                 return (
                     `${mom}${displayName(p.playername, linkedMaps, playerId)} (${archetype})\n` +
-                    `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists}\n` +
+                    `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists} | Saves ${saveCount(p)}\n` +
                     `${p.passesmade}/${p.passattempts} passes\n` +
                     `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
                     `${cleanSheet ? "Clean Sheet" : "No CS"}`

@@ -43,6 +43,9 @@ const archetypes = require("../Utils/archetypes");
 const {
     buildCrestUrl
 } = require("./crests");
+const {
+    saves: saveCount
+} = require("../Utils/apiStats");
 
 const TEMPLATE_PATH = path.join(
     __dirname,
@@ -238,7 +241,7 @@ function buildRows(players) {
                 assists: player.assists || "0",
                 passes,
                 tackles,
-                saves: player.saves || "-"
+                saves: String(saveCount(player))
             };
         });
 }
