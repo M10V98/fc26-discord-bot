@@ -41,11 +41,51 @@ const MAX_MEMORY = 8;
 const MEMORY_TTL_MS = 60 * 60 * 1000;
 const PASSIVE_REPLY_CHANCE = 0.12;
 const FOOTBALL_BANTER_CHANCE = 0.10;
+const AI_BACKOFF_MS =
+    Number(process.env.AI_BACKOFF_MS || 30 * 60 * 1000);
+
+let aiDisabledUntil = 0;
+let aiBackoffLoggedUntil = 0;
 
 function normalize(value) {
     return String(value || "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function isAiBackoffActive() {
+    return Date.now() < aiDisabledUntil;
+}
+
+function isQuotaError(err) {
+    const message =
+        String(err?.message || "").toLowerCase();
+
+    return err?.status === 429 ||
+        err?.code === "insufficient_quota" ||
+        message.includes("quota") ||
+        message.includes("429");
+}
+
+function handleOpenAIError(err, label) {
+    if (isQuotaError(err)) {
+        aiDisabledUntil =
+            Math.max(
+                aiDisabledUntil,
+                Date.now() + AI_BACKOFF_MS
+            );
+
+        if (Date.now() >= aiBackoffLoggedUntil) {
+            console.warn(
+                `${label}: OpenAI quota/rate limit hit. AI calls paused for ${Math.round(AI_BACKOFF_MS / 60000)} minutes.`
+            );
+            aiBackoffLoggedUntil = aiDisabledUntil;
+        }
+
+        return;
+    }
+
+    console.error(`${label}:`, err.message);
 }
 
 function hasQuestion(text) {
@@ -355,7 +395,7 @@ async function remember(message, decision, content) {
 }
 
 async function classifyWithOpenAI(message, memory, ruleDecision) {
-    if (!openai) {
+    if (!openai || isAiBackoffActive()) {
         return ruleDecision;
     }
 
@@ -419,7 +459,7 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
             reason: parsed.reason || ruleDecision.reason
         };
     } catch (err) {
-        console.error("AI classifier error:", err.message);
+        handleOpenAIError(err, "AI classifier error");
         return ruleDecision;
     }
 }
@@ -464,7 +504,7 @@ async function clubContext(guildId) {
 }
 
 async function generateWithOpenAI(message, decision, memory) {
-    if (!openai) {
+    if (!openai || isAiBackoffActive()) {
         return null;
     }
 
@@ -513,7 +553,7 @@ async function generateWithOpenAI(message, decision, memory) {
             response.choices?.[0]?.message?.content
         ).slice(0, 1800);
     } catch (err) {
-        console.error("AI generation error:", err.message);
+        handleOpenAIError(err, "AI generation error");
         return null;
     }
 }
