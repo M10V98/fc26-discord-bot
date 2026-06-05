@@ -48,7 +48,7 @@ function buildLinkedMaps(rows) {
     const byId = new Map();
 
     for (const row of rows || []) {
-        if (row.player_name) {
+        if (isRealPlayerName(row.player_name)) {
             byName.set(row.player_name.toLowerCase(), row);
         }
 
@@ -61,6 +61,16 @@ function buildLinkedMaps(rows) {
         byName,
         byId
     };
+}
+
+function isRealPlayerName(value) {
+    const normalized =
+        String(value || "")
+            .trim();
+
+    return Boolean(normalized) &&
+        !/^[-\s]+$/.test(normalized) &&
+        normalized.toLowerCase() !== "unknown";
 }
 
 function displayName(name, linkedMaps, playerId = null) {
@@ -169,6 +179,7 @@ module.exports = {
     displayName,
     compactRankLine,
     escapeMarkdown,
+    isRealPlayerName,
     splitDescription,
     getLinkedRows,
     infoBlock,

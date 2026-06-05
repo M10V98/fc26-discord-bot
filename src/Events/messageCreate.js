@@ -38,6 +38,10 @@ module.exports = async message => {
         return;
     }
 
+    if (message.mentions?.everyone || /@(everyone|here)\b/i.test(message.content || "")) {
+        return;
+    }
+
     try {
 
         const aiResponse =
@@ -50,9 +54,12 @@ module.exports = async message => {
                 Date.now()
             );
 
-            return await message.reply(
-                aiResponse
-            );
+            return await message.reply({
+                content: aiResponse,
+                allowedMentions: {
+                    parse: []
+                }
+            });
         }
     } catch (err) {
 

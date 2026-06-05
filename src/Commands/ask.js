@@ -18,6 +18,12 @@ const {
 const {
     answerSimpleQuestion
 } = require("../Services/simpleAnswers");
+const {
+    answerSmallTalk
+} = require("../Services/smallTalk");
+const {
+    answerNewsQuestion
+} = require("../Services/newsService");
 
 module.exports = {
 
@@ -40,13 +46,26 @@ module.exports = {
                 "question"
             );
 
+        const news =
+            await answerNewsQuestion(question);
+        const smallTalk =
+            !news
+                ? answerSmallTalk(question)
+                : null;
         const clubKnowledge =
-            answerClubKnowledge(question);
+            !news &&
+            !smallTalk
+                ? answerClubKnowledge(question)
+                : null;
         const simple =
+            !news &&
+            !smallTalk &&
             !clubKnowledge
                 ? answerSimpleQuestion(question)
                 : null;
         const clubMatch =
+            !news &&
+            !smallTalk &&
             !simple &&
             !clubKnowledge
                 ? await answerClubMatchQuestion(
@@ -55,11 +74,15 @@ module.exports = {
                 )
                 : null;
         const knowledge =
+            !news &&
+            !smallTalk &&
             !clubKnowledge &&
             !clubMatch
                 ? answerFootballKnowledge(question)
                 : null;
         const legacy =
+            !news &&
+            !smallTalk &&
             !simple &&
             !clubKnowledge &&
             !clubMatch &&
@@ -71,6 +94,8 @@ module.exports = {
             )
                 : null;
         const response =
+            news ||
+            smallTalk ||
             simple ||
             clubKnowledge ||
             clubMatch ||

@@ -16,6 +16,9 @@ const {
     escapeMarkdown,
     underline
 } = require("../Utils/embedStyle");
+const {
+    getGuildSettings
+} = require("./settingsService");
 
 const CLEANUP_CHECK_MS = 60 * 1000;
 const CLEANUP_GRACE_MS = 0;
@@ -404,6 +407,9 @@ function buildSessionEmbed(session, guild) {
     const loadUpAt =
         Number(session.load_up_at || 0) ||
         Number(session.starts_at);
+    const endsAt =
+        Number(session.ends_at || 0) ||
+        Number(session.starts_at);
     const title =
         session.title ||
         `${guild?.name || "Club"} Scheduled Session`;
@@ -421,6 +427,9 @@ function buildSessionEmbed(session, guild) {
                 "",
                 "**Kick-Off**",
                 `${formatDiscordTime(session.starts_at)} (${formatRelativeTime(session.starts_at)})`,
+                "",
+                "**End**",
+                `${formatDiscordTime(endsAt)} (${formatRelativeTime(endsAt)})`,
                 "",
                 "**League**",
                 escapeMarkdown(session.league || "Not set"),
@@ -484,6 +493,10 @@ async function createSession(interaction, options) {
         options.loadUpTimeText
             ? parseDateTime(options.loadUpTimeText)
             : startsAt;
+    const endsAt =
+        options.endTimeText
+            ? parseDateTime(options.endTimeText)
+            : startsAt;
 
     if (!startsAt) {
         throw new Error("I could not understand that time/date. Try `2026-06-01 20:00` or `01/06/2026 20:00`.");
@@ -493,8 +506,16 @@ async function createSession(interaction, options) {
         throw new Error("I could not understand the load-up time. Try `19:45`, `7.45pm`, or `1945`.");
     }
 
+    if (!endsAt) {
+        throw new Error("I could not understand the end time. Try `22:00`, `10pm`, or `2230`.");
+    }
+
     if (loadUpAt >= startsAt) {
         throw new Error("Load-up time must be before kick-off time.");
+    }
+
+    if (endsAt <= startsAt) {
+        throw new Error("End time must be after kick-off time.");
     }
 
     if (startsAt <= Date.now()) {
@@ -503,6 +524,10 @@ async function createSession(interaction, options) {
 
     if (loadUpAt <= Date.now()) {
         throw new Error("That load-up time is in the past.");
+    }
+
+    if (endsAt <= Date.now()) {
+        throw new Error("That end time is in the past.");
     }
 
     const sessionId =
@@ -533,6 +558,8 @@ async function createSession(interaction, options) {
         existingSessions.length + 1;
     const roleName =
         `Session ${sessionNumber}`.slice(0, 100);
+    const settings =
+        await getGuildSettings(interaction.guild.id);
 
     const role =
         await interaction.guild.roles.create({
@@ -556,6 +583,9 @@ async function createSession(interaction, options) {
         league: options.league,
         load_up_at: loadUpAt,
         starts_at: startsAt,
+        ends_at: endsAt,
+        pre_tag_minutes: settings.schedulePreTagMinutes,
+        pre_tag_sent_at: null,
         crest_url: crestUrl,
         can_play: "[]",
         cannot_play: "[]",
@@ -587,13 +617,16 @@ async function createSession(interaction, options) {
             league,
             crest_url,
             load_up_at,
+            ends_at,
+            pre_tag_minutes,
+            pre_tag_sent_at,
             starts_at,
             can_play,
             cannot_play,
             maybe_play,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             sessionId,
@@ -608,6 +641,9 @@ async function createSession(interaction, options) {
             options.league,
             crestUrl,
             loadUpAt,
+            endsAt,
+            settings.schedulePreTagMinutes,
+            null,
             startsAt,
             "[]",
             "[]",
@@ -742,18 +778,69 @@ async function cleanupSession(client, session) {
 async function cleanupExpiredSessions(client = clientRef) {
     if (!client) return;
 
+    await sendDuePreTags(client);
+
     const rows =
         await db.all(
             `
             SELECT *
             FROM scheduled_sessions
-            WHERE starts_at <= ?
+            WHERE COALESCE(ends_at, starts_at) <= ?
             `,
             [Date.now() - CLEANUP_GRACE_MS]
         );
 
     for (const row of rows) {
         await cleanupSession(client, row);
+    }
+}
+
+async function sendDuePreTags(client) {
+    const now =
+        Date.now();
+    const rows =
+        await db.all(
+            `
+            SELECT *
+            FROM scheduled_sessions
+            WHERE role_id IS NOT NULL
+            AND pre_tag_sent_at IS NULL
+            AND starts_at > ?
+            AND (? >= starts_at - (COALESCE(pre_tag_minutes, 30) * 60 * 1000))
+            `,
+            [
+                now,
+                now
+            ]
+        );
+
+    for (const session of rows) {
+        const guild =
+            await client.guilds.fetch(session.guild_id).catch(() => null);
+        const channel =
+            guild
+                ? await guild.channels.fetch(session.channel_id).catch(() => null)
+                : null;
+
+        if (!channel) {
+            continue;
+        }
+
+        await channel.send(
+            `<@&${session.role_id}> ${escapeMarkdown(session.title || "Session")} starts ${formatRelativeTime(session.starts_at)}. Load up ${formatRelativeTime(session.load_up_at || session.starts_at)}.`
+        ).catch(() => null);
+
+        await db.run(
+            `
+            UPDATE scheduled_sessions
+            SET pre_tag_sent_at = ?
+            WHERE session_id = ?
+            `,
+            [
+                now,
+                session.session_id
+            ]
+        );
     }
 }
 

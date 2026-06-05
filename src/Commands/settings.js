@@ -24,7 +24,10 @@ function settingsEmbed(settings) {
                 `${settings.inFormWindow} matches`,
                 "",
                 "**Competitive In-form Window**",
-                `${settings.compInFormWindow} friendly matches`
+                `${settings.compInFormWindow} friendly matches`,
+                "",
+                "**Schedule Pre Tag**",
+                `${settings.schedulePreTagMinutes} minutes before kick-off`
             ].join("\n")
         )
         .setFooter(FOOTER);
@@ -57,6 +60,10 @@ module.exports = {
                             {
                                 name: "Default /compin-form window",
                                 value: KEYS.compInFormWindow
+                            },
+                            {
+                                name: "Schedule pre-session tag",
+                                value: KEYS.schedulePreTagMinutes
                             }
                         )
                 )
@@ -67,7 +74,9 @@ module.exports = {
                         .setRequired(true)
                         .addChoices(
                             { name: "Last 5 matches", value: 5 },
-                            { name: "Last 10 matches", value: 10 }
+                            { name: "Last 10 matches", value: 10 },
+                            { name: "30 minutes before kick-off", value: 30 },
+                            { name: "45 minutes before kick-off", value: 45 }
                         )
                 )
         ),
@@ -89,10 +98,27 @@ module.exports = {
             interaction.options.getSubcommand();
 
         if (subcommand === "set") {
+            const key =
+                interaction.options.getString("setting");
+            const value =
+                interaction.options.getInteger("value");
+            const allowed =
+                key === KEYS.schedulePreTagMinutes
+                    ? [30, 45]
+                    : [5, 10];
+
+            if (!allowed.includes(value)) {
+                return interaction.editReply(
+                    key === KEYS.schedulePreTagMinutes
+                        ? "Schedule pre-session tag must be 30 or 45 minutes."
+                        : "That stat window must be 5 or 10 matches."
+                );
+            }
+
             await setSetting(
                 interaction.guild.id,
-                interaction.options.getString("setting"),
-                interaction.options.getInteger("value")
+                key,
+                value
             );
         }
 

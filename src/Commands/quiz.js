@@ -10,6 +10,7 @@ const db = require("../Utils/db");
 const eaApi = require("../Services/eaApi");
 const {
     FOOTER,
+    isRealPlayerName,
     number,
     escapeMarkdown
 } = require("../Utils/embedStyle");
@@ -29,12 +30,25 @@ const {
 } = require("../Services/clubKnowledge");
 
 const QUIZ_XP = 1;
-const TIME_LIMIT_SECONDS = 60;
+const TIME_LIMIT_SECONDS = 20;
 const RESULTS_PAGE_SIZE = 15;
 const RECENT_QUESTION_MEMORY = 30;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
 const recentQuizQuestions = new Map();
+
+const POSITION_QUIZ_CHOICES = {
+    goalkeeper: "Protects the goal, commands the box, claims crosses, and starts build-up.",
+    "centre back": "Defends central spaces, wins duels, tracks runners, and starts attacks with first passes.",
+    "full back": "Defends wide areas, supports attacks, and overlaps or underlaps down the flank.",
+    "wing back": "Provides width, joins attacks, and recovers into the defensive line.",
+    cdm: "Screens the defence, wins second balls, blocks passing lanes, and offers a safe build-up option.",
+    cm: "Links defence and attack, controls tempo, presses, and gives passing angles.",
+    cam: "Receives between the lines, creates chances, and links midfield with the forwards.",
+    winger: "Stretches the pitch, attacks one-v-one, crosses, cuts inside, and creates central space.",
+    striker: "Leads the line, pins centre-backs, attacks crosses, and turns chances into goals.",
+    "false nine": "Starts high, drops into midfield, pulls defenders out, and opens space for runners."
+};
 
 const STATIC_QUESTIONS = [
     ...CLUB_LORE_QUIZ_QUESTIONS,
@@ -225,22 +239,21 @@ function shuffleAnswers(question, answers, correctIndex) {
 }
 
 function staticQuestion() {
-    if (Math.random() < 0.15) {
+    const roll =
+        Math.random();
+
+    if (roll < 0.08) {
         const position =
             positionQuestion();
 
-        if (position) {
-            return position;
-        }
+        if (position) return position;
     }
 
-    if (Math.random() < 0.35) {
+    if (roll < 0.5) {
         const history =
             historyQuestion();
 
-        if (history) {
-            return history;
-        }
+        if (history) return history;
     }
 
     const row =
@@ -252,18 +265,22 @@ function staticQuestion() {
 }
 
 function historyQuestion() {
-    const table =
-        leagueTableQuestion();
+    const special =
+        [
+            leagueTableQuestion,
+            leagueAwardQuestion
+        ]
+            .sort(() => Math.random() - 0.5);
 
-    if (table) {
-        return table;
-    }
+    if (Math.random() < 0.55) {
+        for (const build of special) {
+            const question =
+                build();
 
-    const domesticAward =
-        leagueAwardQuestion();
-
-    if (domesticAward) {
-        return domesticAward;
+            if (question) {
+                return question;
+            }
+        }
     }
 
     const pools = [
@@ -300,7 +317,10 @@ function historyQuestion() {
             ...distractors
         ],
         0
-    );
+    ) ||
+    special
+        .map(build => build())
+        .find(Boolean);
 }
 
 function ordinalSuffix(value) {
@@ -440,7 +460,7 @@ function leagueAwardQuestion() {
 
 function positionQuestion() {
     const entries =
-        Object.entries(POSITION_FACTS);
+        Object.entries(POSITION_QUIZ_CHOICES);
     const [position, answer] =
         entries[Math.floor(Math.random() * entries.length)];
     const distractors =
@@ -465,7 +485,15 @@ function positionQuestion() {
 }
 
 function playerName(stats) {
-    return stats?.playername || "Unknown";
+    return isRealPlayerName(stats?.playername)
+        ? stats.playername
+        : null;
+}
+
+function playerLabel(name) {
+    return isRealPlayerName(name)
+        ? name
+        : null;
 }
 
 function uniqueAnswers(correct, candidates) {
@@ -515,7 +543,14 @@ function latestMatchQuestions(matches, clubId) {
     const ourClub = latest.clubs?.[ourId];
     const opponentClub = latest.clubs?.[opponentId];
     const players =
-        Object.values(latest.players?.[ourId] || {});
+        Object.entries(latest.players?.[ourId] || {})
+            .map(([playerId, stats]) => ({
+                ...stats,
+                playerId
+            }))
+            .filter(player =>
+                isRealPlayerName(player.playername)
+            );
     const playerNames =
         players
             .map(playerName)
@@ -565,24 +600,33 @@ function latestMatchQuestions(matches, clubId) {
         },
         {
             question: "Who scored the most goals in our latest tracked game?",
-            answers: uniqueAnswers(playerName(goalsLeader), playerNames),
+            answers: uniqueAnswers(
+                playerLabel(playerName(goalsLeader)),
+                playerNames.map(name => playerLabel(name))
+            ),
             correct:
                 Number(goalsLeader?.goals || 0) > 0
-                    ? playerName(goalsLeader)
+                    ? playerLabel(playerName(goalsLeader))
                     : null
         },
         {
             question: "Who got the most assists in our latest tracked game?",
-            answers: uniqueAnswers(playerName(assistsLeader), playerNames),
+            answers: uniqueAnswers(
+                playerLabel(playerName(assistsLeader)),
+                playerNames.map(name => playerLabel(name))
+            ),
             correct:
                 Number(assistsLeader?.assists || 0) > 0
-                    ? playerName(assistsLeader)
+                    ? playerLabel(playerName(assistsLeader))
                     : null
         },
         {
             question: "Who had the highest rating in our latest tracked game?",
-            answers: uniqueAnswers(playerName(ratingLeader), playerNames),
-            correct: playerName(ratingLeader)
+            answers: uniqueAnswers(
+                playerLabel(playerName(ratingLeader)),
+                playerNames.map(name => playerLabel(name))
+            ),
+            correct: playerLabel(playerName(ratingLeader))
         }
     ];
 
@@ -603,11 +647,22 @@ function bestChemistryQuestion(matches, clubId) {
             for (let j = i + 1; j < players.length; j++) {
                 const [idA, a] = players[i];
                 const [idB, b] = players[j];
+
+                if (
+                    !isRealPlayerName(a.playername) ||
+                    !isRealPlayerName(b.playername)
+                ) {
+                    continue;
+                }
+
                 const key =
                     [idA, idB].sort().join(":");
                 const existing =
                     pairs.get(key) || {
-                        names: [playerName(a), playerName(b)].sort(),
+                        names: [
+                            playerLabel(playerName(a)),
+                            playerLabel(playerName(b))
+                        ].sort(),
                         matches: 0,
                         wins: 0,
                         rating: 0,
@@ -673,6 +728,10 @@ async function dynamicQuestion(guildId) {
                 FROM players
                 WHERE guild_id = ?
                 AND COALESCE(matches, 0) > 0
+                AND player_name IS NOT NULL
+                AND TRIM(player_name) != ''
+                AND TRIM(player_name) != '-'
+                AND TRIM(player_name) != '--'
                 `,
                 [guildId]
             ),
@@ -687,8 +746,12 @@ async function dynamicQuestion(guildId) {
                 ).catch(() => [])
                 : []
         ]);
+    const quizPlayers =
+        players.filter(player =>
+            isRealPlayerName(player.player_name)
+        );
 
-    if (players.length < 2) {
+    if (quizPlayers.length < 2) {
         const liveQuestions =
             club?.club_id
                 ? latestMatchQuestions(recentMatches, club.club_id)
@@ -700,11 +763,11 @@ async function dynamicQuestion(guildId) {
     }
 
     const sortedBy = key =>
-        players
+        quizPlayers
             .slice()
             .sort((a, b) => Number(b[key] || 0) - Number(a[key] || 0));
     const topRated =
-        players
+        quizPlayers
             .filter(player => Number(player.matches || 0) > 0)
             .slice()
             .sort((a, b) =>
@@ -714,40 +777,46 @@ async function dynamicQuestion(guildId) {
     const categories = [
         {
             question: "Who is currently the team's top tracked goalscorer?",
-            correct: sortedBy("goals")[0]?.player_name
+            correctRow: sortedBy("goals")[0]
         },
         {
             question: "Who currently leads the team for tracked assists?",
-            correct: sortedBy("assists")[0]?.player_name
+            correctRow: sortedBy("assists")[0]
         },
         {
             question: "Who has the highest tracked average rating?",
-            correct: topRated[0]?.player_name
+            correctRow: topRated[0]
         },
         {
             question: "Who has played the most tracked matches?",
-            correct: sortedBy("matches")[0]?.player_name
+            correctRow: sortedBy("matches")[0]
         },
         {
             question: "Who has made the most tracked appearances?",
-            correct: sortedBy("matches")[0]?.player_name
+            correctRow: sortedBy("matches")[0]
         },
         {
             question: "Who has recorded the most tracked clean sheets?",
-            correct: sortedBy("clean_sheets")[0]?.player_name
+            correctRow: sortedBy("clean_sheets")[0]
         },
         {
             question: "Who has won the most tracked Man of the Match awards?",
-            correct: sortedBy("motm")[0]?.player_name
+            correctRow: sortedBy("motm")[0]
         },
         {
             question: "Who has the most tracked red cards?",
-            correct:
+            correctRow:
                 Number(sortedBy("red_cards")[0]?.red_cards || 0) > 0
-                    ? sortedBy("red_cards")[0]?.player_name
+                    ? sortedBy("red_cards")[0]
                     : null
         }
     ]
+        .map(row => ({
+            ...row,
+            correct: row.correctRow
+                ? playerLabel(row.correctRow.player_name)
+                : null
+        }))
         .filter(row => row.correct);
 
     if (club?.club_id) {
@@ -776,8 +845,10 @@ async function dynamicQuestion(guildId) {
     }
 
     const distractors =
-        players
-            .map(player => player.player_name)
+        quizPlayers
+            .map(player =>
+                playerLabel(player.player_name)
+            )
             .filter(name => name && name !== selected.correct)
             .sort(() => Math.random() - 0.5)
             .slice(0, 3);
@@ -799,7 +870,7 @@ async function dynamicQuestion(guildId) {
 async function nextQuestion(guildId) {
     let fallback = null;
 
-    if (Math.random() < 0.25) {
+    if (Math.random() < 0.45) {
         const dynamic =
             await dynamicQuestion(guildId);
 
@@ -1203,6 +1274,8 @@ async function scoreCurrentQuestionOnStop(session) {
             Boolean(Number(row.correct))
         );
     }
+
+    return answers;
 }
 
 async function buildQuizResultsPayload(guildId, sessionId, page = 0) {
@@ -1699,7 +1772,10 @@ module.exports = {
             });
         }
 
-        await scoreCurrentQuestionOnStop(session);
+        const currentQuestion =
+            JSON.parse(session.current_question_json || "{}");
+        const answers =
+            await scoreCurrentQuestionOnStop(session);
 
         await db.run(
             `
@@ -1720,8 +1796,27 @@ module.exports = {
                 0
             );
 
+        const stopLines = [
+            `Quiz stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`
+        ];
+
+        if (answers.length) {
+            const correctAnswer =
+                currentQuestion.answers?.[currentQuestion.correct] || "unknown";
+            const correctRows =
+                answers.filter(row => Number(row.correct));
+            const wrongRows =
+                answers.filter(row => !Number(row.correct));
+
+            stopLines.push(
+                `Last question answer: **${escapeMarkdown(correctAnswer)}**`,
+                `\u2705 Correct: ${mentionSummary(correctRows)}`,
+                `\u274C Wrong: ${mentionSummary(wrongRows)}`
+            );
+        }
+
         return interaction.update({
-            content: `Quiz stopped after ${number(session.asked_count)} question${Number(session.asked_count) === 1 ? "" : "s"}.`,
+            content: stopLines.join("\n").slice(0, 1900),
             ...payload
         });
     },

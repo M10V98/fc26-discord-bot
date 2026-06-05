@@ -40,7 +40,19 @@ const initStatements = [
     `
     CREATE TABLE IF NOT EXISTS clubs (
         guild_id TEXT PRIMARY KEY,
-        club_id TEXT
+        club_id TEXT,
+        stats_started_at INTEGER
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS guild_clubs (
+        guild_id TEXT,
+        club_id TEXT,
+        club_name TEXT,
+        is_default INTEGER DEFAULT 0,
+        stats_started_at INTEGER,
+        linked_at INTEGER,
+        PRIMARY KEY (guild_id, club_id)
     )
     `,
     `
@@ -105,6 +117,7 @@ const initStatements = [
         guild_id TEXT PRIMARY KEY,
         channel_id TEXT,
         last_match_id TEXT,
+        last_match_ids_json TEXT DEFAULT '{}',
         started_at INTEGER,
         last_activity_at INTEGER
     )
@@ -239,6 +252,9 @@ const initStatements = [
         league TEXT,
         crest_url TEXT,
         load_up_at INTEGER,
+        ends_at INTEGER,
+        pre_tag_minutes INTEGER,
+        pre_tag_sent_at INTEGER,
         starts_at INTEGER,
         can_play TEXT DEFAULT '[]',
         cannot_play TEXT DEFAULT '[]',
@@ -319,6 +335,30 @@ async function init() {
         "INTEGER DEFAULT 0"
     );
 
+    await ensureColumn(
+        "guild_clubs",
+        "club_name",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "guild_clubs",
+        "is_default",
+        "INTEGER DEFAULT 0"
+    );
+
+    await ensureColumn(
+        "guild_clubs",
+        "stats_started_at",
+        "INTEGER DEFAULT 0"
+    );
+
+    await ensureColumn(
+        "guild_clubs",
+        "linked_at",
+        "INTEGER"
+    );
+
     await run(
         `
         UPDATE clubs
@@ -328,10 +368,18 @@ async function init() {
         [Date.now()]
     );
 
+    await migrateGuildClubs();
+
     await ensureColumn(
         "automode",
         "last_match_id",
         "TEXT"
+    );
+
+    await ensureColumn(
+        "automode",
+        "last_match_ids_json",
+        "TEXT DEFAULT '{}'"
     );
 
     await ensureColumn(
@@ -367,6 +415,24 @@ async function init() {
     await ensureColumn(
         "scheduled_sessions",
         "load_up_at",
+        "INTEGER"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "ends_at",
+        "INTEGER"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "pre_tag_minutes",
+        "INTEGER"
+    );
+
+    await ensureColumn(
+        "scheduled_sessions",
+        "pre_tag_sent_at",
         "INTEGER"
     );
 
@@ -700,6 +766,73 @@ async function migrateLinkedPlayersTable() {
     console.log(
         "Schema migration: linked_players now uses guild-scoped claims."
     );
+}
+
+async function migrateGuildClubs() {
+    await run(`
+        INSERT OR IGNORE INTO guild_clubs
+        (guild_id, club_id, is_default, stats_started_at, linked_at)
+        SELECT
+            guild_id,
+            club_id,
+            1,
+            COALESCE(stats_started_at, ?),
+            COALESCE(stats_started_at, ?)
+        FROM clubs
+        WHERE club_id IS NOT NULL
+        AND TRIM(club_id) != ''
+    `, [Date.now(), Date.now()]);
+
+    const rows =
+        await all(`
+            SELECT guild_id
+            FROM guild_clubs
+            GROUP BY guild_id
+            HAVING SUM(CASE WHEN is_default = 1 THEN 1 ELSE 0 END) = 0
+        `);
+
+    for (const row of rows) {
+        const first =
+            await get(
+                `
+                SELECT *
+                FROM guild_clubs
+                WHERE guild_id = ?
+                ORDER BY linked_at ASC
+                LIMIT 1
+                `,
+                [row.guild_id]
+            );
+
+        if (!first) {
+            continue;
+        }
+
+        await run(
+            `
+            UPDATE guild_clubs
+            SET is_default = CASE WHEN club_id = ? THEN 1 ELSE 0 END
+            WHERE guild_id = ?
+            `,
+            [
+                first.club_id,
+                row.guild_id
+            ]
+        );
+
+        await run(
+            `
+            INSERT OR REPLACE INTO clubs
+            (guild_id, club_id, stats_started_at)
+            VALUES (?, ?, ?)
+            `,
+            [
+                row.guild_id,
+                first.club_id,
+                first.stats_started_at || Date.now()
+            ]
+        );
+    }
 }
 
 async function ensureColumn(table, column, definition) {

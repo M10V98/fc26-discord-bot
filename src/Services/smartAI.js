@@ -19,11 +19,16 @@ const {
 } = require("./footballKnowledge");
 const {
     answerClubKnowledge,
-    isClubKnowledgeQuestion
+    isClubKnowledgeQuestion,
+    isPassiveClubKnowledgeQuestion
 } = require("./clubKnowledge");
 const {
     answerSimpleQuestion
 } = require("./simpleAnswers");
+const {
+    answerNewsQuestion,
+    isNewsQuestion
+} = require("./newsService");
 
 const AI_MODEL =
     process.env.OPENAI_MODEL ||
@@ -39,18 +44,209 @@ const openai =
 
 const MAX_MEMORY = 8;
 const MEMORY_TTL_MS = 60 * 60 * 1000;
-const PASSIVE_REPLY_CHANCE = 0;
-const FOOTBALL_BANTER_CHANCE = 0;
+const PASSIVE_REPLY_CHANCE = 0.35;
+const FOOTBALL_BANTER_CHANCE = 0.08;
 const AI_BACKOFF_MS =
     Number(process.env.AI_BACKOFF_MS || 30 * 60 * 1000);
+const RATINGS_NUDGE_CHANCE = 0.35;
+const RATINGS_NUDGE_COOLDOWN_MS = 45 * 60 * 1000;
 
 let aiDisabledUntil = 0;
 let aiBackoffLoggedUntil = 0;
+const ratingsNudgeMemory = new Map();
+const smallTalkMemory = new Map();
 
 function normalize(value) {
     return String(value || "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function hasMassMention(message) {
+    return Boolean(message.mentions?.everyone) ||
+        /@(everyone|here)\b/i.test(message.content || "");
+}
+
+function isReplyToBot(message) {
+    const ownId =
+        message.client?.user?.id;
+
+    return Boolean(
+        ownId &&
+        message.mentions?.repliedUser?.id === ownId
+    );
+}
+
+function isRatingsPagePost(text) {
+    return /https?:\/\/(?:www\.)?bellaciaofc\.com\/fan-hub\/ratings\b/i
+        .test(text);
+}
+
+function hasAttachmentOnlyCue(message, text) {
+    const attachmentCount =
+        message.attachments?.size ||
+        message.attachments?.length ||
+        0;
+    const cleaned =
+        normalize(text).toLowerCase();
+
+    if (/^(click to see attachment|attachment|image|video|gif)$/i.test(cleaned)) {
+        return true;
+    }
+
+    return attachmentCount > 0 && !cleaned;
+}
+
+function maybeRatingsNudge(guildId, channelId) {
+    const key =
+        `${guildId}:${channelId}:ratings`;
+    const last =
+        ratingsNudgeMemory.get(key) || 0;
+
+    if (Date.now() - last < RATINGS_NUDGE_COOLDOWN_MS) {
+        return null;
+    }
+
+    if (Math.random() >= RATINGS_NUDGE_CHANCE) {
+        return null;
+    }
+
+    ratingsNudgeMemory.set(key, Date.now());
+
+    const variants = [
+        "Player of the night votes are open. Get yours in while the match is still fresh.",
+        "Quick reminder: drop your player of the night vote on the ratings page.",
+        "Ratings link is up. Don’t leave POTN to two people and a guess.",
+        "Get those player of the night votes in. Fresh memories make better votes.",
+        "If you played or watched, get your ratings in. Player of the night needs the room involved.",
+        "Ratings are open. Back your standout before everyone pretends they remembered the full game."
+    ];
+
+    return variants[
+        Math.floor(Math.random() * variants.length)
+    ];
+}
+
+function recentConversationWithBot(memory) {
+    return memory.some(row =>
+        Number(row.should_reply || 0) === 1 &&
+        Date.now() - Number(row.created_at || 0) < 4 * 60_000
+    );
+}
+
+function isBroAddressedByLanguage(text) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    if (!/^bro\b/.test(lower)) {
+        return false;
+    }
+
+    if (/^bro[.!?]*$/.test(lower)) {
+        return true;
+    }
+
+    return /\b(who|what|when|where|why|how|can|could|would|should|do|does|did|is|are|tell|show|explain|help|you good|you alive|you there|alright|thanks|cheers)\b/
+        .test(lower);
+}
+
+function hasSensitiveHumanContext(text) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    return /\b(n[\s-]*word|hard r|slur|racis|racist|racism|banned|ban him|ban me|getting banned|being banned)\b/
+        .test(lower);
+}
+
+function isSmallTalk(text) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    if (lower.length > 90) {
+        return false;
+    }
+
+    return /\b(ok|okay|alright|fair|safe|sound|nice|class|cool|calm|lol|haha|lmao|thanks|cheers|ty|my bad|you good|how are you|how you doing|what you saying|wagwan|yo|hello|hi|hey|bro)\b/
+        .test(lower);
+}
+
+function smallTalkResponse(guildId, channelId, text) {
+    const key =
+        `${guildId}:${channelId}`;
+    const count =
+        Number(smallTalkMemory.get(key)?.count || 0);
+    const lower =
+        normalize(text).toLowerCase();
+    let variants;
+
+    if (/\b(weather|raining|sunny|cold|hot)\b/.test(lower)) {
+        variants = [
+            "I can't see live weather from here, but if it's one of those grim match-night evenings, layers and quick passing only.",
+            "No live weather feed on my side, bro. If it is raining, call it elite football conditions and keep moving.",
+            "I can't check the actual forecast, but I can still complain about heavy touches like it is raining.",
+            "Weather-wise I only know vibes, not forecasts. Sounds like a keep-it-simple kind of night."
+        ];
+    } else if (/\b(what you been up to|what have you been up to|been doing|how's your day|hows your day)\b/.test(lower)) {
+        variants = [
+            "Mostly watching stats, trying not to interrupt normal chat, and learning when to keep quiet.",
+            "Bit of club admin, bit of lore memory, bit of pretending I understand the dressing room.",
+            "Keeping an eye on the numbers and trying to be less robotic. Slow progress, but progress.",
+            "Just sitting here ready for stats, fixtures, lore, and the occasional normal conversation."
+        ];
+    } else if (/\b(thanks|cheers|ty)\b/.test(lower)) {
+        variants = [
+            "Anytime bro.",
+            "No stress.",
+            "You’re good.",
+            "All good, mate."
+        ];
+    } else if (/\b(ok|okay|fair|safe|sound|cool|calm|alright)\b/.test(lower)) {
+        variants = [
+            "Yeah, I’ll keep it lighter.",
+            "Fair. I’ll chill a bit.",
+            "Got you bro.",
+            "Calm, I’m learning the room.",
+            "Say less."
+        ];
+    } else if (/\b(lol|haha|lmao)\b/.test(lower)) {
+        variants = [
+            "I’ll take that as a win.",
+            "Tiny bit of aura restored.",
+            "Had to be done.",
+            "I’m counting that as positive feedback."
+        ];
+    } else if (/\b(you good|how are you|how you doing|what you saying|wagwan)\b/.test(lower)) {
+        variants = [
+            "I’m good bro. Watching the stats and trying not to waffle.",
+            "All good. Keeping the club brain switched on.",
+            "I’m calm. Just here if the room needs stats, lore, or a sensible answer.",
+            "Good, mate. Trying to be useful without jumping into every message."
+        ];
+    } else {
+        variants = [
+            "Yeah bro.",
+            "I hear you.",
+            "Got you.",
+            "Fair enough.",
+            "I’ll keep it sensible."
+        ];
+    }
+
+    smallTalkMemory.set(
+        key,
+        {
+            count: count + 1,
+            updatedAt: Date.now()
+        }
+    );
+
+    if (count >= 8) {
+        return "I’ll leave you to it for a bit, bro.";
+    }
+
+    return variants[
+        Math.floor(Math.random() * variants.length)
+    ];
 }
 
 function isAiBackoffActive() {
@@ -89,7 +285,23 @@ function handleOpenAIError(err, label) {
 }
 
 function hasQuestion(text) {
-    return /\?|\b(who|what|when|where|why|how|which|can you|could you|should we|do we|are we|is there)\b/i
+    const value =
+        normalize(text);
+
+    return /\?|\b(who|what|when|where|why|how|which|whose|whos)\b/i
+        .test(value) ||
+        /^(can|could|should|would|do|does|did|are|is|was|were|has|have|had)\b/i
+            .test(value) ||
+        /\b(can you|could you|would you|do we|are we|is there|has anyone|have we)\b/i
+            .test(value) ||
+        /\b(tell me|tell us|show me|show us|give me|give us|explain|describe|profile|summarise|summarize|run through|teach me|quiz me|test me|history of|lore of|story of|story behind|what happened with|what happened to|best player|top scorer|most goals|most assists|highest rated|who knows ball|ball knowledge)\b/i
+            .test(value);
+}
+
+function hasSchedulingRequest(text) {
+    return /\b(schedule|session|fixture|what time|when are we playing|when do we play|who can play|who is available|who's available|availability|load up|kick-?off)\b/i
+        .test(text) ||
+        /^(can|could|do|does|is|are|who|when|what)\b.{0,80}\b(play|available|session|fixture|schedule|kick-?off|load up)\b/i
         .test(text);
 }
 
@@ -109,9 +321,14 @@ function isDirectBotAddress(message) {
         return true;
     }
 
+    if (isReplyToBot(message)) {
+        return true;
+    }
+
     return (
-        /^(yo|hi|hello|hey|alright)\s+(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text) ||
-        /^(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text)
+        /^(yo|hi|hello|hey|alright)\s+(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub|bro)\b/.test(text) ||
+        /^(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text) ||
+        isBroAddressedByLanguage(text)
     );
 }
 
@@ -123,6 +340,7 @@ function hasBotCue(message) {
         ownId &&
         message.mentions?.users?.has(ownId)
     ) ||
+    isReplyToBot(message) ||
     /\b(bella\s+ciao\s+bot|bella\s+bot|ourproclub|assistant|bot)\b/i
         .test(message.content || "");
 }
@@ -131,7 +349,7 @@ function isBotAddressedByLanguage(text) {
     const lower =
         normalize(text).toLowerCase();
     const botName =
-        "(?:bella\\s+ciao\\s+bot|bella\\s+bot|ourproclub|assistant|bot)";
+        "(?:bella\\s+ciao\\s+bot|bella\\s+bot|ourproclub|assistant|bot|bro)";
     const afterBotRequest =
         "(?:can you|could you|would you|will you|do you|are you|did you|have you|how|what|why|when|where|who|which|tell me|show me|check|find|explain|answer|reply|help|say)";
     const beforeBotRequest =
@@ -144,7 +362,7 @@ function isBotAddressedByLanguage(text) {
 }
 
 function isBotMetaChat(text) {
-    return /\b(this bot|the bot|that bot|it should|it shouldn't|it shouldnt|doesn't understand|doesnt understand|random timer|spam replies|stupid responses|auto response|auto-response|speaking to the bot|talking to the bot)\b/i
+    return /\b(this bot|the bot|that bot|it should|it shouldn't|it shouldnt|doesn't understand|doesnt understand|random timer|spam replies|stupid responses|auto response|auto-response|speaking to the bot|talking to the bot|quiz questions|position questions|answer choices|questions come up|question comes up)\b/i
         .test(text);
 }
 
@@ -153,8 +371,84 @@ function isBotGreeting(text) {
         .test(text);
 }
 
+function isLongHumanUpdate(text) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    return text.length > 110 &&
+        !hasQuestion(text) &&
+        /\b(i|we|he|she|they|if|because|said|says|told|like i said|practice|listen|listening|team|club|night|game|want|wants|wanted)\b/
+            .test(lower);
+}
+
+function isLongReflectiveStatement(text) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    if (lower.length < 260) {
+        return false;
+    }
+
+    const firstQuestionWord =
+        lower.search(/\b(who|what|when|where|why|how|which|can|could|should|would|do|does|did|are|is|was|were|has|have|had)\b/);
+
+    return !/[?]/.test(lower) &&
+        firstQuestionWord > 80 &&
+        /\b(i|me|my|myself|we|our|us|felt|realized|understand|situation|mistake|trust|respect|writing|excuses|sorry|apolog)\b/
+            .test(lower);
+}
+
 function hasSlashCommandCue(text) {
     return /\/(help|claim|player|stats|ratings|top|quiz|poll|mod|schedule|syncstats|resetstats|linkclub|unlink)\b/i
+        .test(text);
+}
+
+function hasBallKnowledgeCue(text) {
+    return /\b(ball knowledge|ball knowl?edge|football knowledge|knows ball|know ball|ball iq|football iq|test my ball|quiz my ball|do i know ball|does (?:he|she|[a-z0-9_]+) know ball|who knows ball)\b/i
+        .test(text);
+}
+
+function hasMeaningfulPassiveCue(text, signals) {
+    const lower =
+        normalize(text).toLowerCase();
+
+    if (hasBallKnowledgeCue(lower)) {
+        return true;
+    }
+
+    if (signals.scheduling && !signals.clubStats && !signals.clubLore && !signals.botHelp) {
+        return hasSchedulingRequest(lower);
+    }
+
+    if (
+        signals.botHelp ||
+        signals.clubLore ||
+        signals.clubStats
+    ) {
+        return hasQuestion(lower) ||
+            /\b(tell me|explain|show|check|who has|who is|who was|what happened|where did|how many|best|top|leader|history|lore|story|profile|stats|form|available|session)\b/
+                .test(lower) ||
+            /\bincident\b/
+                .test(lower);
+    }
+
+    if (signals.tactical) {
+        return hasQuestion(lower) ||
+            /\b(explain|why|how|what is|what does|difference between|ball knowledge|football iq|tactics?)\b/
+                .test(lower);
+    }
+
+    return false;
+}
+
+function hasRequestCue(text) {
+    return hasQuestion(text) ||
+        /\b(tell me|explain|show me|show us|check|give me|give us|describe|profile|summarise|summarize|run through|teach me|quiz me|incident)\b/i
+            .test(text);
+}
+
+function hasStrongShortCue(text) {
+    return /\b(who is [a-z0-9_]{2,}|who was [a-z0-9_]{2,}|[a-z0-9_ ]+ incident|best player|top scorer|top goalscorer|most goals|most assists|highest rated|highest rating|ball knowledge|who knows ball|club history|bella lore|what is xg|what is xa|what is xt|expected goals|expected assists|expected threat)\b/i
         .test(text);
 }
 
@@ -183,6 +477,20 @@ function isPlanningOrAdminChat(text) {
         "still adding",
         "new ideas",
         "quiz questions",
+        "position questions",
+        "question comes up",
+        "questions come up",
+        "screenshot",
+        "send it me",
+        "send it to me",
+        "i can fix it",
+        "can fix it",
+        "ai helping",
+        "code them",
+        "more random",
+        "more questions",
+        "the more it knows",
+        "answer choices",
         "updating the bot",
         "introduce the bot",
         "xp system",
@@ -208,11 +516,13 @@ function topicSignals(text) {
             /\b(top scorer|goals|assists|rating|leaderboard|stats|form|matches|win rate|clean sheet|motm|last game|latest match|recent match|best player)\b/i.test(lower),
         botHelp:
             /\b(command|commands|how do i|help|claim|link|start quiz|quiz leaderboard|poll command|compare command|chemistry command)\b/i.test(lower) ||
+            hasBallKnowledgeCue(text) ||
             hasSlashCommandCue(text),
         clubLore:
-            isClubKnowledgeQuestion(text),
+            isPassiveClubKnowledgeQuestion(text),
         tactical:
-            /\b(formation|press|low block|counter|cutback|through ball|build up|transition|winger|striker|cdm|cam|defend|attack|world cup|euros|euro|champions league|ballon|golden boot|golden ball|european cup|history|record|trophy|winner)\b/i.test(lower),
+            /\b(formation|press|low block|counter|cutback|through ball|build up|transition|winger|striker|cdm|cam|defend|attack|xg|xa|xt|expected goals|expected assists|expected threat|world cup|euros|euro|champions league|ballon|golden boot|golden ball|european cup|history|record|trophy|winner)\b/i.test(lower) ||
+            hasBallKnowledgeCue(text),
         matchBanter:
             /\b(goal|save|assist|tackle|won|lost|battered|bottled|heads gone|matchday|clubs|divs)\b/i.test(lower),
         moderation:
@@ -233,6 +543,99 @@ function topicSignals(text) {
 function classifyRuleBased(message, memory = []) {
     const text =
         normalize(message.content);
+
+    if (hasMassMention(message)) {
+        return {
+            shouldReply: false,
+            mode: "silent",
+            intent: "mass_mention",
+            confidence: 1,
+            reason: "Never reply to @everyone or @here messages.",
+            situation: {
+                direct: false,
+                planning: false,
+                longStatement: false,
+                recentBotReply: false,
+                intent: "mass_mention",
+                signals: {},
+                botCue: false,
+                directAddress: false,
+                usefulness: 0,
+                interruptionRisk: 1
+            }
+        };
+    }
+
+    if (hasAttachmentOnlyCue(message, text)) {
+        return {
+            shouldReply: false,
+            mode: "silent",
+            intent: "attachment_only",
+            confidence: 0.95,
+            reason: "Attachment without a real text prompt.",
+            situation: {
+                direct: false,
+                planning: false,
+                longStatement: false,
+                recentBotReply: false,
+                intent: "attachment_only",
+                signals: {},
+                botCue: false,
+                directAddress: false,
+                usefulness: 0,
+                interruptionRisk: 0.9
+            }
+        };
+    }
+
+    if (isRatingsPagePost(text)) {
+        const recentBotReply =
+            memory.some(row =>
+                Number(row.should_reply || 0) === 1 &&
+                Date.now() - Number(row.created_at || 0) < 60_000
+            );
+        const nudge =
+            !recentBotReply
+                ? maybeRatingsNudge(
+                    message.guild.id,
+                    message.channel.id
+                )
+                : null;
+
+        return {
+            shouldReply: Boolean(nudge),
+            mode: "helpful",
+            intent: "ratings_vote_nudge",
+            confidence: 0.9,
+            reason:
+                nudge
+                    ? "Occasional ratings page vote nudge."
+                    : "Ratings page post skipped by chance/cooldown.",
+            cannedResponse: nudge,
+            situation: {
+                direct: false,
+                planning: false,
+                longStatement: false,
+                recentBotReply,
+                intent: "ratings_vote_nudge",
+                signals: {
+                    botHelp: false,
+                    clubLore: false,
+                    clubStats: false,
+                    tactical: false,
+                    matchBanter: false,
+                    moderation: false,
+                    scheduling: false,
+                    count: 0
+                },
+                botCue: false,
+                directAddress: false,
+                usefulness: nudge ? 0.55 : 0,
+                interruptionRisk: 0.2
+            }
+        };
+    }
+
     const directAddress =
         isDirectBotAddress(message) ||
         isBotAddressedByLanguage(text);
@@ -248,14 +651,13 @@ function classifyRuleBased(message, memory = []) {
     const planning =
         isPlanningOrAdminChat(text);
     const longStatement =
-        text.length > 120 &&
-        !hasQuestion(text) &&
+        (
+            isLongHumanUpdate(text) ||
+            isLongReflectiveStatement(text)
+        ) &&
         !directAddress;
     const recentBotReply =
-        memory.some(row =>
-            Number(row.should_reply || 0) === 1 &&
-            Date.now() - Number(row.created_at || 0) < 60_000
-        );
+        recentConversationWithBot(memory);
     const situation = {
         direct,
         planning,
@@ -311,6 +713,21 @@ function classifyRuleBased(message, memory = []) {
     }
 
     if (
+        hasSensitiveHumanContext(text) &&
+        !directAddress &&
+        !hasSlashCommandCue(text)
+    ) {
+        return {
+            shouldReply: false,
+            mode: "silent",
+            intent: "sensitive_human_context",
+            confidence: 0.95,
+            reason: "Serious/sensitive human conversation, bot should not chip in.",
+            situation
+        };
+    }
+
+    if (
         directAddress &&
         isBotGreeting(text)
     ) {
@@ -325,9 +742,27 @@ function classifyRuleBased(message, memory = []) {
     }
 
     if (
+        isNewsQuestion(text) &&
+        (
+            directAddress ||
+            hasQuestion(text)
+        )
+    ) {
+        return {
+            shouldReply: true,
+            mode: "helpful",
+            intent: "news_lookup",
+            confidence: 0.85,
+            reason: "Direct news/current events question.",
+            situation
+        };
+    }
+
+    if (
         longStatement &&
         !signals.clubStats &&
-        !signals.clubLore
+        !signals.clubLore &&
+        !hasMeaningfulPassiveCue(text, signals)
     ) {
         return {
             shouldReply: false,
@@ -362,8 +797,76 @@ function classifyRuleBased(message, memory = []) {
     }
 
     if (
-        intent !== "unknown" &&
+        hasBallKnowledgeCue(text) &&
+        hasRequestCue(text)
+    ) {
+        return {
+            shouldReply: true,
+            mode: "helpful",
+            intent: "ball_knowledge_help",
+            confidence: 0.88,
+            reason: "Ball knowledge question.",
+            situation
+        };
+    }
+
+    if (
+        hasMeaningfulPassiveCue(text, signals) &&
+        hasRequestCue(text) &&
+        !recentBotReply &&
+        (
+            text.length >= 12 ||
+            hasStrongShortCue(text)
+        )
+    ) {
+        return {
+            shouldReply: true,
+            mode: "helpful",
+            intent:
+                hasBallKnowledgeCue(text)
+                    ? "ball_knowledge_help"
+                    : intent !== "unknown"
+                        ? intent
+                        : signals.clubLore
+                            ? "club_lore"
+                            : "useful_passive_question",
+            confidence: 0.82,
+            reason: "Useful passive question with a recognised trigger.",
+            situation
+        };
+    }
+
+    if (
+        isSmallTalk(text) &&
+        (
+            directAddress ||
+            isReplyToBot(message)
+        )
+    ) {
+        return {
+            shouldReply: true,
+            mode: "small_talk",
+            intent: "casual_small_talk",
+            confidence: 0.85,
+            reason: "Short casual reply in an active bot conversation.",
+            cannedResponse:
+                smallTalkResponse(
+                    message.guild.id,
+                    message.channel.id,
+                    text
+                ),
+            situation
+        };
+    }
+
+    if (
+        (
+            intent !== "unknown" ||
+            hasMeaningfulPassiveCue(text, signals)
+        ) &&
         !signals.botHelp &&
+        !recentBotReply &&
+        text.length >= 12 &&
         Math.random() < PASSIVE_REPLY_CHANCE
     ) {
         return {
@@ -478,6 +981,10 @@ async function remember(message, decision, content) {
 }
 
 async function classifyWithOpenAI(message, memory, ruleDecision) {
+    if (ruleDecision.cannedResponse) {
+        return ruleDecision;
+    }
+
     if (!openai || isAiBackoffActive()) {
         return ruleDecision;
     }
@@ -653,6 +1160,10 @@ async function generateWithOpenAI(message, decision, memory) {
 }
 
 async function answerSmartMessage(message) {
+    if (hasMassMention(message)) {
+        return null;
+    }
+
     const content =
         normalize(message.content)
             .replace(/<@!?\d+>/g, " ")
@@ -682,8 +1193,28 @@ async function answerSmartMessage(message) {
         return null;
     }
 
+    if (decision.intent === "ratings_vote_nudge") {
+        return decision.cannedResponse || null;
+    }
+
+    if (decision.intent === "casual_small_talk") {
+        return decision.cannedResponse || null;
+    }
+
+    if (decision.intent === "news_lookup") {
+        return answerNewsQuestion(content);
+    }
+
     if (decision.intent === "bot_greeting") {
-        return "I'm good. Keeping an eye on the club stats.";
+        return smallTalkResponse(
+            message.guild.id,
+            message.channel.id,
+            content
+        );
+    }
+
+    if (decision.intent === "ball_knowledge_help") {
+        return "Ball knowledge is reading the game properly: tactics, roles, decision-making, form, stats, and club lore. If you want the room tested, run `/quiz start`.";
     }
 
     if (decision.mode === "helpful" || decision.mode === "analysis") {
@@ -707,16 +1238,25 @@ async function answerSmartMessage(message) {
         }
 
         const legacy =
-            await answerQuestion(
-                message.guild.id,
-                content
-            );
+            detectIntent(content) !== "unknown"
+                ? await answerQuestion(
+                    message.guild.id,
+                    content
+                )
+                : null;
 
         if (
             legacy &&
             !legacy.includes("I don't know that yet")
         ) {
             return legacy;
+        }
+
+        if (
+            decision.intent === "useful_passive_question" &&
+            decision.situation?.signals?.scheduling
+        ) {
+            return null;
         }
     }
 

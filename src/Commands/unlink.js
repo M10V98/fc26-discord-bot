@@ -34,6 +34,11 @@ module.exports = {
                 [interaction.guild.id]
             );
 
+            const linkedResult = await db.run(
+                `DELETE FROM guild_clubs WHERE guild_id = ?`,
+                [interaction.guild.id]
+            );
+
             await db.run(
                 `DELETE FROM automode WHERE guild_id = ?`,
                 [interaction.guild.id]
@@ -58,6 +63,7 @@ module.exports = {
 
             await interaction.editReply(
                 result.changes > 0
+                    || linkedResult.changes > 0
                     ? "Club unlinked and server club stats/claims cleared. You can now use `/linkclub` with a new Club ID."
                     : "No club is currently linked for this server."
             );

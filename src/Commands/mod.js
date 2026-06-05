@@ -1,4 +1,7 @@
 const {
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     SlashCommandBuilder,
     EmbedBuilder,
     MessageFlags,
@@ -13,9 +16,10 @@ const {
 } = require("../Utils/embedStyle");
 
 const DEFAULT_TIMEOUT_MINUTES = 60;
+const INFRACTIONS_PAGE_SIZE = 8;
 
 const ACTION_LABELS = {
-    warn: "Warn",
+    warn: "Warning",
     timeout: "Timeout",
     ban: "Ban"
 };
@@ -51,6 +55,192 @@ function infractionEmbed(user, rows) {
         .setFooter(FOOTER);
 }
 
+function formatInfractionRow(row, index) {
+    return [
+        `**${index}. ${row.type.toUpperCase()}**`,
+        `User: <@${row.user_id}>`,
+        `Reason: ${escapeMarkdown(row.reason || "No reason")}`,
+        `Moderator: <@${row.moderator_id}>`
+    ].join("\n");
+}
+
+function infractionPageButtons(scope, targetUserId, page, totalPages) {
+    const target =
+        targetUserId || "all";
+
+    return [
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`mod_infractions_page:${scope}:${target}:${page - 1}`)
+                    .setLabel("Previous")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page <= 0),
+
+                new ButtonBuilder()
+                    .setCustomId(`mod_infractions_page:${scope}:${target}:${page + 1}`)
+                    .setLabel("Next")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(page >= totalPages - 1)
+            )
+    ];
+}
+
+async function buildInfractionsPage(interaction, options = {}) {
+    const page =
+        Math.max(0, Number(options.page || 0));
+    const targetUserId =
+        options.userId || null;
+    const params =
+        targetUserId
+            ? [interaction.guild.id, targetUserId]
+            : [interaction.guild.id];
+    const where =
+        targetUserId
+            ? "WHERE guild_id = ? AND user_id = ?"
+            : "WHERE guild_id = ?";
+    const [{ total = 0 } = {}] =
+        await db.all(
+            `
+            SELECT COUNT(*) AS total
+            FROM mod_infractions
+            ${where}
+            `,
+            params
+        );
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(Number(total || 0) / INFRACTIONS_PAGE_SIZE)
+        );
+    const safePage =
+        Math.min(page, totalPages - 1);
+    const rows =
+        await db.all(
+            `
+            SELECT *
+            FROM mod_infractions
+            ${where}
+            ORDER BY created_at DESC
+            LIMIT ?
+            OFFSET ?
+            `,
+            [
+                ...params,
+                INFRACTIONS_PAGE_SIZE,
+                safePage * INFRACTIONS_PAGE_SIZE
+            ]
+        );
+    const counts =
+        await db.get(
+            `
+            SELECT
+                SUM(CASE WHEN type = 'warn' THEN 1 ELSE 0 END) AS warns,
+                SUM(CASE WHEN type = 'timeout' THEN 1 ELSE 0 END) AS timeouts,
+                SUM(CASE WHEN type = 'ban' THEN 1 ELSE 0 END) AS bans
+            FROM mod_infractions
+            ${where}
+            `,
+            params
+        );
+    const heading =
+        targetUserId
+            ? `Infractions for <@${targetUserId}>`
+            : "Server moderation records";
+    const lines =
+        rows.length
+            ? rows.map((row, index) =>
+                formatInfractionRow(
+                    row,
+                    safePage * INFRACTIONS_PAGE_SIZE + index + 1
+                )
+            )
+            : ["No infractions recorded."];
+    const embed =
+        new EmbedBuilder()
+            .setColor("#2b2d31")
+            .setTitle(`${heading}:`)
+            .setDescription(
+                [
+                    `Total records: **${number(total)}**`,
+                    `Warnings: **${number(counts?.warns || 0)}** | Timeouts: **${number(counts?.timeouts || 0)}** | Bans: **${number(counts?.bans || 0)}**`,
+                    "",
+                    lines.join("\n\n")
+                ].join("\n").slice(0, 4096)
+            )
+            .setFooter({
+                ...FOOTER,
+                text:
+                    `${FOOTER.text} - Page ${safePage + 1}/${totalPages}`
+            });
+
+    return {
+        embeds: [embed],
+        components:
+            totalPages > 1
+                ? infractionPageButtons(
+                    "records",
+                    targetUserId,
+                    safePage,
+                    totalPages
+                )
+                : []
+    };
+}
+
+async function handleInfractionsPageButton(interaction) {
+    if (
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+    ) {
+        return interaction.reply({
+            content: "Only administrators can use moderation buttons.",
+            ephemeral: true
+        });
+    }
+
+    const [, , target, page] =
+        interaction.customId.split(":");
+    const payload =
+        await buildInfractionsPage(
+            interaction,
+            {
+                userId:
+                    target === "all"
+                        ? null
+                        : target,
+                page
+            }
+        );
+
+    return interaction.update(payload);
+}
+
+function warningsEmbed(user, rows) {
+    const lines =
+        rows.length
+            ? rows.map((row, index) =>
+                [
+                    `**Warning ${index + 1}**`,
+                    `Reason: ${escapeMarkdown(row.reason || "No reason")}`,
+                    `Moderator: <@${row.moderator_id}>`
+                ].join("\n")
+            )
+            : ["No warnings recorded."];
+
+    return new EmbedBuilder()
+        .setColor("#2b2d31")
+        .setTitle("Warning records:")
+        .setDescription(
+            [
+                `User: **${escapeMarkdown(user.tag)}**`,
+                `Total warnings: **${number(rows.length)}**`,
+                "",
+                lines.join("\n\n")
+            ].join("\n").slice(0, 4096)
+        )
+        .setFooter(FOOTER);
+}
+
 async function recordInfraction(interaction, type, user, reason) {
     await db.run(
         `
@@ -75,7 +265,11 @@ function targetLine(action, user) {
 
 function actionSummary(action, user, options = {}) {
     if (action === "warn") {
-        return `Warned ${user.username}. Total warns: **${number(options.warns)}**.`;
+        return `Warned ${user.username}. Total warnings: **${number(options.warns)}**.`;
+    }
+
+    if (action === "resetwarnings") {
+        return `Reset ${number(options.removed)} warning${options.removed === 1 ? "" : "s"} for ${user.username}.`;
     }
 
     if (action === "timeout") {
@@ -91,7 +285,9 @@ function actionSummary(action, user, options = {}) {
 
 function actionEmbed(interaction, action, user, reason, options = {}) {
     const label =
-        ACTION_LABELS[action] || "Moderation";
+        action === "resetwarnings"
+            ? "Reset Warnings"
+            : ACTION_LABELS[action] || "Moderation";
     const dmStatus =
         options.dmSent
             ? "✅ User notified by DM"
@@ -114,7 +310,7 @@ function actionEmbed(interaction, action, user, reason, options = {}) {
                 `👥 **Moderator:** <@${interaction.user.id}>`,
                 duration.trim(),
                 "",
-                `**${action === "timeout" ? "Timed out" : action === "ban" ? "Banned" : "Warned"}:**`,
+                `**${action === "timeout" ? "Timed out" : action === "ban" ? "Banned" : action === "resetwarnings" ? "Warnings reset" : "Warned"}:**`,
                 targetLine(action, user),
                 "",
                 dmStatus,
@@ -130,6 +326,10 @@ function actionEmbed(interaction, action, user, reason, options = {}) {
 function dmEmbed(interaction, action, reason, options = {}) {
     const label =
         ACTION_LABELS[action] || "Moderation";
+    const noticeLabel =
+        action === "warn"
+            ? "warning"
+            : label.toLowerCase();
     const duration =
         action === "timeout"
             ? `\n⏱️ Duration: ${number(options.minutes)} minute${options.minutes === 1 ? "" : "s"}`
@@ -140,7 +340,7 @@ function dmEmbed(interaction, action, reason, options = {}) {
         .setTitle(`${label} notice`)
         .setDescription(
             [
-                `You have received a **${label.toLowerCase()}** in **${interaction.guild.name}**.`,
+                `You have received a **${noticeLabel}** in **${interaction.guild.name}**.`,
                 "",
                 `📋 **Reason:** ${escapeMarkdown(reason || "No reason provided")}`,
                 `👥 **Moderator:** ${interaction.user.tag}`,
@@ -175,7 +375,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("mod")
         .setDescription("Moderation tools")
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
                 .setName("warn")
@@ -195,11 +395,58 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("infractions")
-                .setDescription("Show a user's infractions")
+                .setDescription("Show server infractions or a user's infractions")
                 .addUserOption(option =>
                     option
                         .setName("user")
                         .setDescription("User to inspect")
+                        .setRequired(false)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("resetwarnings")
+                .setDescription("Reset a user's warning count")
+                .addUserOption(option =>
+                    option
+                        .setName("user")
+                        .setDescription("User to reset warnings for")
+                        .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
+                        .setName("reset")
+                        .setDescription("How many warnings to remove")
+                        .setRequired(true)
+                        .addChoices(
+                            {
+                                name: "Complete reset",
+                                value: "all"
+                            },
+                            {
+                                name: "Remove 1 warning",
+                                value: "1"
+                            },
+                            {
+                                name: "Remove 2 warnings",
+                                value: "2"
+                            }
+                        )
+                )
+                .addStringOption(option =>
+                    option
+                        .setName("reason")
+                        .setDescription("Reason for resetting warnings")
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("warnings")
+                .setDescription("Show a user's warnings only")
+                .addUserOption(option =>
+                    option
+                        .setName("user")
+                        .setDescription("User to inspect warnings for")
                         .setRequired(true)
                 )
         )
@@ -242,11 +489,17 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        await interaction.deferReply({
-            flags: MessageFlags.Ephemeral
-        });
+        await interaction.deferReply();
 
         try {
+            if (
+                !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+            ) {
+                return interaction.editReply(
+                    "Only administrators can use moderation commands."
+                );
+            }
+
             const subcommand =
                 interaction.options.getSubcommand();
             const user =
@@ -256,6 +509,19 @@ module.exports = {
                 "No reason provided";
 
             if (subcommand === "infractions") {
+                const payload =
+                    await buildInfractionsPage(
+                        interaction,
+                        {
+                            userId: user?.id || null,
+                            page: 0
+                        }
+                    );
+
+                return interaction.editReply(payload);
+            }
+
+            if (subcommand === "warnings") {
                 const rows =
                     await db.all(
                         `
@@ -263,14 +529,15 @@ module.exports = {
                         FROM mod_infractions
                         WHERE guild_id = ?
                         AND user_id = ?
+                        AND type = 'warn'
                         ORDER BY created_at DESC
-                        LIMIT 15
+                        LIMIT 25
                         `,
                         [interaction.guild.id, user.id]
                     );
 
                 return interaction.editReply({
-                    embeds: [infractionEmbed(user, rows)]
+                    embeds: [warningsEmbed(user, rows)]
                 });
             }
 
@@ -306,6 +573,76 @@ module.exports = {
                                 warns,
                                 dmSent,
                                 escalation
+                            }
+                        )
+                    ]
+                });
+            }
+
+            if (subcommand === "resetwarnings") {
+                const reset =
+                    interaction.options.getString("reset") || "all";
+                const amount =
+                    reset === "all"
+                        ? null
+                        : Number(reset);
+                let result;
+
+                if (amount) {
+                    result =
+                        await db.run(
+                            `
+                            DELETE FROM mod_infractions
+                            WHERE id IN (
+                                SELECT id
+                                FROM mod_infractions
+                                WHERE guild_id = ?
+                                AND user_id = ?
+                                AND type = 'warn'
+                                ORDER BY created_at DESC
+                                LIMIT ?
+                            )
+                            `,
+                            [
+                                interaction.guild.id,
+                                user.id,
+                                amount
+                            ]
+                        );
+                } else {
+                    result =
+                        await db.run(
+                            `
+                            DELETE FROM mod_infractions
+                            WHERE guild_id = ?
+                            AND user_id = ?
+                            AND type = 'warn'
+                            `,
+                            [
+                                interaction.guild.id,
+                                user.id
+                            ]
+                        );
+                }
+
+                const removed =
+                    Number(result.changes || 0);
+
+                return interaction.editReply({
+                    content: actionSummary(
+                        "resetwarnings",
+                        user,
+                        { removed }
+                    ),
+                    embeds: [
+                        actionEmbed(
+                            interaction,
+                            "resetwarnings",
+                            user,
+                            reason,
+                            {
+                                removed,
+                                dmSent: false
                             }
                         )
                     ]
@@ -396,5 +733,6 @@ module.exports = {
             console.error("mod error:", err);
             return interaction.editReply("Failed to run moderation action. Check my role permissions.");
         }
-    }
+    },
+    handleInfractionsPageButton
 };

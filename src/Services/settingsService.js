@@ -2,12 +2,14 @@ const db = require("../Utils/db");
 
 const DEFAULTS = {
     inFormWindow: "10",
-    compInFormWindow: "10"
+    compInFormWindow: "10",
+    schedulePreTagMinutes: "30"
 };
 
 const KEYS = {
     inFormWindow: "in_form_window",
-    compInFormWindow: "comp_in_form_window"
+    compInFormWindow: "comp_in_form_window",
+    schedulePreTagMinutes: "schedule_pre_tag_minutes"
 };
 
 async function getSetting(guildId, key) {
@@ -61,7 +63,9 @@ async function getGuildSettings(guildId) {
         inFormWindow:
             Number(values.get(KEYS.inFormWindow) || DEFAULTS.inFormWindow),
         compInFormWindow:
-            Number(values.get(KEYS.compInFormWindow) || DEFAULTS.compInFormWindow)
+            Number(values.get(KEYS.compInFormWindow) || DEFAULTS.compInFormWindow),
+        schedulePreTagMinutes:
+            Number(values.get(KEYS.schedulePreTagMinutes) || DEFAULTS.schedulePreTagMinutes)
     };
 }
 

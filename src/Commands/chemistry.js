@@ -9,9 +9,12 @@ const {
 } = require("../Services/crests");
 const {
     findLinkedPlayer,
-    getModeMatches,
+    getModeMatchesForClubs,
     chemistry
 } = require("../Services/playerAnalytics");
+const {
+    getLinkedClubs
+} = require("../Services/clubLinks");
 const {
     FOOTER,
     buildLinkedMaps,
@@ -96,15 +99,16 @@ module.exports = {
         await interaction.deferReply();
 
         try {
-            const club =
-                await db.get(
-                    `SELECT * FROM clubs WHERE guild_id = ?`,
-                    [interaction.guild.id]
-                );
+            const clubs =
+                await getLinkedClubs(interaction.guild.id);
 
-            if (!club) {
+            if (!clubs.length) {
                 return interaction.editReply("No club linked. Use /linkclub first.");
             }
+
+            const defaultClub =
+                clubs.find(club => Number(club.is_default)) ||
+                clubs[0];
 
             const [first, second] =
                 await Promise.all([
@@ -120,9 +124,9 @@ module.exports = {
                 interaction.options.getString("mode") || "divisions";
             const [matches, linkedRows, crestUrl] =
                 await Promise.all([
-                    getModeMatches(
+                    getModeMatchesForClubs(
                         interaction.guild.id,
-                        club.club_id,
+                        clubs,
                         mode,
                         {
                             forceRefresh: true,
@@ -130,7 +134,7 @@ module.exports = {
                         }
                     ),
                     getLinkedRows(db, interaction.guild.id),
-                    getCrestUrl(club.club_id).catch(() => null)
+                    getCrestUrl(defaultClub.club_id).catch(() => null)
                 ]);
             const linkedMaps =
                 buildLinkedMaps(linkedRows);
@@ -147,11 +151,15 @@ module.exports = {
                     second.player_id
                 );
             const summary =
-                chemistry(matches, club.club_id, first, second);
+                chemistry(matches, defaultClub.club_id, first, second);
             const modeLabel =
                 mode === "competitive"
                     ? "Competitive friendlies"
                     : "Divisions";
+            const clubScope =
+                clubs.length === 1
+                    ? clubs[0].club_name || clubs[0].club_id
+                    : `${clubs.length} linked clubs`;
 
             const embed =
                 new EmbedBuilder()
@@ -162,6 +170,7 @@ module.exports = {
                             `${displayFirst} \u{1F91D} ${displaySecond}`,
                             "",
                             `Mode: **${modeLabel}**`,
+                            `Clubs: **${clubScope}**`,
                             `Chemistry Score: **${number(summary.score)}/100** - ${chemistryTier(summary.score)}`
                         ].join("\n")
                     )

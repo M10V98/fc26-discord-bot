@@ -38,6 +38,12 @@ module.exports = {
                 )
                 .addStringOption(option =>
                     option
+                        .setName("end_time")
+                        .setDescription("When the event ends. Examples: 22:00, 10pm, 2230")
+                        .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
                         .setName("league")
                         .setDescription("League or competition name")
                         .setRequired(true)
@@ -69,6 +75,8 @@ module.exports = {
                             `${interaction.options.getString("date")} ${interaction.options.getString("kickoff_time")}`,
                         loadUpTimeText:
                             `${interaction.options.getString("date")} ${interaction.options.getString("load_up_time")}`,
+                        endTimeText:
+                            `${interaction.options.getString("date")} ${interaction.options.getString("end_time")}`,
                         league:
                             interaction.options.getString("league"),
                         title:

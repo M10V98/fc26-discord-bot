@@ -10,6 +10,9 @@ const eaApi =
 
 const db =
     require("../Utils/db");
+const {
+    isRealPlayerName
+} = require("../Utils/embedStyle");
 
 module.exports = {
 
@@ -64,6 +67,9 @@ module.exports = {
             const list =
                 Array.isArray(members?.members)
                     ? members.members
+                        .filter(member =>
+                            isRealPlayerName(member.name)
+                        )
                     : [];
 
             if (list.length === 0) {
@@ -89,7 +95,10 @@ module.exports = {
 
                 for (const [pid, p] of Object.entries(players)) {
 
-                    if (p.playername && !idByName.has(p.playername)) {
+                    if (
+                        isRealPlayerName(p.playername) &&
+                        !idByName.has(p.playername)
+                    ) {
                         idByName.set(p.playername, pid);
                     }
                 }

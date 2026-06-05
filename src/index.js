@@ -32,6 +32,9 @@ const {
     handleSessionButton,
     startScheduleSessionCleanup
 } = require("./Services/scheduleSessions");
+const {
+    isRealPlayerName
+} = require("./Utils/embedStyle");
 
 const client = new Client({
     intents: [
@@ -220,16 +223,30 @@ client.on(
                 const playerName =
                     nameParts.join("|") || rawValue;
 
+                if (!isRealPlayerName(playerName)) {
+                    return interaction.editReply(
+                        "EA did not provide a real player name for that entry yet. Try again after the player appears properly in-game."
+                    );
+                }
+
                 const existing =
                     await db.get(
                         `
                         SELECT * FROM linked_players
                         WHERE guild_id = ?
-                        AND player_name = ?
+                        AND (
+                            player_name = ?
+                            OR (
+                                ? IS NOT NULL
+                                AND player_id = ?
+                            )
+                        )
                         `,
                         [
                             interaction.guild.id,
-                            playerName
+                            playerName,
+                            playerId || null,
+                            playerId || null
                         ]
                     );
 
@@ -340,6 +357,19 @@ client.on(
 
                     if (command?.handleMembersPageButton) {
                         await command.handleMembersPageButton(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("mod_infractions_page:")
+                ) {
+                    const command =
+                        client.commands.get("mod");
+
+                    if (command?.handleInfractionsPageButton) {
+                        await command.handleInfractionsPageButton(interaction);
                     }
 
                     return;

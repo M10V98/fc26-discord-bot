@@ -2,11 +2,17 @@ const db = require("../Utils/db");
 const {
     buildLinkedMaps,
     displayName,
-    getLinkedRows
+    getLinkedRows,
+    isRealPlayerName
 } = require("../Utils/embedStyle");
  
 function hasAny(text, words) {
     return words.some(word => text.includes(word));
+}
+
+function hasStandalone(text, word) {
+    return new RegExp(`(^|[^a-z0-9])${word}([^a-z0-9]|$)`, "i")
+        .test(text);
 }
  
 function detectIntent(question) {
@@ -106,6 +112,24 @@ function detectIntent(question) {
     }
 
     if (hasAny(q, [
+        "ball knowledge",
+        "ball knowledge test",
+        "football knowledge",
+        "knows ball",
+        "know ball",
+        "ball iq",
+        "football iq",
+        "test my ball knowledge",
+        "quiz my ball knowledge",
+        "do i know ball",
+        "does he know ball",
+        "does she know ball",
+        "who knows ball"
+    ])) {
+        return "ball_knowledge_help";
+    }
+
+    if (hasAny(q, [
         "player form",
         "my form",
         "how is my form",
@@ -198,10 +222,12 @@ function detectIntent(question) {
     }
 
     if (hasAny(q, [
-        "quiz",
         "start quiz",
+        "how do i start quiz",
+        "how to start quiz",
         "quiz leaderboard",
-        "football questions",
+        "quiz command",
+        "football quiz",
         "trivia",
         "xp quiz"
     ])) {
@@ -240,29 +266,35 @@ function detectIntent(question) {
         return "var_help";
     }
  
-    if (hasAny(q, [
-        "xg",
-        "expected goals",
-        "what is xg",
-        "how is xg"
-    ])) {
+    if (
+        hasStandalone(q, "xg") ||
+        hasAny(q, [
+            "expected goals",
+            "what is xg",
+            "how is xg"
+        ])
+    ) {
         return "xg_help";
     }
  
-    if (hasAny(q, [
-        "xa",
-        "expected assists",
-        "what is xa",
-        "how is xa"
-    ])) {
+    if (
+        hasStandalone(q, "xa") ||
+        hasAny(q, [
+            "expected assists",
+            "what is xa",
+            "how is xa"
+        ])
+    ) {
         return "xa_help";
     }
  
-    if (hasAny(q, [
-        "xt",
-        "expected threat",
-        "what is xt"
-    ])) {
+    if (
+        hasStandalone(q, "xt") ||
+        hasAny(q, [
+            "expected threat",
+            "what is xt"
+        ])
+    ) {
         return "xt_help";
     }
  
@@ -594,7 +626,8 @@ function shouldReplyAutomatically(question, options = {}) {
 
     const directBotCue =
         /\b(bot|ourproclub|assistant)\b/i.test(text) ||
-        text.includes("?");
+        /\?|\b(who|what|when|where|why|how|which|whose|whos|can|could|should|would|do|does|did|are|is|was|were|has|have|had|tell me|show me|explain|describe|history of|lore of|story behind|best player|top scorer|most goals|most assists|ball knowledge|knows ball|know ball)\b/i
+            .test(text);
     const chance =
     directBotCue
         ? options.directChance ?? 0.75
@@ -603,6 +636,339 @@ function shouldReplyAutomatically(question, options = {}) {
     return Math.random() < chance;
 }
 
+function compact(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+}
+
+function levenshtein(a, b) {
+    const left =
+        String(a || "");
+    const right =
+        String(b || "");
+    const previous =
+        Array.from(
+            {
+                length: right.length + 1
+            },
+            (_, index) => index
+        );
+
+    for (let i = 1; i <= left.length; i++) {
+        let lastDiagonal =
+            previous[0];
+
+        previous[0] = i;
+
+        for (let j = 1; j <= right.length; j++) {
+            const oldDiagonal =
+                previous[j];
+            const cost =
+                left[i - 1] === right[j - 1]
+                    ? 0
+                    : 1;
+
+            previous[j] =
+                Math.min(
+                    previous[j] + 1,
+                    previous[j - 1] + 1,
+                    lastDiagonal + cost
+                );
+            lastDiagonal = oldDiagonal;
+        }
+    }
+
+    return previous[right.length];
+}
+
+function similarity(a, b) {
+    const left =
+        compact(a);
+    const right =
+        compact(b);
+    const visualLeft =
+        visualCompact(a);
+    const visualRight =
+        visualCompact(b);
+
+    if (!left || !right) {
+        return 0;
+    }
+
+    if (left === right) {
+        return 1;
+    }
+
+    if (left.includes(right) || right.includes(left)) {
+        return Math.min(left.length, right.length) / Math.max(left.length, right.length);
+    }
+
+    if (
+        visualLeft.length >= 3 &&
+        visualRight.length >= 3 &&
+        (
+            visualLeft.startsWith(visualRight) ||
+            visualRight.startsWith(visualLeft)
+        )
+    ) {
+        return Math.min(
+            0.9,
+            0.78 + (Math.min(visualLeft.length, visualRight.length) * 0.03)
+        );
+    }
+
+    const distance =
+        Math.min(
+            levenshtein(left, right),
+            levenshtein(visualLeft, visualRight)
+        );
+
+    return 1 - (distance / Math.max(left.length, right.length));
+}
+
+function visualCompact(value) {
+    return compact(value)
+        .replace(/[o]/g, "0")
+        .replace(/[il]/g, "1")
+        .replace(/[s]/g, "5");
+}
+
+function questionNameHints(question) {
+    const normalized =
+        String(question || "")
+            .toLowerCase()
+            .replace(/<@!?\d+>/g, " ")
+            .replace(/[^a-z0-9\s]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    const withoutQuestionWords =
+        normalized
+            .replace(/\b(who|what|when|where|why|how|many|much|does|did|is|was|are|were|has|have|had|tell|me|about|profile|stats|goals?|assists?|rating|matches|games|played|level|xp|clean|sheets?|motm|man|of|the|match|position|archetype|bella|ciao|club|player)\b/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    const words =
+        withoutQuestionWords
+            .split(/\s+/)
+            .filter(word => word.length >= 2);
+    const hints =
+        new Set();
+
+    for (let start = 0; start < words.length; start++) {
+        for (let size = 1; size <= 3; size++) {
+            const phrase =
+                words.slice(start, start + size).join("");
+
+            if (phrase.length >= 2) {
+                hints.add(phrase);
+            }
+        }
+    }
+
+    return [...hints];
+}
+
+function aliasScoreForQuestion(question, aliases) {
+    const text =
+        compact(question);
+    const hints =
+        questionNameHints(question);
+    let best = 0;
+
+    for (const alias of aliases) {
+        const value =
+            compact(alias);
+
+        if (value.length < 2) {
+            continue;
+        }
+
+        if (text.includes(value)) {
+            best =
+                Math.max(
+                    best,
+                    value.length >= 4 ? 1 : 0.92
+                );
+            continue;
+        }
+
+        for (const hint of hints) {
+            best =
+                Math.max(
+                    best,
+                    similarity(hint, value)
+                );
+        }
+    }
+
+    return best;
+}
+
+function averageRating(player) {
+    const matches =
+        Number(player?.matches || 0);
+
+    return matches
+        ? (Number(player?.total_rating || 0) / matches).toFixed(2)
+        : "0.00";
+}
+
+function statIntent(question) {
+    const q =
+        question.toLowerCase();
+
+    if (/\b(who is|who was|who are|tell me about|what do you know about|profile|about)\b/.test(q)) return "identity";
+    if (/\b(goals?|scored|score)\b/.test(q)) return "goals";
+    if (/\b(assists?|created|setup|set up)\b/.test(q)) return "assists";
+    if (/\b(g\/a|goal contributions?|goals and assists)\b/.test(q)) return "contributions";
+    if (/\b(rating|average rating|avg rating|amr)\b/.test(q)) return "rating";
+    if (/\b(matches|appearances|games|played)\b/.test(q)) return "matches";
+    if (/\b(level)\b/.test(q)) return "level";
+    if (/\b(xp|experience)\b/.test(q)) return "xp";
+    if (/\b(clean sheets?|cs)\b/.test(q)) return "clean_sheets";
+    if (/\b(motm|man of the match)\b/.test(q)) return "motm";
+    if (/\b(red cards?|reds)\b/.test(q)) return "red_cards";
+    if (/\b(position|pos|role)\b/.test(q)) return "position";
+    if (/\b(archetype|build)\b/.test(q)) return "archetype";
+
+    return null;
+}
+
+async function findMentionedPlayer(guildId, question, linkedRows) {
+    const mention =
+        String(question || "").match(/<@!?(\d+)>/);
+
+    if (mention) {
+        const linked =
+            linkedRows.find(row => row.discord_id === mention[1]);
+
+        if (linked) {
+            return db.get(
+                `
+                SELECT *
+                FROM players
+                WHERE guild_id = ?
+                AND (
+                    player_id = ?
+                    OR LOWER(player_name) = LOWER(?)
+                )
+                ORDER BY matches DESC
+                LIMIT 1
+                `,
+                [
+                    guildId,
+                    linked.player_id,
+                    linked.player_name
+                ]
+            );
+        }
+    }
+
+    const players =
+        await db.all(
+            `
+            SELECT *
+            FROM players
+            WHERE guild_id = ?
+            AND COALESCE(matches, 0) > 0
+            `,
+            [guildId]
+        );
+    const text =
+        compact(question);
+    const linkedByPlayerId =
+        new Map(
+            linkedRows
+                .filter(row => row.player_id)
+                .map(row => [String(row.player_id), row])
+        );
+    const candidates =
+        players
+            .map(player => {
+                const linked =
+                    linkedByPlayerId.get(String(player.player_id));
+                const names =
+                    [
+                        player.player_name,
+                        linked?.player_name
+                    ]
+                        .filter(isRealPlayerName);
+                const best =
+                    aliasScoreForQuestion(question, names);
+
+                return {
+                    player,
+                    score: best
+                };
+            })
+            .filter(row => row.score >= 0.74)
+            .sort((a, b) => b.score - a.score);
+
+    if (!candidates.length) {
+        return null;
+    }
+
+    if (
+        candidates[0].score < 0.86 &&
+        candidates[1] &&
+        candidates[0].score - candidates[1].score < 0.12
+    ) {
+        return null;
+    }
+
+    return candidates[0].player;
+}
+
+async function answerNamedPlayerQuestion(guildId, question, linkedRows, shown) {
+    const stat =
+        statIntent(question);
+
+    if (!stat) {
+        return null;
+    }
+
+    const player =
+        await findMentionedPlayer(guildId, question, linkedRows);
+
+    if (!player) {
+        return null;
+    }
+
+    const name =
+        shown(player);
+
+    switch (stat) {
+        case "identity":
+            return `${name} is a stored Bella Ciao player. Tracked profile: ${player.matches || 0} matches, ${player.goals || 0} goals, ${player.assists || 0} assists, ${averageRating(player)} average rating, level ${player.level || 1}. Latest stored position: ${player.position || "Unknown"}.`;
+        case "goals":
+            return `${name} has ${player.goals || 0} tracked goals.`;
+        case "assists":
+            return `${name} has ${player.assists || 0} tracked assists.`;
+        case "contributions":
+            return `${name} has ${Number(player.goals || 0) + Number(player.assists || 0)} tracked goal contributions (${player.goals || 0} goals, ${player.assists || 0} assists).`;
+        case "rating":
+            return `${name} has a tracked average rating of ${averageRating(player)}.`;
+        case "matches":
+            return `${name} has played ${player.matches || 0} tracked matches.`;
+        case "level":
+            return `${name} is level ${player.level || 1}.`;
+        case "xp":
+            return `${name} has ${player.xp || 0} season XP and ${player.all_time_xp || player.xp || 0} all-time XP.`;
+        case "clean_sheets":
+            return `${name} has ${player.clean_sheets || 0} tracked clean sheets.`;
+        case "motm":
+            return `${name} has ${player.motm || 0} tracked Man of the Match awards.`;
+        case "red_cards":
+            return `${name} has ${player.red_cards || 0} tracked red cards.`;
+        case "position":
+            return `${name}'s latest stored position is ${player.position || "Unknown"}.`;
+        case "archetype":
+            return `${name}'s latest stored archetype is ${player.archetype || "Unknown"}.`;
+        default:
+            return null;
+    }
+}
+ 
 async function answerAutoMessage(guildId, message) {
     const text =
         String(message || "").trim();
@@ -624,16 +990,27 @@ async function answerAutoMessage(guildId, message) {
 async function answerQuestion(guildId, question) {
  
     const intent = detectIntent(question);
+    const linkedRows =
+        await getLinkedRows(db, guildId);
     const linkedMaps =
-        buildLinkedMaps(
-            await getLinkedRows(db, guildId)
-        );
+        buildLinkedMaps(linkedRows);
     const shown = player =>
         displayName(
             player?.player_name,
             linkedMaps,
             player?.player_id
         );
+    const namedPlayerAnswer =
+        await answerNamedPlayerQuestion(
+            guildId,
+            question,
+            linkedRows,
+            shown
+        );
+
+    if (namedPlayerAnswer) {
+        return namedPlayerAnswer;
+    }
  
     switch (intent) {
  
@@ -740,7 +1117,10 @@ async function answerQuestion(guildId, question) {
             return "🗳️ Use `/poll create` with a question and at least two options. The bot posts buttons and keeps the vote count live.";
 
         case "quiz_help":
-            return "🧠 Use `/quiz start` to begin a server-wide quiz. Each question stays open for 60 seconds, then the bot advances automatically until someone presses Stop.";
+            return "🧠 Use `/quiz start` to begin a server-wide quiz. Each question stays open for 20 seconds, then the bot advances automatically until someone presses Stop.";
+
+        case "ball_knowledge_help":
+            return "Ball knowledge means reading the game properly: tactics, roles, decision-making, form, stats, and knowing the club lore. Use `/quiz start` if you want the room tested.";
 
         case "moderation_help":
             return "⚖️ Staff can use `/mod warn`, `/mod infractions`, `/mod timeout`, and `/mod ban`. Three warns triggers an escalation flag.";

@@ -22,8 +22,34 @@ function isAfterStart(match, startedAt = 0) {
     return timestampMs >= start;
 }
 
-async function getStatsStartedAt(guildId) {
+async function getStatsStartedAt(guildId, clubId = null) {
     const row =
+        await db.get(
+            `
+            SELECT stats_started_at
+            FROM guild_clubs
+            WHERE guild_id = ?
+            AND club_id = ?
+            UNION
+            SELECT stats_started_at
+            FROM clubs
+            WHERE guild_id = ?
+            AND club_id = ?
+            LIMIT 1
+            `,
+            [
+                guildId,
+                String(clubId || ""),
+                guildId,
+                String(clubId || "")
+            ]
+        );
+
+    if (row) {
+        return Number(row.stats_started_at || 0);
+    }
+
+    const fallback =
         await db.get(
             `
             SELECT stats_started_at
@@ -33,7 +59,7 @@ async function getStatsStartedAt(guildId) {
             [guildId]
         );
 
-    return Number(row?.stats_started_at || 0);
+    return Number(fallback?.stats_started_at || 0);
 }
 
 async function syncCompetitiveMatches(guildId, clubId, options = {}) {
@@ -42,7 +68,7 @@ async function syncCompetitiveMatches(guildId, clubId, options = {}) {
     const statsStartedAt =
         Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
             ? Number(options.statsStartedAt || 0)
-            : await getStatsStartedAt(guildId);
+            : await getStatsStartedAt(guildId, clubId);
 
     const matches =
         await eaApi.getMatches(
@@ -94,7 +120,7 @@ async function getStoredCompetitiveMatches(guildId, clubId, options = {}) {
     const statsStartedAt =
         Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
             ? Number(options.statsStartedAt || 0)
-            : await getStatsStartedAt(guildId);
+            : await getStatsStartedAt(guildId, clubId);
 
     const rows =
         await db.all(

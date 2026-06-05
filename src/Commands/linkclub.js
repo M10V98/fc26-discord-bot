@@ -7,7 +7,9 @@ const {
 const {
     syncGuildStats
 } = require("../Services/autoStatsSync");
-const db = require("../Utils/db");
+const {
+    addLinkedClub
+} = require("../Services/clubLinks");
 
 async function linkById(interaction, clubId) {
     console.log({
@@ -15,18 +17,14 @@ async function linkById(interaction, clubId) {
         guildId: interaction.guildId
     });
 
-    await db.run(
-        `
-        INSERT OR REPLACE INTO clubs
-        (guild_id, club_id, stats_started_at)
-        VALUES (?, ?, ?)
-        `,
-        [
+    const linked =
+        await addLinkedClub(
             interaction.guild.id,
             clubId,
-            Date.now()
-        ]
-    );
+            {
+                makeDefault: true
+            }
+        );
 
     const syncResult =
         await syncGuildStats(
@@ -38,7 +36,7 @@ async function linkById(interaction, clubId) {
         );
 
     await interaction.editReply(
-        `Club linked: ${clubId}\nSynced ${syncResult.processed} recent match${syncResult.processed === 1 ? "" : "es"} automatically.`
+        `Club linked as the server default: ${linked.club_name || linked.club_id}\nSynced ${syncResult.processed} recent match${syncResult.processed === 1 ? "" : "es"} automatically.`
     );
 }
 

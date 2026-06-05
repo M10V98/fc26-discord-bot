@@ -36,12 +36,15 @@ function isFriendly(match, club) {
 }
 
 function getOurClub(match, clubId) {
-    return match.clubs?.[String(clubId)];
+    return match.clubs?.[String(match._clubId || clubId)];
 }
 
 function getOpponentClub(match, clubId) {
+    const ourClubId =
+        String(match._clubId || clubId);
+
     return Object.entries(match.clubs || {})
-        .find(([id]) => String(id) !== String(clubId))?.[1];
+        .find(([id]) => String(id) !== ourClubId)?.[1];
 }
 
 function getResult(match, clubId) {
@@ -61,7 +64,7 @@ function getResult(match, clubId) {
 function playerEntry(match, clubId, player) {
     const wantedId = player?.player_id;
     const wantedName = normalize(player?.player_name);
-    const players = match.players?.[String(clubId)] || {};
+    const players = match.players?.[String(match._clubId || clubId)] || {};
 
     for (const [playerId, stats] of Object.entries(players)) {
         if (
@@ -181,6 +184,33 @@ async function getModeMatches(guildId, clubId, mode, options = {}) {
             const our = getOurClub(match, clubId);
             return match?.matchId && !isFriendly(match, our);
         })
+        .sort((a, b) => n(b.timestamp) - n(a.timestamp))
+        .slice(0, options.limit || 100);
+}
+
+async function getModeMatchesForClubs(guildId, clubs, mode, options = {}) {
+    const rows =
+        await Promise.all(
+            (clubs || []).map(async club => {
+                const matches =
+                    await getModeMatches(
+                        guildId,
+                        club.club_id,
+                        mode,
+                        options
+                    );
+
+                return matches.map(match => ({
+                    ...match,
+                    _clubId: String(club.club_id),
+                    _clubName: club.club_name || null
+                }));
+            })
+        );
+
+    return rows
+        .flat()
+        .filter(match => match?.matchId)
         .sort((a, b) => n(b.timestamp) - n(a.timestamp))
         .slice(0, options.limit || 100);
 }
@@ -426,14 +456,35 @@ function chemistry(matches, clubId, playerA, playerB) {
         together.length
             ? (cleanSheets / together.length) * 100
             : 0;
+    const sampleFactor =
+        together.length
+            ? Math.min(1, Math.sqrt(together.length / 12))
+            : 0;
+    const ratingScore =
+        Math.max(0, avgRating - 6) * 9;
+    const outputScore =
+        Math.min(avgContrib, 3) * 7;
+    const defensiveScore =
+        cleanSheetRate * 0.08;
+    const resultScore =
+        winRate * 0.24;
+    const consistencyBonus =
+        together.length >= 20
+            ? 6
+            : together.length >= 12
+                ? 3
+                : 0;
     const score =
         Math.min(
             100,
             Math.round(
-                (winRate * 0.38) +
-                (avgRating * 5.5) +
-                (avgContrib * 8) +
-                (cleanSheetRate * 0.12)
+                (
+                    resultScore +
+                    ratingScore +
+                    outputScore +
+                    defensiveScore +
+                    consistencyBonus
+                ) * sampleFactor
             )
         );
 
@@ -472,6 +523,7 @@ module.exports = {
     getLinkedPlayer,
     getStoredPlayer,
     getModeMatches,
+    getModeMatchesForClubs,
     summarizePlayerForm,
     aggregateFormStats,
     compareStoredPlayers,

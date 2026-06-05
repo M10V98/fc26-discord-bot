@@ -8,6 +8,9 @@ const {
 const {
     syncCompetitiveMatches
 } = require("./compStats");
+const {
+    isRealPlayerName
+} = require("../Utils/embedStyle");
 
 const DEFAULT_LIMIT = 100;
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -144,23 +147,22 @@ async function syncGuildStats(guildId, clubId, options = {}) {
 
 async function backfillLinkedPlayerIds(guildId, clubId, matches) {
 
-    const legacyLinks =
+    const links =
         await db.all(
             `
             SELECT *
             FROM linked_players
             WHERE guild_id = ?
-            AND (player_id IS NULL OR player_id = '')
-            AND player_name IS NOT NULL
             `,
             [guildId]
         );
 
-    if (!legacyLinks.length) {
+    if (!links.length) {
         return;
     }
 
     const idByName = new Map();
+    const nameById = new Map();
     const ourClubId = String(clubId);
 
     for (const match of matches) {
@@ -168,29 +170,53 @@ async function backfillLinkedPlayerIds(guildId, clubId, matches) {
             match.players?.[ourClubId] || {};
 
         for (const [playerId, player] of Object.entries(players)) {
-            if (player.playername && !idByName.has(player.playername)) {
+            if (
+                isRealPlayerName(player.playername) &&
+                !idByName.has(player.playername)
+            ) {
                 idByName.set(player.playername, playerId);
+            }
+
+            if (isRealPlayerName(player.playername)) {
+                nameById.set(String(playerId), player.playername);
             }
         }
     }
 
-    for (const link of legacyLinks) {
-        const playerId =
-            idByName.get(link.player_name);
+    for (const link of links) {
+        const knownPlayerId =
+            link.player_id ? String(link.player_id) : null;
+        const matchedPlayerId =
+            knownPlayerId ||
+            (
+                isRealPlayerName(link.player_name)
+                    ? idByName.get(link.player_name)
+                    : null
+            );
+        const realName =
+            matchedPlayerId
+                ? nameById.get(String(matchedPlayerId))
+                : null;
 
-        if (!playerId) {
+        if (!matchedPlayerId && !realName) {
             continue;
         }
 
         await db.run(
             `
             UPDATE linked_players
-            SET player_id = ?
+            SET player_id = COALESCE(?, player_id),
+                player_name = CASE
+                    WHEN ? IS NOT NULL THEN ?
+                    ELSE player_name
+                END
             WHERE guild_id = ?
             AND discord_id = ?
             `,
             [
-                playerId,
+                matchedPlayerId || null,
+                realName || null,
+                realName || null,
                 guildId,
                 link.discord_id
             ]
@@ -211,8 +237,19 @@ async function syncAllLinkedClubs(options = {}) {
     try {
         const clubs =
             await db.all(
-                `SELECT guild_id, club_id
-                 FROM clubs`
+                `
+                SELECT guild_id, club_id, stats_started_at
+                FROM guild_clubs
+                UNION
+                SELECT guild_id, club_id, stats_started_at
+                FROM clubs
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM guild_clubs gc
+                    WHERE gc.guild_id = clubs.guild_id
+                    AND gc.club_id = clubs.club_id
+                )
+                `
             );
 
         let checked = 0;
@@ -224,7 +261,13 @@ async function syncAllLinkedClubs(options = {}) {
                     await syncGuildStats(
                         club.guild_id,
                         club.club_id,
-                        options
+                        {
+                            ...options,
+                            statsStartedAt:
+                                Object.prototype.hasOwnProperty.call(options, "statsStartedAt")
+                                    ? options.statsStartedAt
+                                    : club.stats_started_at
+                        }
                     );
 
                 checked += result.checked;

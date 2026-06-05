@@ -10,6 +10,9 @@ const {
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
+const {
+    isRealPlayerName
+} = require("../Utils/embedStyle");
 
 const processingMatches = new Set();
 
@@ -211,24 +214,11 @@ async function processMatchXP(match, guildId, options = {}) {
         return false;
     }
 
-    const processedKey =
+    const lockKey =
         `${guildId}:${matchId}`;
-
-    if (processingMatches.has(processedKey)) {
-        return false;
-    }
-
-    processingMatches.add(processedKey);
+    let processedKey = null;
 
     try {
-
-        const exists = await db.get(
-            `SELECT * FROM processed_matches WHERE match_id = ?`,
-            [processedKey]
-        );
-
-        if (exists && !options.force) return false;
-
         const ourClubId =
             String(
                 options.clubId ||
@@ -239,6 +229,33 @@ async function processMatchXP(match, guildId, options = {}) {
         if (!ourClubId) {
             return false;
         }
+
+        processedKey =
+            `${guildId}:${ourClubId}:${matchId}`;
+        const legacyProcessedKey =
+            `${guildId}:${matchId}`;
+
+        if (processingMatches.has(processedKey) || processingMatches.has(lockKey)) {
+            return false;
+        }
+
+        processingMatches.add(processedKey);
+        processingMatches.add(lockKey);
+
+        const exists = await db.get(
+            `
+            SELECT *
+            FROM processed_matches
+            WHERE match_id IN (?, ?)
+            LIMIT 1
+            `,
+            [
+                processedKey,
+                legacyProcessedKey
+            ]
+        );
+
+        if (exists && !options.force) return false;
 
         const ourClub =
             match.clubs?.[ourClubId];
@@ -311,6 +328,10 @@ async function processMatchXP(match, guildId, options = {}) {
                 ]
             );
 
+            const safePlayerName =
+                isRealPlayerName(p.playername)
+                    ? p.playername
+                    : existing?.player_name || playerId;
             const allTimeXP =
                 Number(existing?.all_time_xp || existing?.xp || 0) + xp;
             const seasonXP =
@@ -378,7 +399,7 @@ async function processMatchXP(match, guildId, options = {}) {
         `,
             [
                 playerId,
-                p.playername || existing?.player_name || playerId,
+                safePlayerName,
                 guildId,
                 seasonXP,
                 allTimeXP,
@@ -447,7 +468,11 @@ async function processMatchXP(match, guildId, options = {}) {
         return true;
 
     } finally {
-        processingMatches.delete(processedKey);
+        if (processedKey) {
+            processingMatches.delete(processedKey);
+        }
+
+        processingMatches.delete(lockKey);
     }
 }
 
