@@ -234,6 +234,7 @@ const initStatements = [
         author_name TEXT,
         content TEXT,
         intent TEXT,
+        interpretation_json TEXT,
         should_reply INTEGER DEFAULT 0,
         created_at INTEGER
     )
@@ -416,6 +417,12 @@ async function init() {
     await ensureColumn(
         "automode",
         "started_by",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "ai_message_memory",
+        "interpretation_json",
         "TEXT"
     );
 

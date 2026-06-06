@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "deploy:commands": "node src/Utils/deployCommands.js",
+    "test:conversation": "node src/scripts/testConversationInterpretation.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {

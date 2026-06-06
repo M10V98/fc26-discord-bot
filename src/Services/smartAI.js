@@ -33,6 +33,11 @@ const {
     answerLearnedKnowledge,
     getRelevantLearnedKnowledge
 } = require("./learnedKnowledge");
+const {
+    applyInterpretationGate,
+    interpretationPrompt,
+    sanitizeInterpretation
+} = require("./conversationInterpretation");
 
 const AI_MODEL =
     process.env.OPENAI_MODEL ||
@@ -64,6 +69,16 @@ function normalize(value) {
     return String(value || "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function parseInterpretation(value) {
+    try {
+        return value
+            ? JSON.parse(value)
+            : null;
+    } catch {
+        return null;
+    }
 }
 
 function hasMassMention(message) {
@@ -942,8 +957,8 @@ async function remember(message, decision, content) {
     await db.run(
         `
         INSERT INTO ai_message_memory
-        (guild_id, channel_id, author_id, author_name, content, intent, should_reply, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (guild_id, channel_id, author_id, author_name, content, intent, interpretation_json, should_reply, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             message.guild.id,
@@ -952,6 +967,9 @@ async function remember(message, decision, content) {
             message.author.username,
             content.slice(0, 500),
             decision.intent,
+            decision.interpretation
+                ? JSON.stringify(decision.interpretation)
+                : null,
             decision.shouldReply ? 1 : 0,
             Date.now()
         ]
@@ -993,9 +1011,17 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
         return ruleDecision;
     }
 
+    const situation =
+        ruleDecision.situation || {};
+    const ambiguousConversationCandidate =
+        hasQuestion(message.content || "") ||
+        /\b(you|your|bot|assistant|bella\s+ciao)\b/i
+            .test(message.content || "");
+
     if (
-        !ruleDecision.situation?.direct &&
-        !ruleDecision.situation?.botCue
+        !situation.direct &&
+        !situation.botCue &&
+        !ambiguousConversationCandidate
     ) {
         return ruleDecision;
     }
@@ -1011,14 +1037,34 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
                 messages: [
                     {
                         role: "system",
-                        content:
-                            "You are a Discord bot reply gate for an FC Clubs server. Decide if the bot should reply. Be conservative. Prefer silence unless the message is a direct question, direct bot mention, command/help request, club stat question, or clearly useful football/tactical prompt. Never interrupt planning/admin messages, long human updates, or ordinary conversation. Return JSON only with shouldReply boolean, mode one of silent/helpful/analysis/banter, intent string, confidence 0-1, reason string."
+                        content: interpretationPrompt()
                     },
                     {
                         role: "user",
                         content: JSON.stringify({
                             message: message.content,
                             author: message.author.username,
+                            bot: {
+                                id: message.client?.user?.id,
+                                username: message.client?.user?.username,
+                                directlyMentioned:
+                                    Boolean(
+                                        message.client?.user?.id &&
+                                        message.mentions?.users?.has(
+                                            message.client.user.id
+                                        )
+                                    ),
+                                replyingToBot: isReplyToBot(message)
+                            },
+                            mentionedUsers:
+                                [...(message.mentions?.users?.values?.() || [])]
+                                    .map(user => ({
+                                        id: user.id,
+                                        username: user.username,
+                                        isBot:
+                                            user.id === message.client?.user?.id
+                                    }))
+                                    .slice(0, 10),
                             ruleDecision,
                             recentMessages:
                                 memory
@@ -1028,6 +1074,10 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
                                         author: row.author_name,
                                         content: row.content,
                                         intent: row.intent,
+                                        interpretation:
+                                            parseInterpretation(
+                                                row.interpretation_json
+                                            ),
                                         botReplied: Boolean(row.should_reply)
                                     }))
                         })
@@ -1043,26 +1093,10 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
             return ruleDecision;
         }
 
-        if (
-            [
-                "planning_admin_chat",
-                "bot_meta_chat",
-                "long_human_statement"
-            ].includes(ruleDecision.intent) &&
-            parsed.shouldReply
-        ) {
-            return ruleDecision;
-        }
-
-        return {
-            ...ruleDecision,
-            shouldReply: parsed.shouldReply,
-            mode: parsed.mode || ruleDecision.mode,
-            intent: parsed.intent || ruleDecision.intent,
-            confidence:
-                Number(parsed.confidence || ruleDecision.confidence),
-            reason: parsed.reason || ruleDecision.reason
-        };
+        return applyInterpretationGate(
+            ruleDecision,
+            sanitizeInterpretation(parsed, ruleDecision)
+        );
     } catch (err) {
         handleOpenAIError(err, "AI classifier error");
         return ruleDecision;
@@ -1136,7 +1170,7 @@ async function generateWithOpenAI(message, decision, memory) {
                     {
                         role: "system",
                         content:
-                            "You are Bella Ciao FC Bot, a sharp but restrained FC Clubs assistant. Reply only because a separate gate has approved it. Be concise, useful, and natural. Mention relevant slash commands where helpful. Treat supplied footballKnowledge facts as trusted context, understand paraphrases and conversational wording, and answer from those facts without changing names, years, clubs, or records. If the facts do not support the requested detail, do not invent it. Do not overdo banter. Avoid replying like a motivational quote unless the user clearly asks for that energy."
+                            "You are Bella Ciao FC Bot, a sharp but restrained FC Clubs assistant. Reply only because a separate gate has approved it. Use the supplied interpretation to match the response to the actual audience, implied meaning, emotion, tone, and requested response style. Answer confusion clearly. Acknowledge frustration briefly before helping. Match friendly sarcasm or teasing with restrained banter only when it is aimed at you. Use calm, non-combative language when de-escalation is needed. Be gently supportive only when empathy is clearly appropriate and the user is speaking to you. Never imitate hostility, diagnose emotions, announce your classification, or intrude on human-to-human conversation. Be concise, useful, and natural. Mention relevant slash commands where helpful. Treat supplied footballKnowledge facts as trusted context, understand paraphrases and conversational wording, and answer from those facts without changing names, years, clubs, or records. If the facts do not support the requested detail, do not invent it. Avoid replying like a motivational quote unless the user clearly asks for that energy."
                     },
                     {
                         role: "user",
@@ -1145,6 +1179,7 @@ async function generateWithOpenAI(message, decision, memory) {
                             mode: decision.mode,
                             intent: decision.intent,
                             reason: decision.reason,
+                            interpretation: decision.interpretation || null,
                             clubContext: context,
                             footballKnowledge,
                             learnedKnowledge,
@@ -1154,7 +1189,11 @@ async function generateWithOpenAI(message, decision, memory) {
                                     .reverse()
                                     .map(row => ({
                                         author: row.author_name,
-                                        content: row.content
+                                        content: row.content,
+                                        interpretation:
+                                            parseInterpretation(
+                                                row.interpretation_json
+                                            )
                                     }))
                         })
                     }
