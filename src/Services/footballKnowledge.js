@@ -488,7 +488,16 @@ function answerLeagueAwardQuestion(text, year) {
     }
 
     const winners =
-        award.winners.join(" and ");
+        award.winners
+            .map(winner => {
+                const club =
+                    award.clubs?.[winner];
+
+                return club
+                    ? `${winner} (${club})`
+                    : winner;
+            })
+            .join(" and ");
     const goals =
         award.goals
             ? ` with ${award.goals} goals`

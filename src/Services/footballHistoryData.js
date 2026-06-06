@@ -1,4 +1,14 @@
 const HISTORY_START_YEAR = 1966;
+const {
+    PREMIER_LEAGUE_TABLES,
+    PREMIER_LEAGUE_TOP_SCORERS
+} = require("./officialPremierLeagueHistory");
+const {
+    BUNDESLIGA_TOP_SCORERS
+} = require("./officialBundesligaTopScorers");
+const {
+    EUROPEAN_TOP_SCORERS
+} = require("./europeanTopScorers");
 
 const KNOWLEDGE_COVERAGE = {
     targetStartYear: 1966,
@@ -669,66 +679,24 @@ const POSITION_FACTS = {
 };
 
 const LEAGUE_TABLES = {
-    england: {
-        2004: [
-            "Arsenal",
-            "Chelsea",
-            "Manchester United",
-            "Liverpool",
-            "Newcastle United",
-            "Aston Villa",
-            "Charlton Athletic",
-            "Bolton Wanderers",
-            "Fulham",
-            "Birmingham City",
-            "Middlesbrough",
-            "Southampton",
-            "Portsmouth",
-            "Tottenham Hotspur",
-            "Blackburn Rovers",
-            "Manchester City",
-            "Everton",
-            "Leicester City",
-            "Leeds United",
-            "Wolverhampton Wanderers"
-        ],
-        2010: [
-            "Chelsea",
-            "Manchester United",
-            "Arsenal",
-            "Tottenham Hotspur",
-            "Manchester City",
-            "Aston Villa",
-            "Liverpool",
-            "Everton",
-            "Birmingham City",
-            "Blackburn Rovers",
-            "Stoke City",
-            "Fulham",
-            "Sunderland",
-            "Bolton Wanderers",
-            "Wolverhampton Wanderers",
-            "Wigan Athletic",
-            "West Ham United",
-            "Burnley",
-            "Hull City",
-            "Portsmouth"
-        ]
-    }
+    england: PREMIER_LEAGUE_TABLES
 };
 
 const LEAGUE_AWARDS = {
+    england: {
+        goldenBoot: PREMIER_LEAGUE_TOP_SCORERS
+    },
     bundesliga: {
-        goldenBoot: {
-            1993: {
-                label: "Bundesliga top scorer",
-                winners: [
-                    "Ulf Kirsten",
-                    "Anthony Yeboah"
-                ],
-                goals: 20
-            }
-        }
+        goldenBoot: BUNDESLIGA_TOP_SCORERS
+    },
+    "la liga": {
+        goldenBoot: EUROPEAN_TOP_SCORERS.laLiga
+    },
+    "serie a": {
+        goldenBoot: EUROPEAN_TOP_SCORERS.serieA
+    },
+    "ligue 1": {
+        goldenBoot: EUROPEAN_TOP_SCORERS.ligue1
     }
 };
 

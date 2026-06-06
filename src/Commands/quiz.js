@@ -432,6 +432,17 @@ function leagueTableQuestion() {
 }
 
 function leagueAwardQuestion() {
+    const answerLabel = award =>
+        award.winners
+            .map(winner => {
+                const club =
+                    award.clubs?.[winner];
+
+                return club
+                    ? `${winner} (${club})`
+                    : winner;
+            })
+            .join(" and ");
     const entries =
         Object.entries(LEAGUE_AWARDS || {})
             .flatMap(([leagueKey, awards]) =>
@@ -456,10 +467,10 @@ function leagueAwardQuestion() {
     const selected =
         entries[Math.floor(Math.random() * entries.length)];
     const correct =
-        selected.award.winners.join(" and ");
+        answerLabel(selected.award);
     const distractors =
         entries
-            .map(row => row.award.winners.join(" and "))
+            .map(row => answerLabel(row.award))
             .filter(value => value !== correct)
             .sort(() => Math.random() - 0.5)
             .slice(0, 3);
