@@ -22,6 +22,9 @@ OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5.4-nano
 AI_REPLY_CHANCE=0.08
 AI_REPLY_COOLDOWN_MS=600000
+WORLD_CUP_SUPABASE_URL=https://pagoqdpzbxpckhpqjoif.supabase.co
+WORLD_CUP_SUPABASE_ANON_KEY=your_public_supabase_anon_key
+WORLD_CUP_TOURNAMENT_SLUG=world-cup-2026
 ```
 
 For persistent SQLite storage, add a Railway volume and set:
