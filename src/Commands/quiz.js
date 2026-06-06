@@ -34,12 +34,16 @@ const {
 const {
     GENERATED_FOOTBALL_QUIZ_QUESTIONS
 } = require("../Services/generatedFootballQuiz");
+const {
+    getDefaultClub,
+    getLinkedClubs
+} = require("../Services/clubLinks");
 
 const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 30;
 const RESULTS_PAGE_SIZE = 15;
 const RECENT_QUESTION_MEMORY = 300;
-const DYNAMIC_QUESTION_TIMEOUT_MS = 2500;
+const DYNAMIC_QUESTION_TIMEOUT_MS = 6000;
 const QUIZ_WATCHDOG_INTERVAL_MS = 5000;
 const MIN_SPECIAL_HISTORY_SEASONS = 10;
 const quizTimers = new Map();
@@ -620,7 +624,7 @@ function getOurClubId(match, clubId) {
         : ids[0];
 }
 
-function latestMatchQuestions(matches, clubId) {
+function latestMatchQuestions(matches, clubId, clubName = "our linked club") {
     const latest = matches[0];
 
     if (!latest) {
@@ -670,12 +674,12 @@ function latestMatchQuestions(matches, clubId) {
     const ratingLeader = statLeader("rating");
     const questions = [
         {
-            question: "What was the score in our latest tracked game?",
+            question: `What was the score in ${clubName}'s latest tracked game?`,
             answers: uniqueAnswers(score, allScores.slice(1)),
             correct: score
         },
         {
-            question: "What was the name of the latest team we played?",
+            question: `What was the latest team ${clubName} played?`,
             answers: uniqueAnswers(
                 getClubName(opponentClub),
                 matches
@@ -690,7 +694,7 @@ function latestMatchQuestions(matches, clubId) {
             correct: getClubName(opponentClub)
         },
         {
-            question: "Who scored the most goals in our latest tracked game?",
+            question: `Who scored the most goals in ${clubName}'s latest tracked game?`,
             answers: uniqueAnswers(
                 playerLabel(playerName(goalsLeader)),
                 playerNames.map(name => playerLabel(name))
@@ -701,7 +705,7 @@ function latestMatchQuestions(matches, clubId) {
                     : null
         },
         {
-            question: "Who got the most assists in our latest tracked game?",
+            question: `Who got the most assists in ${clubName}'s latest tracked game?`,
             answers: uniqueAnswers(
                 playerLabel(playerName(assistsLeader)),
                 playerNames.map(name => playerLabel(name))
@@ -712,7 +716,7 @@ function latestMatchQuestions(matches, clubId) {
                     : null
         },
         {
-            question: "Who had the highest rating in our latest tracked game?",
+            question: `Who had the highest rating in ${clubName}'s latest tracked game?`,
             answers: uniqueAnswers(
                 playerLabel(playerName(ratingLeader)),
                 playerNames.map(name => playerLabel(name))
@@ -726,7 +730,7 @@ function latestMatchQuestions(matches, clubId) {
         .map(row => shuffleAnswers(row.question, row.answers, 0));
 }
 
-function bestChemistryQuestion(matches, clubId) {
+function bestChemistryQuestion(matches, clubId, clubName = "the linked club") {
     const pairs = new Map();
 
     for (const match of matches || []) {
@@ -799,13 +803,13 @@ function bestChemistryQuestion(matches, clubId) {
     }
 
     return shuffleAnswers(
-        "Which two players currently have the best tracked chemistry?",
+        `Which two players currently have the best tracked chemistry for ${clubName}?`,
         ranked.slice(0, 4).map(pair => pair.label),
         0
     );
 }
 
-function rollingLeaderQuestions(matches, clubId) {
+function rollingLeaderQuestions(matches, clubId, clubName = "the linked club") {
     const questions = [];
 
     for (const windowSize of [5, 10]) {
@@ -880,67 +884,149 @@ function rollingLeaderQuestions(matches, clubId) {
 
         addUniqueLeader(
             "goals",
-            `Who scored the most goals across our last ${windowSize} tracked games?`
+            `Who scored the most goals across ${clubName}'s last ${windowSize} tracked games?`
         );
         addUniqueLeader(
             "assists",
-            `Who recorded the most assists across our last ${windowSize} tracked games?`
+            `Who recorded the most assists across ${clubName}'s last ${windowSize} tracked games?`
         );
         addUniqueLeader(
             "appearances",
-            `Who made the most appearances across our last ${windowSize} tracked games?`
+            `Who made the most appearances across ${clubName}'s last ${windowSize} tracked games?`
         );
         addUniqueLeader(
             "cleanSheets",
-            `Who recorded the most clean-sheet appearances across our last ${windowSize} tracked games?`
+            `Who recorded the most clean-sheet appearances across ${clubName}'s last ${windowSize} tracked games?`
         );
     }
 
     return questions;
 }
 
-async function dynamicQuestion(guildId) {
-    const club =
-        await db.get(
-            `SELECT * FROM clubs WHERE guild_id = ?`,
-            [guildId]
+function aggregateTrackedPlayers(matches, clubId) {
+    const aggregate = new Map();
+
+    for (const match of matches || []) {
+        const ourId =
+            getOurClubId(match, clubId);
+        const opponentId =
+            Object.keys(match.clubs || {})
+                .find(id => id !== ourId);
+        const opponentClub =
+            match.clubs?.[opponentId];
+        const cleanSheet =
+            Number(opponentClub?.goals || 0) === 0;
+
+        for (const player of Object.values(match.players?.[ourId] || {})) {
+            const name =
+                playerLabel(playerName(player));
+
+            if (!name) {
+                continue;
+            }
+
+            const key =
+                name.toLowerCase();
+            const row =
+                aggregate.get(key) || {
+                    player_name: name,
+                    matches: 0,
+                    goals: 0,
+                    assists: 0,
+                    total_rating: 0,
+                    clean_sheets: 0,
+                    motm: 0,
+                    red_cards: 0
+                };
+
+            row.matches += 1;
+            row.goals += Number(player.goals || 0);
+            row.assists += Number(player.assists || 0);
+            row.total_rating += Number(player.rating || 0);
+            row.clean_sheets += cleanSheet ? 1 : 0;
+            row.motm += player.mom === "1" || player.mom === 1 ? 1 : 0;
+            row.red_cards += Number(player.redcards || player.redCards || 0);
+            aggregate.set(key, row);
+        }
+    }
+
+    return [...aggregate.values()];
+}
+
+async function mostRecentlyActiveLinkedClub(guildId) {
+    let clubs =
+        await getLinkedClubs(guildId);
+
+    if (!clubs.length) {
+        const fallback =
+            await getDefaultClub(guildId);
+
+        clubs = fallback ? [fallback] : [];
+    }
+
+    const candidates =
+        await Promise.all(
+            clubs.map(async club => {
+                const matches =
+                    await eaApi.getRecentMatches(
+                        club.club_id,
+                        {
+                            forceRefresh: false,
+                            limit: 100,
+                            maxResultCount: 100
+                        }
+                    ).catch(() => []);
+
+                return {
+                    club,
+                    matches,
+                    latestTimestamp:
+                        Number(matches[0]?.timestamp || 0)
+                };
+            })
         );
-    const [players, recentMatches] =
-        await Promise.all([
-            db.all(
-                `
-                SELECT *
-                FROM players
-                WHERE guild_id = ?
-                AND COALESCE(matches, 0) > 0
-                AND player_name IS NOT NULL
-                AND TRIM(player_name) != ''
-                AND TRIM(player_name) != '-'
-                AND TRIM(player_name) != '--'
-                `,
-                [guildId]
-            ),
-            club?.club_id
-                ? eaApi.getRecentMatches(
-                    club.club_id,
-                    {
-                        forceRefresh: false,
-                        limit: 100,
-                        maxResultCount: 100
-                    }
-                ).catch(() => [])
-                : []
-        ]);
+
+    return candidates
+        .filter(candidate => candidate.matches.length)
+        .sort((a, b) =>
+            b.latestTimestamp - a.latestTimestamp
+        )[0] || null;
+}
+
+async function dynamicQuestion(guildId) {
+    const activeClub =
+        await mostRecentlyActiveLinkedClub(guildId);
+
+    if (!activeClub) {
+        return null;
+    }
+
+    const club =
+        activeClub.club;
+    const recentMatches =
+        activeClub.matches;
+    const latestOurClubId =
+        getOurClubId(
+            recentMatches[0],
+            club.club_id
+        );
+    const clubName =
+        club.club_name || getClubName(
+            recentMatches[0]?.clubs?.[latestOurClubId]
+        ) || "the most recently active linked club";
     const quizPlayers =
-        players.filter(player =>
-            isRealPlayerName(player.player_name)
+        aggregateTrackedPlayers(
+            recentMatches,
+            club.club_id
         );
 
     if (quizPlayers.length < 2) {
         const liveQuestions =
-            club?.club_id
-                ? latestMatchQuestions(recentMatches, club.club_id)
-                : [];
+            latestMatchQuestions(
+                recentMatches,
+                club.club_id,
+                clubName
+            );
 
         return liveQuestions.length
             ? liveQuestions[Math.floor(Math.random() * liveQuestions.length)]
@@ -961,35 +1047,35 @@ async function dynamicQuestion(guildId) {
             );
     const categories = [
         {
-            question: "Who is currently the team's top tracked goalscorer?",
+            question: `Who is currently ${clubName}'s top tracked goalscorer?`,
             correctRow: sortedBy("goals")[0]
         },
         {
-            question: "Who currently leads the team for tracked assists?",
+            question: `Who currently leads ${clubName} for tracked assists?`,
             correctRow: sortedBy("assists")[0]
         },
         {
-            question: "Who has the highest tracked average rating?",
+            question: `Who has ${clubName}'s highest tracked average rating?`,
             correctRow: topRated[0]
         },
         {
-            question: "Who has played the most tracked matches?",
+            question: `Who has played the most tracked matches for ${clubName}?`,
             correctRow: sortedBy("matches")[0]
         },
         {
-            question: "Who has made the most tracked appearances?",
+            question: `Who has made the most tracked appearances for ${clubName}?`,
             correctRow: sortedBy("matches")[0]
         },
         {
-            question: "Who has recorded the most tracked clean sheets?",
+            question: `Who has recorded the most tracked clean sheets for ${clubName}?`,
             correctRow: sortedBy("clean_sheets")[0]
         },
         {
-            question: "Who has won the most tracked Man of the Match awards?",
+            question: `Who has won the most tracked Man of the Match awards for ${clubName}?`,
             correctRow: sortedBy("motm")[0]
         },
         {
-            question: "Who has the most tracked red cards?",
+            question: `Who has the most tracked red cards for ${clubName}?`,
             correctRow:
                 Number(sortedBy("red_cards")[0]?.red_cards || 0) > 0
                     ? sortedBy("red_cards")[0]
@@ -1004,18 +1090,28 @@ async function dynamicQuestion(guildId) {
         }))
         .filter(row => row.correct);
 
-    if (club?.club_id) {
-        categories.push(
-            ...latestMatchQuestions(recentMatches, club.club_id),
-            ...rollingLeaderQuestions(recentMatches, club.club_id)
+    categories.push(
+        ...latestMatchQuestions(
+            recentMatches,
+            club.club_id,
+            clubName
+        ),
+        ...rollingLeaderQuestions(
+            recentMatches,
+            club.club_id,
+            clubName
+        )
+    );
+
+    const chemistryQuestion =
+        bestChemistryQuestion(
+            recentMatches,
+            club.club_id,
+            clubName
         );
 
-        const chemistryQuestion =
-            bestChemistryQuestion(recentMatches, club.club_id);
-
-        if (chemistryQuestion) {
-            categories.push(chemistryQuestion);
-        }
+    if (chemistryQuestion) {
+        categories.push(chemistryQuestion);
     }
 
     if (!categories.length) {
