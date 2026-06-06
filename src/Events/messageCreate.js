@@ -1,6 +1,9 @@
 const {
     answerSmartMessage
 } = require("../Services/smartAI");
+const {
+    conflictDeescalationResponse
+} = require("../Services/conflictDeescalation");
 
 const cooldowns = new Map();
 
@@ -13,6 +16,30 @@ module.exports = async message => {
         !message.guild
     ) {
         return;
+    }
+
+    try {
+        const deescalation =
+            await conflictDeescalationResponse(message);
+
+        if (deescalation) {
+            cooldowns.set(
+                message.guild.id,
+                Date.now()
+            );
+
+            return await message.reply({
+                content: deescalation,
+                allowedMentions: {
+                    parse: []
+                }
+            });
+        }
+    } catch (err) {
+        console.error(
+            "conflict de-escalation error:",
+            err
+        );
     }
 
     const guildId = message.guild.id;
