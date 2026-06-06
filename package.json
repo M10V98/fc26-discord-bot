@@ -8,6 +8,7 @@
     "deploy:commands": "node src/Utils/deployCommands.js",
     "test:conversation": "node src/scripts/testConversationInterpretation.js",
     "test:conflict": "node src/scripts/testConflictDeescalation.js",
+    "test:knowledge": "node src/scripts/testClubKnowledge.js",
     "test:worldcup": "node src/scripts/testWorldCup.js",
     "test:trivia": "node src/scripts/auditFootballTrivia.js",
     "test": "echo \"Error: no test specified\" && exit 1"

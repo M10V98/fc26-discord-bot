@@ -1079,6 +1079,11 @@ function startsWithPersonCue(text) {
         .test(text);
 }
 
+function isPersonIdentityQuestion(text) {
+    return /^(who is|who was|who are|tell me about|what do you know about|profile)\b/
+        .test(text);
+}
+
 function hasSpecificFactCue(text) {
     return /\b(incident|files|who won|where is|where was|where's|where did|who said|which line|what line|quote|press conference|furious)\b/
         .test(text);
@@ -1455,6 +1460,15 @@ function answerClubKnowledge(question) {
         return vpcSeason7;
     }
 
+    if (isPersonIdentityQuestion(text)) {
+        const person =
+            answerPersonLore(text);
+
+        if (person) {
+            return person;
+        }
+    }
+
     if (
         /\b(tell me about|explain|describe|what is|story behind)\b/.test(text) &&
         !/\b(full|whole|complete|all|everything|timeline)\b/.test(text)
@@ -1476,6 +1490,7 @@ function answerClubKnowledge(question) {
 
     if (
         startsWithPersonCue(text) &&
+        !isPersonIdentityQuestion(text) &&
         !/^what happened (?:to|with)\b/.test(text)
     ) {
         const person =
