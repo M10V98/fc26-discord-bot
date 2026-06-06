@@ -3,7 +3,8 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    PermissionFlagsBits
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -1826,21 +1827,6 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
     try {
         const current =
             JSON.parse(session.current_question_json || "{}");
-        const answerCount =
-            await getCurrentQuestionAnswerCount(session);
-
-        if (
-            reason === "time" &&
-            answerCount === 0
-        ) {
-            await stopQuizForNoAnswers(
-                client,
-                session,
-                current
-            );
-            return;
-        }
-
         const next =
             await nextQuestion(
                 session.guild_id,
@@ -2241,6 +2227,68 @@ module.exports = {
             });
         }
 
+        const canStop =
+            String(session.creator_id) === String(interaction.user.id) ||
+            interaction.memberPermissions?.has(
+                PermissionFlagsBits.Administrator
+            );
+
+        if (!canStop) {
+            return interaction.reply({
+                content: "Only the person who started the quiz or a server administrator can stop it.",
+                ephemeral: true
+            });
+        }
+
+        return interaction.reply({
+            content: "Stop this quiz now?",
+            components: [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`quiz_stop_confirm:${sessionId}`)
+                            .setLabel("Confirm Stop")
+                            .setStyle(ButtonStyle.Danger)
+                    )
+            ],
+            ephemeral: true
+        });
+    },
+
+    async handleStopConfirm(interaction) {
+        const [, sessionId] =
+            interaction.customId.split(":");
+        const session =
+            await db.get(
+                `
+                SELECT *
+                FROM quiz_sessions
+                WHERE session_id = ?
+                AND guild_id = ?
+                `,
+                [sessionId, interaction.guild.id]
+            );
+
+        if (!session || !Number(session.active)) {
+            return interaction.update({
+                content: "That quiz has already stopped.",
+                components: []
+            });
+        }
+
+        const canStop =
+            String(session.creator_id) === String(interaction.user.id) ||
+            interaction.memberPermissions?.has(
+                PermissionFlagsBits.Administrator
+            );
+
+        if (!canStop) {
+            return interaction.update({
+                content: "Only the person who started the quiz or a server administrator can stop it.",
+                components: []
+            });
+        }
+
         const currentQuestion =
             JSON.parse(session.current_question_json || "{}");
         const answers =
@@ -2284,10 +2332,23 @@ module.exports = {
             );
         }
 
-        return interaction.update({
-            content: stopLines.join("\n").slice(0, 1900),
-            ...payload
+        console.log(
+            `Quiz ${sessionId} stopped by ${interaction.user.id} after ${session.asked_count} question(s).`
+        );
+
+        await interaction.update({
+            content: "Quiz stopped.",
+            components: []
         });
+
+        return postReplacementQuizMessage(
+            interaction.client,
+            session,
+            {
+                content: stopLines.join("\n").slice(0, 1900),
+                ...payload
+            }
+        );
     },
 
     async handleResultsPage(interaction) {

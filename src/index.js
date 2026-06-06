@@ -331,6 +331,19 @@ client.on(
                 }
 
                 if (
+                    interaction.customId.startsWith("quiz_stop_confirm:")
+                ) {
+                    const command =
+                        client.commands.get("quiz");
+
+                    if (command?.handleStopConfirm) {
+                        await command.handleStopConfirm(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("quiz_stop:")
                 ) {
                     const command =
