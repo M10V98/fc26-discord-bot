@@ -40,10 +40,12 @@ const TIME_LIMIT_SECONDS = 30;
 const RESULTS_PAGE_SIZE = 15;
 const RECENT_QUESTION_MEMORY = 300;
 const DYNAMIC_QUESTION_TIMEOUT_MS = 2500;
+const QUIZ_WATCHDOG_INTERVAL_MS = 5000;
 const MIN_SPECIAL_HISTORY_SEASONS = 10;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
 const recentQuizQuestions = new Map();
+let quizWatchdog = null;
 
 const POSITION_QUIZ_CHOICES = {
     goalkeeper: "Protects the goal, commands the box, claims crosses, and starts build-up.",
@@ -1746,6 +1748,45 @@ function scheduleQuizAdvance(client, sessionId, expectedQuestionId) {
     quizTimers.set(sessionId, timer);
 }
 
+function startQuizWatchdog(client) {
+    if (quizWatchdog) {
+        return;
+    }
+
+    quizWatchdog =
+        setInterval(async () => {
+            try {
+                const overdue =
+                    await db.all(
+                        `
+                        SELECT session_id, current_question_id
+                        FROM quiz_sessions
+                        WHERE active = 1
+                        AND updated_at <= ?
+                        `,
+                        [
+                            Date.now() -
+                            (TIME_LIMIT_SECONDS * 1000) -
+                            QUIZ_WATCHDOG_INTERVAL_MS
+                        ]
+                    );
+
+                for (const session of overdue) {
+                    await advanceQuiz(
+                        client,
+                        session.session_id,
+                        session.current_question_id,
+                        "time"
+                    );
+                }
+            } catch (err) {
+                console.error("quiz watchdog error:", err);
+            }
+        }, QUIZ_WATCHDOG_INTERVAL_MS);
+
+    quizWatchdog.unref?.();
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("quiz")
@@ -1839,6 +1880,8 @@ module.exports = {
             questionId
         );
     },
+
+    startQuizWatchdog,
 
     async handleAnswer(interaction) {
         const [, sessionId, clickedQuestionId, answerRaw] =

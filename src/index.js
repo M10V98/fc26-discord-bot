@@ -121,6 +121,9 @@ client.once(
 
         startAutoStatsSync();
         startScheduleSessionCleanup(readyClient);
+        client.commands
+            .get("quiz")
+            ?.startQuizWatchdog?.(readyClient);
 
         try {
             const guilds =
