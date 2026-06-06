@@ -24,6 +24,9 @@ const {
 const {
     answerNewsQuestion
 } = require("../Services/newsService");
+const {
+    answerLearnedKnowledge
+} = require("../Services/learnedKnowledge");
 
 module.exports = {
 
@@ -52,20 +55,31 @@ module.exports = {
             !news
                 ? answerSmallTalk(question)
                 : null;
-        const clubKnowledge =
+        const learned =
             !news &&
             !smallTalk
+                ? await answerLearnedKnowledge(
+                    interaction.guild.id,
+                    question
+                )
+                : null;
+        const clubKnowledge =
+            !news &&
+            !smallTalk &&
+            !learned
                 ? answerClubKnowledge(question)
                 : null;
         const simple =
             !news &&
             !smallTalk &&
+            !learned &&
             !clubKnowledge
                 ? answerSimpleQuestion(question)
                 : null;
         const clubMatch =
             !news &&
             !smallTalk &&
+            !learned &&
             !simple &&
             !clubKnowledge
                 ? await answerClubMatchQuestion(
@@ -76,6 +90,8 @@ module.exports = {
         const knowledge =
             !news &&
             !smallTalk &&
+            !learned &&
+            !simple &&
             !clubKnowledge &&
             !clubMatch
                 ? answerFootballKnowledge(question)
@@ -83,6 +99,7 @@ module.exports = {
         const legacy =
             !news &&
             !smallTalk &&
+            !learned &&
             !simple &&
             !clubKnowledge &&
             !clubMatch &&
@@ -96,6 +113,7 @@ module.exports = {
         const response =
             news ||
             smallTalk ||
+            learned ||
             simple ||
             clubKnowledge ||
             clubMatch ||

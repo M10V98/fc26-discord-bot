@@ -101,7 +101,7 @@ module.exports = {
                 isAdmin && "`/syncstats` backfills League, Playoff, and Friendly match history from EA manually.",
                 isAdmin && "`/resetstats` can reset XP only or reset all tracked server stats after confirmation.",
                 "Friendly matches also feed the competitive commands.",
-                "`/quiz start` starts a continuous 60-second football quiz for the whole server.",
+                "`/quiz start` starts a continuous 20-second football quiz for the whole server.",
                 "`/quiz leaderboard` shows the server quiz table."
             ]
         );
@@ -112,6 +112,8 @@ module.exports = {
             [
                 "`/poll` creates a live vote with buttons.",
                 "`/ask` asks the football assistant a question.",
+                "`/teach` teaches the assistant a fact or submits it for admin approval.",
+                isAdmin && "`/knowledge pending`, `/knowledge approve`, `/knowledge reject`, and `/knowledge remove` manage learned knowledge.",
                 "`/inform` posts an in-form style player update.",
                 "`/staff` shows staff information."
             ]

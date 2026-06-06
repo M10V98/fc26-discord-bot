@@ -239,6 +239,25 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS learned_knowledge (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id TEXT,
+        question TEXT,
+        answer TEXT,
+        aliases_json TEXT DEFAULT '[]',
+        source_url TEXT,
+        status TEXT DEFAULT 'pending',
+        submitted_by TEXT,
+        approved_by TEXT,
+        created_at INTEGER,
+        updated_at INTEGER
+    )
+    `,
+    `
+    CREATE INDEX IF NOT EXISTS idx_learned_knowledge_guild_status
+    ON learned_knowledge (guild_id, status)
+    `,
+    `
     CREATE TABLE IF NOT EXISTS scheduled_sessions (
         session_id TEXT PRIMARY KEY,
         guild_id TEXT,

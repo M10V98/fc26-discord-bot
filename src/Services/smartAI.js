@@ -29,6 +29,10 @@ const {
     answerNewsQuestion,
     isNewsQuestion
 } = require("./newsService");
+const {
+    answerLearnedKnowledge,
+    getRelevantLearnedKnowledge
+} = require("./learnedKnowledge");
 
 const AI_MODEL =
     process.env.OPENAI_MODEL ||
@@ -1114,6 +1118,12 @@ async function generateWithOpenAI(message, decision, memory) {
             await clubContext(message.guild.id);
         const footballKnowledge =
             getRelevantFootballKnowledge(message.content, 8);
+        const learnedKnowledge =
+            await getRelevantLearnedKnowledge(
+                message.guild.id,
+                message.content,
+                8
+            );
         const response =
             await openai.chat.completions.create({
                 model: AI_MODEL,
@@ -1137,6 +1147,7 @@ async function generateWithOpenAI(message, decision, memory) {
                             reason: decision.reason,
                             clubContext: context,
                             footballKnowledge,
+                            learnedKnowledge,
                             recentMessages:
                                 memory
                                     .slice()
@@ -1218,6 +1229,16 @@ async function answerSmartMessage(message) {
     }
 
     if (decision.mode === "helpful" || decision.mode === "analysis") {
+        const learnedKnowledge =
+            await answerLearnedKnowledge(
+                message.guild.id,
+                content
+            );
+
+        if (learnedKnowledge) {
+            return learnedKnowledge;
+        }
+
         const clubKnowledge =
             answerClubKnowledge(content);
 
@@ -1283,6 +1304,16 @@ async function answerSmartMessage(message) {
 
     if (simple) {
         return simple;
+    }
+
+    const learnedKnowledge =
+        await answerLearnedKnowledge(
+            message.guild.id,
+            content
+        );
+
+    if (learnedKnowledge) {
+        return learnedKnowledge;
     }
 
     const knowledge =
