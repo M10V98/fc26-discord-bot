@@ -36,9 +36,10 @@ const {
 } = require("../Services/generatedFootballQuiz");
 
 const QUIZ_XP = 1;
-const TIME_LIMIT_SECONDS = 20;
+const TIME_LIMIT_SECONDS = 30;
 const RESULTS_PAGE_SIZE = 15;
-const RECENT_QUESTION_MEMORY = 60;
+const RECENT_QUESTION_MEMORY = 300;
+const DYNAMIC_QUESTION_TIMEOUT_MS = 2500;
 const MIN_SPECIAL_HISTORY_SEASONS = 10;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
@@ -804,6 +805,100 @@ function bestChemistryQuestion(matches, clubId) {
     );
 }
 
+function rollingLeaderQuestions(matches, clubId) {
+    const questions = [];
+
+    for (const windowSize of [5, 10]) {
+        const totals = new Map();
+        const recent =
+            (matches || []).slice(0, windowSize);
+
+        for (const match of recent) {
+            const ourId =
+                getOurClubId(match, clubId);
+            const ourClub =
+                match.clubs?.[ourId];
+            const opponentId =
+                Object.keys(match.clubs || {})
+                    .find(id => id !== ourId);
+            const opponentClub =
+                match.clubs?.[opponentId];
+            const cleanSheet =
+                Number(opponentClub?.goals || 0) === 0;
+
+            for (const player of Object.values(match.players?.[ourId] || {})) {
+                const name =
+                    playerLabel(playerName(player));
+
+                if (!name) {
+                    continue;
+                }
+
+                const total =
+                    totals.get(name) || {
+                        name,
+                        goals: 0,
+                        assists: 0,
+                        appearances: 0,
+                        cleanSheets: 0
+                    };
+
+                total.goals += Number(player.goals || 0);
+                total.assists += Number(player.assists || 0);
+                total.appearances += 1;
+                total.cleanSheets += cleanSheet && ourClub ? 1 : 0;
+                totals.set(name, total);
+            }
+        }
+
+        const addUniqueLeader = (key, question) => {
+            const ranked =
+                [...totals.values()]
+                    .sort((a, b) =>
+                        Number(b[key] || 0) - Number(a[key] || 0)
+                    );
+
+            if (
+                ranked.length < 4 ||
+                Number(ranked[0]?.[key] || 0) <= 0 ||
+                Number(ranked[0]?.[key] || 0) === Number(ranked[1]?.[key] || 0)
+            ) {
+                return;
+            }
+
+            const quizQuestion =
+                shuffleAnswers(
+                    question,
+                    ranked.slice(0, 4).map(row => row.name),
+                    0
+                );
+
+            if (quizQuestion) {
+                questions.push(quizQuestion);
+            }
+        };
+
+        addUniqueLeader(
+            "goals",
+            `Who scored the most goals across our last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
+            "assists",
+            `Who recorded the most assists across our last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
+            "appearances",
+            `Who made the most appearances across our last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
+            "cleanSheets",
+            `Who recorded the most clean-sheet appearances across our last ${windowSize} tracked games?`
+        );
+    }
+
+    return questions;
+}
+
 async function dynamicQuestion(guildId) {
     const club =
         await db.get(
@@ -829,7 +924,7 @@ async function dynamicQuestion(guildId) {
                 ? eaApi.getRecentMatches(
                     club.club_id,
                     {
-                        forceRefresh: true,
+                        forceRefresh: false,
                         limit: 100,
                         maxResultCount: 100
                     }
@@ -911,7 +1006,8 @@ async function dynamicQuestion(guildId) {
 
     if (club?.club_id) {
         categories.push(
-            ...latestMatchQuestions(recentMatches, club.club_id)
+            ...latestMatchQuestions(recentMatches, club.club_id),
+            ...rollingLeaderQuestions(recentMatches, club.club_id)
         );
 
         const chemistryQuestion =
@@ -962,7 +1058,15 @@ async function nextQuestion(guildId) {
 
     if (Math.random() < 0.2) {
         const dynamic =
-            await dynamicQuestion(guildId);
+            await Promise.race([
+                dynamicQuestion(guildId),
+                new Promise(resolve =>
+                    setTimeout(
+                        () => resolve(null),
+                        DYNAMIC_QUESTION_TIMEOUT_MS
+                    )
+                )
+            ]);
 
         if (
             dynamic &&
@@ -1009,10 +1113,6 @@ function createQuestionId() {
 }
 
 function questionKey(question) {
-    if (question?.factKey) {
-        return question.factKey;
-    }
-
     return String(question?.question || "")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, " ")

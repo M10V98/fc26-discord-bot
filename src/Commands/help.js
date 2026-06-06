@@ -101,7 +101,7 @@ module.exports = {
                 isAdmin && "`/syncstats` backfills League, Playoff, and Friendly match history from EA manually.",
                 isAdmin && "`/resetstats` can reset XP only or reset all tracked server stats after confirmation.",
                 "Friendly matches also feed the competitive commands.",
-                "`/quiz start` starts a continuous 20-second football quiz for the whole server.",
+                "`/quiz start` starts a continuous 30-second football quiz for the whole server.",
                 "`/quiz leaderboard` shows the server quiz table."
             ]
         );
