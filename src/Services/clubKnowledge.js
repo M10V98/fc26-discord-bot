@@ -527,6 +527,32 @@ const CLUB_LORE_ITEMS = [
         ]
     },
     {
+        aliases: [["coltan", "jake", "casino heist"], ["caughlan", "casino"], ["flying bike", "bridge collision"], ["episode 3", "plane goes down"], ["double life"]],
+        answer: "In the Coltan casino-heist story, Jake remained close to Coltan while living a double life as a police officer. Caughlan worked with Coltan but was stopped at the casino entrance while Coltan was in the car park. The escape became a car chase, bridge collision and flying-bike escape. Coltan had built the bike at 20 and finally used it at 35; Jake shot him from the air, then Jake's associate returned and rammed him. Coltan later appeared again in Episode 3, his former associates wished him well as he headed out of Los Santos, and his plane unknowingly went down.",
+        quiz: [
+            ["Why did Jake initially remain associated with Coltan during the casino job?", ["He was living a double life", "He wanted to rob Coltan", "He was secretly running Boys FC", "He was investigating Penguin"], 0],
+            ["Which person was working alongside Coltan during the casino heist?", ["Caughlan", "Penguin", "Gazz Bryant", "Schnitzler"], 0],
+            ["During the casino operation, where was Coltan when everything started falling apart?", ["In the casino car park", "At the casino entrance", "In the vault", "On the roof"], 0],
+            ["What happened to Caughlan during the casino heist?", ["He was stopped at the casino entrance", "He escaped Los Santos", "He stole the money", "He shot Coltan"], 0],
+            ["Complete the sequence: Casino Heist, Car Chase, __, Flying Bike.", ["Bridge Collision", "Dragon Fight", "Front Garden Fence", "Plane Crash"], 0],
+            ["After being rammed off the bridge, how did Coltan continue his escape?", ["Flying Bike", "Helicopter", "Train", "Boat"], 0],
+            ["Which statement about Coltan's flying bike is true?", ["Coltan built it years before eventually using it", "Coltan built it shortly before the chase", "Coltan stole it from Jake", "Caughlan built it"], 0],
+            ["How old was Coltan when he built the flying bike?", ["20", "18", "25", "35"], 0],
+            ["How old was Coltan when he finally used the flying bike during the chase?", ["35", "20", "25", "30"], 0],
+            ["Who shot Coltan out of the air?", ["Jake", "Caughlan", "Penguin", "Gazz Bryant"], 0],
+            ["What happened immediately after Coltan was shot from the flying bike?", ["Jake's associate eventually returned and rammed him", "He escaped Los Santos", "Jake retired", "The dragon appeared"], 0],
+            ["Which description best matches Jake?", ["Police officer living a double life", "Lifelong criminal with no police connection", "Boys FC chairman", "Casino owner"], 0],
+            ["Which famous Jake quote appears in the lore?", ["Hello Coltan, haven't seen you in time", "What tribe?", "Stealth didn't get in", "That was interesting"], 0],
+            ["What makes Coltan's apparent death unusual?", ["He later appears again in Episode 3", "He wins the Ballon d'Or afterwards", "He joins Bella Ciao afterwards", "He becomes a police officer afterwards"], 0],
+            ["In Episode 3, what do Coltan's former associates do?", ["Wish him well", "Hunt him down", "Arrest him", "Rob him"], 0],
+            ["Where is Coltan heading when he is last seen?", ["Out of Los Santos", "Little Polar Peak", "Scunthorpe", "Birmingham Docks"], 0],
+            ["What ultimately happens to Coltan's plane?", ["It unknowingly goes down", "It reaches its destination", "It disappears", "Jake shoots it down"], 0],
+            ["Which event happened first in the casino-heist story?", ["Caughlan is stopped at the casino", "Coltan is shot from the flying bike", "Coltan is rammed off the bridge", "Jake's associate returns"], 0],
+            ["Which pair are the same age in the Coltan story?", ["Jake and Coltan", "Coltan and Caughlan", "Jake and Caughlan", "Jake and Penguin"], 0],
+            ["Which answer best summarises Coltan's story?", ["Gangster, Casino Heist, Car Chase, Flying Bike, Apparent Death, Episode 3 Return, Plane Goes Down", "Footballer, Boys FC, Ballon d'Or, Retirement", "Police Officer, Dragon Hunter, Manager", "Goalkeeper, Hella Bow Survivor, Viking"], 0]
+        ]
+    },
+    {
         aliases: [["bella ciao lines", "club lines", "who said"], ["i was going to win it so i shot", "stealth didn't get in", "that was interesting", "yes big snitch", "gussy or glendick"]],
         answer: "Bella Ciao lines: Cobra said \"I was going to win it so I shot\" after disobeying the corner tactic; Craig said \"Stealth didn't get in\" while informing the wife Schnitzler had not loaded in; Gehad said \"that was interesting\" after a player showed zero composure, skill or accuracy; \"yes big snitch\" was said to Schnitzler during bad early form; and \"gussy or glendick\" was asked to Fyzo, who replied \"I'm not answering that\".",
         quiz: [
@@ -694,11 +720,11 @@ const PERSON_LORE = [
     },
     {
         aliases: ["coltan"],
-        answer: "Coltan was a Hella Bow rioter and gangsta linked with the lines \"get out this bar you tool\" and \"here you witless worm\". He was smashed by a car over a front garden fence during a standoff with Jake, later died when Jake's friend ran him over mid 1-on-1 duel, and his body was found on a crashed airplane in 2011."
+        answer: "Coltan was a Hella Bow rioter and gangsta linked with the lines \"get out this bar you tool\" and \"here you witless worm\". His casino-heist escape became a car chase, bridge collision and flying-bike escape using a bike he built at 20 and finally used at 35. Jake shot him from the air and Jake's associate rammed him, but Coltan later appeared in Episode 3 before heading out of Los Santos on a plane that unknowingly went down."
     },
     {
         aliases: ["jake"],
-        answer: "Jake was a former Bow City rioter turned police officer and Coltan's ex-friend. His lines include \"hello Coltan, haven't seen you in time\" and \"the work is getting too much for me\". He was involved in the Coltan standoff and was questioned in 2011 near the crashed airplane where Coltan's body was found."
+        answer: "Jake was a former Bow City rioter turned police officer and Coltan's ex-friend. He remained close to Coltan during the casino job while living a double life, later tracked him through the chase and shot him from the flying bike. His lines include \"hello Coltan, haven't seen you in time\" and \"the work is getting too much for me\"."
     },
     {
         aliases: ["edward"],
@@ -1204,7 +1230,7 @@ function scoreItem(text, item) {
     };
 }
 
-function getRelevantClubLore(question, limit = 3) {
+function getRelevantClubLore(question, limit = 3, minimumDistinctiveHits = 1) {
     const text =
         normalize(question);
     const threshold =
@@ -1231,7 +1257,7 @@ function getRelevantClubLore(question, limit = 3) {
         })
         .filter(candidate =>
             candidate.score >= threshold &&
-            candidate.distinctiveHits > 0
+            candidate.distinctiveHits >= minimumDistinctiveHits
         )
         .sort((a, b) => b.score - a.score)
         .slice(0, limit)
@@ -1418,6 +1444,10 @@ function answerClubQuizKnowledge(question) {
 function answerClubKnowledge(question) {
     const text =
         normalize(question);
+    const asksWhatHappened =
+        /^what happened (?:to|with)\b/.test(text);
+    const minimumDistinctiveHits =
+        asksWhatHappened ? 2 : 1;
     const vpcSeason7 =
         answerVPCSeason7Knowledge(question);
 
@@ -1427,10 +1457,10 @@ function answerClubKnowledge(question) {
 
     if (
         /\b(tell me about|explain|describe|what is|story behind)\b/.test(text) &&
-        /\b(fyzo|gussy|glendick|what tribe|50 jobs|nightclub|docks|sauna)\b/.test(text)
+        !/\b(full|whole|complete|all|everything|timeline)\b/.test(text)
     ) {
         const facts =
-            getRelevantClubLore(text, 1);
+            getRelevantClubLore(text, 1, minimumDistinctiveHits);
 
         if (facts.length) {
             return facts.join("\n");
@@ -1444,7 +1474,10 @@ function answerClubKnowledge(question) {
         return quizAnswer;
     }
 
-    if (startsWithPersonCue(text)) {
+    if (
+        startsWithPersonCue(text) &&
+        !/^what happened (?:to|with)\b/.test(text)
+    ) {
         const person =
             answerPersonLore(text);
 
@@ -1458,7 +1491,7 @@ function answerClubKnowledge(question) {
         /\b(fyzo|gussy|glendick|what tribe|50 jobs|nightclub|docks|sauna)\b/.test(text)
     ) {
         const facts =
-            getRelevantClubLore(text, 1);
+            getRelevantClubLore(text, 1, minimumDistinctiveHits);
 
         if (facts.length) {
             return facts.join("\n");
@@ -1473,14 +1506,16 @@ function answerClubKnowledge(question) {
     }
 
     const person =
-        answerPersonLore(text);
+        asksWhatHappened
+            ? null
+            : answerPersonLore(text);
 
     if (person) {
         return person;
     }
 
     const facts =
-        getRelevantClubLore(text, 3);
+        getRelevantClubLore(text, 3, minimumDistinctiveHits);
 
     if (!facts.length) {
         return null;

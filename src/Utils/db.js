@@ -196,6 +196,7 @@ const initStatements = [
         creator_id TEXT,
         current_question_id TEXT,
         current_question_json TEXT,
+        quiz_mode TEXT DEFAULT 'full',
         active INTEGER DEFAULT 1,
         asked_count INTEGER DEFAULT 0,
         created_at INTEGER,
@@ -526,6 +527,12 @@ async function init() {
         "quiz_sessions",
         "current_question_json",
         "TEXT"
+    );
+
+    await ensureColumn(
+        "quiz_sessions",
+        "quiz_mode",
+        "TEXT DEFAULT 'full'"
     );
 
     await backfillXpColumns();

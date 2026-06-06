@@ -1326,6 +1326,8 @@ async function answerSmartMessage(message) {
         ) {
             return null;
         }
+
+        return "I do not understand that question well enough to give a reliable answer. Use `/teach` to teach me the correct question and answer.";
     }
 
     const generated =
@@ -1364,7 +1366,7 @@ async function answerSmartMessage(message) {
     }
 
     if (isFootballKnowledgeQuestion(content)) {
-        return "I do not have that football history fact stored yet.";
+        return "I do not understand that question well enough to give a reliable answer. Use `/teach` to teach me the correct question and answer.";
     }
 
     if (decision.mode === "banter") {

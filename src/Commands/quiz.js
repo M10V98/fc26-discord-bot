@@ -251,6 +251,25 @@ const STATIC_QUESTIONS = deduplicateQuestions([
     ["Which club won the Champions League in 2011 at Wembley?", ["Barcelona", "Manchester United", "Chelsea", "Bayern Munich"], 0]
 ]);
 
+const CLUB_LORE_QUESTION_KEYS =
+    new Set(
+        CLUB_LORE_QUIZ_QUESTIONS.map(question =>
+            String(question?.[0] || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim()
+        )
+    );
+const NON_LORE_STATIC_QUESTIONS =
+    STATIC_QUESTIONS.filter(question =>
+        !CLUB_LORE_QUESTION_KEYS.has(
+            String(question?.[0] || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim()
+        )
+    );
+
 function shuffleAnswers(question, answers, correctIndex, factKey = null) {
     const correctAnswer =
         String(answers?.[correctIndex] || "").trim();
@@ -311,21 +330,14 @@ function staticQuestion() {
         if (history) return history;
     }
 
-    if (roll < 0.52) {
-        const lore =
-            fromPool(CLUB_LORE_QUIZ_QUESTIONS);
-
-        if (lore) return lore;
-    }
-
-    if (roll < 0.62) {
+    if (roll < 0.42) {
         const supplied =
             fromPool(SUPPLIED_FOOTBALL_TRIVIA);
 
         if (supplied) return supplied;
     }
 
-    return fromPool(STATIC_QUESTIONS);
+    return fromPool(NON_LORE_STATIC_QUESTIONS);
 }
 
 function historyQuestion() {
@@ -1149,8 +1161,40 @@ async function dynamicQuestion(guildId) {
     );
 }
 
-async function nextQuestion(guildId) {
+function questionFromPool(pool) {
+    const row =
+        pool[Math.floor(Math.random() * pool.length)];
+
+    return row
+        ? shuffleAnswers(row[0], row[1], row[2], row[3])
+        : null;
+}
+
+async function nextQuestion(guildId, mode = "full") {
     let fallback = null;
+
+    if (
+        mode === "lore" ||
+        Math.random() < 0.25
+    ) {
+        for (let attempt = 0; attempt < 40; attempt++) {
+            const candidate =
+                questionFromPool(CLUB_LORE_QUIZ_QUESTIONS);
+
+            if (!candidate) continue;
+            fallback = fallback || candidate;
+
+            if (!await wasRecentlyAsked(guildId, candidate)) {
+                await rememberQuestion(guildId, candidate);
+                return candidate;
+            }
+        }
+
+        if (fallback || mode === "lore") {
+            await rememberQuestion(guildId, fallback);
+            return fallback;
+        }
+    }
 
     if (Math.random() < 0.2) {
         const dynamic =
@@ -1194,7 +1238,7 @@ async function nextQuestion(guildId) {
 
     const safeFallback =
         fallback ||
-        STATIC_QUESTIONS
+        NON_LORE_STATIC_QUESTIONS
             .map(row => shuffleAnswers(row[0], row[1], row[2]))
             .find(Boolean);
 
@@ -1798,7 +1842,10 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
         }
 
         const next =
-            await nextQuestion(session.guild_id);
+            await nextQuestion(
+                session.guild_id,
+                session.quiz_mode || "full"
+            );
         const nextQuestionId =
             createQuestionId();
         const nextCount =
@@ -1951,6 +1998,21 @@ module.exports = {
             subcommand
                 .setName("start")
                 .setDescription("Start a continuous timed quiz")
+                .addStringOption(option =>
+                    option
+                        .setName("mode")
+                        .setDescription("Full quiz keeps the existing quiz mix")
+                        .addChoices(
+                            {
+                                name: "Full Quiz",
+                                value: "full"
+                            },
+                            {
+                                name: "Bella Ciao Lore",
+                                value: "lore"
+                            }
+                        )
+                )
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -1994,16 +2056,18 @@ module.exports = {
 
         const sessionId =
             interaction.id;
+        const mode =
+            interaction.options.getString("mode") || "full";
         const question =
-            await nextQuestion(interaction.guild.id);
+            await nextQuestion(interaction.guild.id, mode);
         const questionId =
             createQuestionId();
 
         await db.run(
             `
             INSERT INTO quiz_sessions
-            (session_id, guild_id, channel_id, message_id, creator_id, current_question_id, current_question_json, active, asked_count, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
+            (session_id, guild_id, channel_id, message_id, creator_id, current_question_id, current_question_json, quiz_mode, active, asked_count, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
             `,
             [
                 sessionId,
@@ -2013,6 +2077,7 @@ module.exports = {
                 interaction.user.id,
                 questionId,
                 JSON.stringify(question),
+                mode,
                 Date.now(),
                 Date.now()
             ]

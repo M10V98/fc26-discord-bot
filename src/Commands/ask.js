@@ -3,7 +3,8 @@ const {
 } = require("discord.js");
 
 const {
-    answerQuestion
+    answerQuestion,
+    detectIntent
 } = require("../Services/fakeAI");
 const {
     answerClubMatchQuestion
@@ -104,7 +105,8 @@ module.exports = {
             !clubKnowledge &&
             !clubMatch &&
             !knowledge &&
-            !isFootballKnowledgeQuestion(question)
+            !isFootballKnowledgeQuestion(question) &&
+            detectIntent(question) !== "unknown"
                 ? await answerQuestion(
                 interaction.guild.id,
                 question
@@ -119,7 +121,7 @@ module.exports = {
             clubMatch ||
             knowledge ||
             legacy ||
-            "I do not have that football history fact stored yet.";
+            "I do not understand that question well enough to give a reliable answer. Use `/teach` to teach me the correct question and answer.";
 
         await interaction.editReply(
             response

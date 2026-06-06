@@ -29,6 +29,9 @@ const {
 } = require("./Services/autoStatsSync");
 
 const {
+    handleDeleteSessionButton,
+    handleLineupFormationSelect,
+    handleRecommendedXiButton,
     handleSessionButton,
     startScheduleSessionCleanup
 } = require("./Services/scheduleSessions");
@@ -203,6 +206,13 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
+                if (
+                    interaction.customId.startsWith("session_lineup_formation:")
+                ) {
+                    await handleLineupFormationSelect(interaction);
+                    return;
+                }
+
                 if (interaction.customId !== "claim_player") {
                     return;
                 }
@@ -414,6 +424,20 @@ client.on(
                     interaction.customId.startsWith("session_rsvp:")
                 ) {
                     await handleSessionButton(interaction);
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("session_recommended_xi:")
+                ) {
+                    await handleRecommendedXiButton(interaction);
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("session_delete:")
+                ) {
+                    await handleDeleteSessionButton(interaction);
                     return;
                 }
 

@@ -1,9 +1,11 @@
 const {
     ActionRowBuilder,
+    AttachmentBuilder,
     ButtonBuilder,
     ButtonStyle,
     EmbedBuilder,
-    PermissionFlagsBits
+    PermissionFlagsBits,
+    StringSelectMenuBuilder
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -19,6 +21,11 @@ const {
 const {
     getGuildSettings
 } = require("./settingsService");
+const {
+    FORMATIONS,
+    recommendLineup,
+    renderLineupPng
+} = require("./recommendedLineup");
 
 const CLEANUP_CHECK_MS = 60 * 1000;
 const CLEANUP_GRACE_MS = 0;
@@ -483,6 +490,17 @@ function buildSessionButtons(sessionId) {
                     .setEmoji("❔")
                     .setLabel("Maybe")
                     .setStyle(ButtonStyle.Secondary)
+            ),
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`session_recommended_xi:${sessionId}`)
+                    .setLabel("Admin: Recommended XI")
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(`session_delete:${sessionId}`)
+                    .setLabel("Admin: Delete Event")
+                    .setStyle(ButtonStyle.Danger)
             )
     ];
 }
@@ -537,27 +555,17 @@ async function createSession(interaction, options) {
             `SELECT * FROM clubs WHERE guild_id = ?`,
             [interaction.guild.id]
         );
-    const [info, crestUrl, existingSessions] =
+    const [info, crestUrl] =
         await Promise.all([
             club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
-            club ? getCrestUrl(club.club_id).catch(() => null) : null,
-            db.all(
-                `
-                SELECT session_id
-                FROM scheduled_sessions
-                WHERE guild_id = ?
-                `,
-                [interaction.guild.id]
-            )
+            club ? getCrestUrl(club.club_id).catch(() => null) : null
         ]);
     const clubName =
         club && info?.[String(club.club_id)]?.name
             ? info[String(club.club_id)].name
             : interaction.guild.name;
-    const sessionNumber =
-        existingSessions.length + 1;
     const roleName =
-        `Session ${sessionNumber}`.slice(0, 100);
+        `${String(options.league || "League").trim()} Match Squad`.slice(0, 100);
     const settings =
         await getGuildSettings(interaction.guild.id);
 
@@ -734,6 +742,121 @@ async function handleSessionButton(interaction) {
     });
 }
 
+async function getAdminSession(interaction, prefix) {
+    if (!canManageSessions(interaction)) {
+        await interaction.reply({
+            content: "Only server administrators can use this event control.",
+            ephemeral: true
+        });
+        return null;
+    }
+
+    const sessionId =
+        interaction.customId.slice(prefix.length);
+    const session =
+        await db.get(
+            `SELECT * FROM scheduled_sessions WHERE session_id = ? AND guild_id = ?`,
+            [sessionId, interaction.guild.id]
+        );
+
+    if (!session) {
+        await interaction.reply({
+            content: "This scheduled event no longer exists.",
+            ephemeral: true
+        });
+        return null;
+    }
+
+    return session;
+}
+
+async function handleRecommendedXiButton(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_recommended_xi:");
+
+    if (!session) return;
+
+    const select =
+        new StringSelectMenuBuilder()
+            .setCustomId(`session_lineup_formation:${session.session_id}`)
+            .setPlaceholder("Choose the formation")
+            .addOptions(
+                Object.keys(FORMATIONS).map(formation => ({
+                    label: formation,
+                    value: formation
+                }))
+            );
+
+    return interaction.reply({
+        content: "Choose a formation for the recommended XI.",
+        components: [
+            new ActionRowBuilder().addComponents(select)
+        ],
+        ephemeral: true
+    });
+}
+
+async function handleLineupFormationSelect(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_lineup_formation:");
+
+    if (!session) return;
+
+    await interaction.deferUpdate();
+
+    const formation =
+        interaction.values[0];
+    const lineup =
+        await recommendLineup(interaction.guild, session, formation);
+    const png =
+        await renderLineupPng(
+            lineup,
+            formation,
+            session.title || `${session.league} Match Squad`
+        );
+    const unfilled =
+        lineup.selected.filter(slot => !slot.player).length;
+
+    return interaction.editReply({
+        content:
+            `Recommended from ${lineup.candidateCount} eligible linked player(s), weighted 70% to the latest ${lineup.recentMatchCount} combined COMP matches and 30% to all tracked COMP matches.${unfilled ? ` ${unfilled} position(s) could not be filled from player position roles.` : ""}`,
+        components: [],
+        files: [
+            new AttachmentBuilder(png, {
+                name: `recommended-xi-${formation}.png`
+            })
+        ]
+    });
+}
+
+async function handleDeleteSessionButton(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_delete:");
+
+    if (!session) return;
+
+    await interaction.reply({
+        content: "Deleting scheduled event...",
+        ephemeral: true
+    });
+
+    if (session.role_id) {
+        const role =
+            await interaction.guild.roles.fetch(session.role_id).catch(() => null);
+        if (role?.editable) {
+            await role.delete("Scheduled event deleted by administrator").catch(() => null);
+        }
+    }
+
+    await db.run(
+        `DELETE FROM scheduled_sessions WHERE session_id = ?`,
+        [session.session_id]
+    );
+    await interaction.message.delete().catch(() => null);
+
+    return interaction.editReply("Scheduled event, reminders, and Match Squad role deleted.");
+}
+
 async function cleanupSession(client, session) {
     const guild =
         await client.guilds.fetch(session.guild_id).catch(() => null);
@@ -873,6 +996,9 @@ module.exports = {
     buildSessionEmbed,
     canManageSessions,
     createSession,
+    handleDeleteSessionButton,
+    handleLineupFormationSelect,
+    handleRecommendedXiButton,
     handleSessionButton,
     parseDateTime,
     startScheduleSessionCleanup
