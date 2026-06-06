@@ -243,7 +243,6 @@ const STATIC_QUESTIONS = deduplicateQuestions([
     ["Which club is most associated with Arrigo Sacchi's late-1980s pressing and defensive organisation?", ["AC Milan", "Juventus", "Inter", "Roma"], 0],
     ["Which manager led Arsenal's Invincibles in the 2003-04 Premier League season?", ["Arsene Wenger", "Sir Alex Ferguson", "Jose Mourinho", "Rafael Benitez"], 0],
     ["Which team went unbeaten through the 2003-04 Premier League season?", ["Arsenal", "Chelsea", "Manchester United", "Liverpool"], 0],
-    ["Which club did Jose Mourinho call a 'special' project when arriving in England in 2004?", ["Chelsea", "Manchester United", "Liverpool", "Arsenal"], 0],
     ["Which manager led Barcelona to the 2009 sextuple?", ["Pep Guardiola", "Frank Rijkaard", "Luis Enrique", "Johan Cruyff"], 0],
     ["Which player scored Barcelona's second goal in the 2009 Champions League final?", ["Lionel Messi", "Samuel Eto'o", "Xavi", "Andres Iniesta"], 0],
     ["Which club won the Champions League in 2011 at Wembley?", ["Barcelona", "Manchester United", "Chelsea", "Bayern Munich"], 0]

@@ -17,7 +17,23 @@ const QUESTION_CORRECTIONS = {
     "Which player moved from Borussia Dortmund to Barcelona in 2022?":
         "Which listed player moved from Borussia Dortmund to Barcelona in 2022?",
     "Which player transferred from Ajax to Arsenal in 2022?":
-        "Which listed player transferred from Ajax to Arsenal in 2023?"
+        "Which listed player transferred from Ajax to Arsenal in 2023?",
+    "Which player joined Chelsea from Leicester in 2023 for around Â£115 million?":
+        "Which player joined Chelsea from Brighton in 2023 for a reported fee of around Â£115 million?",
+    "Who was transferred from AtlÃ©tico Madrid to Chelsea in 2017 for around Â£60 million?":
+        "Who transferred from Real Madrid to Chelsea in 2017 for a reported fee of around Â£60 million?",
+    "Which club plays at the San Siro?":
+        "Which listed club plays at the San Siro?",
+    "Which stadium hosts the home matches of Argentina?":
+        "Which stadium is most closely associated with Argentina's home matches?",
+    "Which stadium is home to Dynamo Kyiv?":
+        "Which stadium is traditionally associated with Dynamo Kyiv?",
+    "Which stadium is home to Shakhtar Donetsk?":
+        "Which stadium was Shakhtar Donetsk's home before the club left Donetsk?",
+    "Who has the most appearances in La Liga history?":
+        "Which listed player shares the record for the most La Liga appearances?",
+    "Which club plays at Goodison Park?":
+        "Which club played at Goodison Park until 2025?"
 };
 const ANSWER_CORRECTIONS = {
     "How many officials are typically on the field during a match?":
@@ -40,6 +56,10 @@ const EXCLUDED_QUESTIONS = new Set([
     "Which club is nicknamed \"The Saints\"?",
     "Which club is nicknamed \"The Bees\"?",
     "Which player holds the record for the most appearances in Champions League finals?"
+    ,"Which defender became the first Â£50 million defender when moving from Benfica to Manchester City?"
+    ,"Which transfer took Gareth Bale from Southampton to Tottenham?"
+    ,"Which player moved from Ajax to Manchester United in 2022?"
+    ,"Which player moved from Borussia Dortmund to Barcelona in 2022?"
 ]);
 const EXTRA_QUESTIONS = [
     ["Which English club is known as \"The Red Devils\"?", ["Manchester United", "Liverpool", "Arsenal", "Chelsea"], 0],
@@ -70,6 +90,39 @@ function normalizeQuestion(value) {
     return String(value || "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function clarifyQuestion(question) {
+    const clarified =
+        question
+        .replace(
+            /^Which club is (known as|nicknamed) /,
+            "Which listed club is $1 "
+        )
+        .replace(
+            /^Which club's nickname is /,
+            "Which listed club's nickname is "
+        );
+
+    if (/joined Chelsea from Leicester in 2023/i.test(clarified)) {
+        return "Which player joined Chelsea from Brighton in 2023 for a reported fee of around £115 million?";
+    }
+
+    if (/transferred from Atlético Madrid to Chelsea in 2017/i.test(clarified)) {
+        return "Who transferred from Real Madrid to Chelsea in 2017 for a reported fee of around £60 million?";
+    }
+
+    return clarified;
+}
+
+function isExcludedQuestion(question) {
+    return EXCLUDED_QUESTIONS.has(question) ||
+        /first £50 million defender/i.test(question) ||
+        /Which transfer took Gareth Bale from Southampton to Tottenham/i.test(question) ||
+        /moved from Ajax to Manchester United in 2022/i.test(question) ||
+        /moved from Borussia Dortmund to Barcelona in 2022/i.test(question) ||
+        /How many officials are typically on the field during a match/i.test(question) ||
+        /Which club is nicknamed "The Blue Moon"/i.test(question);
 }
 
 function parseFile(file) {
@@ -103,7 +156,7 @@ function parseFile(file) {
                     .join(" ")
             );
 
-        if (!question || EXCLUDED_QUESTIONS.has(question)) {
+        if (!question || isExcludedQuestion(question)) {
             continue;
         }
 
@@ -120,7 +173,9 @@ function parseFile(file) {
         const correct =
             ANSWER_CORRECTIONS[question] || suppliedCorrect;
         const correctedQuestion =
-            QUESTION_CORRECTIONS[question] || question;
+            clarifyQuestion(
+                QUESTION_CORRECTIONS[question] || question
+            );
         const correctIndex =
             answers.indexOf(correct);
 

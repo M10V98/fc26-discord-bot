@@ -72,7 +72,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is known as \"The Gunners\"?",
+        "Which listed club is known as \"The Gunners\"?",
         [
             "Chelsea",
             "Tottenham",
@@ -162,7 +162,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club plays at the San Siro?",
+        "Which listed club plays at the San Siro?",
         [
             "Napoli",
             "Roma",
@@ -202,7 +202,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is known as \"The Blues\"?",
+        "Which listed club is known as \"The Blues\"?",
         [
             "Chelsea",
             "Arsenal",
@@ -312,7 +312,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club's nickname is \"The Magpies\"?",
+        "Which listed club's nickname is \"The Magpies\"?",
         [
             "Fulham",
             "Newcastle United",
@@ -352,7 +352,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is known as \"The Toffees\"?",
+        "Which listed club is known as \"The Toffees\"?",
         [
             "Everton",
             "Burnley",
@@ -492,7 +492,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Foxes\"?",
+        "Which listed club is nicknamed \"The Foxes\"?",
         [
             "Leicester City",
             "Norwich City",
@@ -512,7 +512,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club plays at Goodison Park?",
+        "Which club played at Goodison Park until 2025?",
         [
             "Everton",
             "Liverpool",
@@ -542,7 +542,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Baggies\"?",
+        "Which listed club is nicknamed \"The Baggies\"?",
         [
             "West Bromwich Albion",
             "Birmingham City",
@@ -622,7 +622,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is known as \"The Hammers\"?",
+        "Which listed club is known as \"The Hammers\"?",
         [
             "West Ham United",
             "Millwall",
@@ -712,7 +712,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Eagles\"?",
+        "Which listed club is nicknamed \"The Eagles\"?",
         [
             "Crystal Palace",
             "Reading",
@@ -728,16 +728,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
             "Spanish",
             "Italian",
             "Argentinian"
-        ],
-        1
-    ],
-    [
-        "How many officials are typically on the field during a match?",
-        [
-            "2",
-            "3",
-            "4",
-            "5"
         ],
         1
     ],
@@ -772,7 +762,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Clarets\"?",
+        "Which listed club is nicknamed \"The Clarets\"?",
         [
             "Burnley",
             "Aston Villa",
@@ -842,7 +832,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Cherries\"?",
+        "Which listed club is nicknamed \"The Cherries\"?",
         [
             "Bournemouth",
             "Blackpool",
@@ -902,7 +892,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Canaries\"?",
+        "Which listed club is nicknamed \"The Canaries\"?",
         [
             "Norwich City",
             "Watford",
@@ -962,7 +952,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Terriers\"?",
+        "Which listed club is nicknamed \"The Terriers\"?",
         [
             "Huddersfield Town",
             "Wigan Athletic",
@@ -1032,7 +1022,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Old Lady\"?",
+        "Which listed club is nicknamed \"The Old Lady\"?",
         [
             "AC Milan",
             "Roma",
@@ -1052,7 +1042,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which stadium hosts the home matches of Argentina?",
+        "Which stadium is most closely associated with Argentina's home matches?",
         [
             "Monumental",
             "Bombonera",
@@ -1172,7 +1162,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Yellow Submarine\"?",
+        "Which listed club is nicknamed \"The Yellow Submarine\"?",
         [
             "Villarreal",
             "Cádiz",
@@ -1282,7 +1272,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which club is nicknamed \"The Rossoneri\"?",
+        "Which listed club is nicknamed \"The Rossoneri\"?",
         [
             "AC Milan",
             "Inter Milan",
@@ -1382,7 +1372,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Eagles of Lisbon\"?",
+        "Which listed club is nicknamed \"The Eagles of Lisbon\"?",
         [
             "Sporting CP",
             "Benfica",
@@ -1492,7 +1482,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which club is nicknamed \"The Dragons\"?",
+        "Which listed club is nicknamed \"The Dragons\"?",
         [
             "Porto",
             "Benfica",
@@ -1500,16 +1490,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
             "Boavista"
         ],
         0
-    ],
-    [
-        "Which transfer took Gareth Bale from Southampton to Tottenham?",
-        [
-            "£5m",
-            "£10m",
-            "£15m",
-            "£20m"
-        ],
-        1
     ],
     [
         "Guess the player: Played for Ajax Liverpool Barcelona Atlético Madrid",
@@ -1542,7 +1522,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which club is nicknamed \"The Bhoys\"?",
+        "Which listed club is nicknamed \"The Bhoys\"?",
         [
             "Rangers",
             "Aberdeen",
@@ -1552,7 +1532,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Who was transferred from Atlético Madrid to Chelsea in 2017 for around £60 million?",
+        "Who transferred from Real Madrid to Chelsea in 2017 for a reported fee of around £60 million?",
         [
             "Diego Costa",
             "João Félix",
@@ -1640,16 +1620,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
             "Romário"
         ],
         1
-    ],
-    [
-        "Which club is nicknamed \"The Blue Moon\"?",
-        [
-            "Manchester City",
-            "Chelsea",
-            "Napoli",
-            "Schalke"
-        ],
-        0
     ],
     [
         "Which player transferred from Liverpool to Barcelona in January 2018?",
@@ -1882,16 +1852,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which player moved from Ajax to Manchester United in 2022?",
-        [
-            "Antony",
-            "Lisandro Martínez",
-            "André Onana",
-            "Both A and B"
-        ],
-        3
-    ],
-    [
         "Guess the player: Played for Atlético Madrid Liverpool Chelsea AC Milan",
         [
             "Diego Costa",
@@ -1972,16 +1932,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which defender became the first £50 million defender when moving from Benfica to Manchester City?",
-        [
-            "João Cancelo",
-            "Nicolás Otamendi",
-            "Rúben Dias",
-            "Benjamin Mendy"
-        ],
-        2
-    ],
-    [
         "Guess the player: Played for Le Havre Arsenal Barcelona",
         [
             "Thierry Henry",
@@ -2012,7 +1962,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Old Gold\"?",
+        "Which listed club is nicknamed \"The Old Gold\"?",
         [
             "Wolves",
             "Hull City",
@@ -2052,7 +2002,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Who has the most appearances in La Liga history?",
+        "Which listed player shares the record for the most La Liga appearances?",
         [
             "Sergio Ramos",
             "Raúl",
@@ -2072,7 +2022,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which player joined Chelsea from Leicester in 2023 for around £115 million?",
+        "Which player joined Chelsea from Brighton in 2023 for a reported fee of around £115 million?",
         [
             "Wesley Fofana",
             "Enzo Fernández",
@@ -2112,7 +2062,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Tractor Boys\"?",
+        "Which listed club is nicknamed \"The Tractor Boys\"?",
         [
             "Norwich City",
             "Ipswich Town",
@@ -2172,16 +2122,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which listed player moved from Borussia Dortmund to Barcelona in 2022?",
-        [
-            "Jude Bellingham",
-            "Erling Haaland",
-            "Pierre-Emerick Aubameyang",
-            "None of the above"
-        ],
-        3
-    ],
-    [
         "Guess the player: Played for PSV Manchester United Real Madrid",
         [
             "Ruud van Nistelrooy",
@@ -2212,7 +2152,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         2
     ],
     [
-        "Which club is nicknamed \"The Addicks\"?",
+        "Which listed club is nicknamed \"The Addicks\"?",
         [
             "Charlton Athletic",
             "Barnsley",
@@ -2242,7 +2182,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which stadium is home to Dynamo Kyiv?",
+        "Which stadium is traditionally associated with Dynamo Kyiv?",
         [
             "Metalist Stadium",
             "NSC Olimpiyskiy",
@@ -2302,7 +2242,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which club is nicknamed \"The Railwaymen\"?",
+        "Which listed club is nicknamed \"The Railwaymen\"?",
         [
             "Crewe Alexandra",
             "Doncaster Rovers",
@@ -2332,7 +2272,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which stadium is home to Shakhtar Donetsk?",
+        "Which stadium was Shakhtar Donetsk's home before the club left Donetsk?",
         [
             "Arena Lviv",
             "Donbass Arena",
@@ -2402,7 +2342,7 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         1
     ],
     [
-        "Which club is nicknamed \"The Chairboys\"?",
+        "Which listed club is nicknamed \"The Chairboys\"?",
         [
             "Wycombe Wanderers",
             "Oldham Athletic",
@@ -2645,19 +2585,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Liverpool play at?",
         [
             "Anfield",
-            "the Emirates Stadium",
-            "Goodison Park",
-            "Craven Cottage"
-        ],
-        0
-    ],
-    [
-        "Which stadium does AC Milan play at?",
-        [
-            "the San Siro",
-            "the Emirates Stadium",
-            "Goodison Park",
-            "Craven Cottage"
+            "Craven Cottage",
+            "the City Ground",
+            "Selhurst Park"
         ],
         0
     ],
@@ -2665,9 +2595,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Borussia Dortmund play at?",
         [
             "Signal Iduna Park",
-            "Kenilworth Road",
-            "Anfield",
-            "the San Siro"
+            "the Emirates Stadium",
+            "Craven Cottage",
+            "the City Ground"
         ],
         0
     ],
@@ -2675,16 +2605,6 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Aston Villa play at?",
         [
             "Villa Park",
-            "Anfield",
-            "the San Siro",
-            "Signal Iduna Park"
-        ],
-        0
-    ],
-    [
-        "Which stadium does Arsenal play at?",
-        [
-            "the Emirates Stadium",
             "Selhurst Park",
             "St Mary's Stadium",
             "Bramall Lane"
@@ -2692,12 +2612,12 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         0
     ],
     [
-        "Which stadium does Everton play at?",
+        "Which stadium does Arsenal play at?",
         [
-            "Goodison Park",
-            "Anfield",
-            "the San Siro",
-            "Signal Iduna Park"
+            "the Emirates Stadium",
+            "Villa Park",
+            "Craven Cottage",
+            "the City Ground"
         ],
         0
     ],
@@ -2705,9 +2625,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Fulham play at?",
         [
             "Craven Cottage",
+            "the Emirates Stadium",
             "the City Ground",
-            "Selhurst Park",
-            "St Mary's Stadium"
+            "Selhurst Park"
         ],
         0
     ],
@@ -2716,8 +2636,8 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         [
             "the City Ground",
             "Anfield",
-            "the San Siro",
-            "Signal Iduna Park"
+            "Signal Iduna Park",
+            "Villa Park"
         ],
         0
     ],
@@ -2735,9 +2655,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Southampton play at?",
         [
             "St Mary's Stadium",
-            "Villa Park",
             "the Emirates Stadium",
-            "Goodison Park"
+            "Craven Cottage",
+            "the City Ground"
         ],
         0
     ],
@@ -2745,9 +2665,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Sheffield United play at?",
         [
             "Bramall Lane",
-            "St Mary's Stadium",
-            "Deepdale",
-            "Kenilworth Road"
+            "Kenilworth Road",
+            "Anfield",
+            "Signal Iduna Park"
         ],
         0
     ],
@@ -2755,9 +2675,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Preston North End play at?",
         [
             "Deepdale",
-            "Signal Iduna Park",
-            "Villa Park",
-            "the Emirates Stadium"
+            "Craven Cottage",
+            "the City Ground",
+            "Selhurst Park"
         ],
         0
     ],
@@ -2765,9 +2685,9 @@ const SUPPLIED_FOOTBALL_TRIVIA = [
         "Which stadium does Luton Town play at?",
         [
             "Kenilworth Road",
-            "Selhurst Park",
-            "St Mary's Stadium",
-            "Bramall Lane"
+            "Anfield",
+            "Signal Iduna Park",
+            "Villa Park"
         ],
         0
     ]
@@ -2781,7 +2701,7 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which player has scored the most goals in Champions League history? Cristiano Ronaldo",
     "Which country is Lionel Messi from? Argentina",
     "What is the maximum length of regular time in a football match? 90 minutes",
-    "Which club is known as \"The Gunners\"? Arsenal",
+    "Which listed club is known as \"The Gunners\"? Arsenal",
     "Which goalkeeper was famous for wearing a protective helmet? Petr Čech",
     "Which position traditionally wears the number 1 shirt? Goalkeeper",
     "Which player is known as \"The Egyptian King\"? Mohamed Salah",
@@ -2790,11 +2710,11 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which country does Borussia Dortmund play in? Germany",
     "Which player is nicknamed \"The Flea\"? Lionel Messi",
     "How many points are awarded for a win? 3",
-    "Which club plays at the San Siro? AC Milan",
+    "Which listed club plays at the San Siro? AC Milan",
     "Which country is Erling Haaland from? Norway",
     "What is the radius of the centre circle? 10 yards",
     "Which player famously wore the number 10 for Brazil in 1970? Pelé",
-    "Which club is known as \"The Blues\"? Chelsea",
+    "Which listed club is known as \"The Blues\"? Chelsea",
     "How many substitutions are generally permitted in competitive matches? 5",
     "Which country is Kylian Mbappé from? France",
     "Who is Barcelona's all-time top goalscorer? Lionel Messi",
@@ -2805,11 +2725,11 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which nationality is Robert Lewandowski? Polish",
     "What is the minimum number of players needed to continue a match? 7",
     "Which player is nicknamed \"The Phenomenon\"? Ronaldo Nazário",
-    "Which club's nickname is \"The Magpies\"? Newcastle United",
+    "Which listed club's nickname is \"The Magpies\"? Newcastle United",
     "Which country is Luka Modrić from? Croatia",
     "Which country does Harry Kane represent internationally? England",
     "What shape is the penalty area? Rectangle",
-    "Which club is known as \"The Toffees\"? Everton",
+    "Which listed club is known as \"The Toffees\"? Everton",
     "Who holds the Premier League assist record? Ryan Giggs",
     "Which country is Mohamed Salah from? Egypt",
     "Which club plays at Villa Park? Aston Villa",
@@ -2823,12 +2743,12 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which club plays at the Emirates Stadium? Arsenal",
     "How far is the penalty spot from the goal line? 12 yards",
     "Which player has the most international goals in men's football? Cristiano Ronaldo",
-    "Which club is nicknamed \"The Foxes\"? Leicester City",
+    "Which listed club is nicknamed \"The Foxes\"? Leicester City",
     "Which player scored the fastest Premier League hat-trick? Sadio Mané",
-    "Which club plays at Goodison Park? Everton",
+    "Which club played at Goodison Park until 2025? Everton",
     "Which nationality is Son Heung-min? South Korean",
     "How many players can be named on a typical matchday bench in the Premier League? 9",
-    "Which club is nicknamed \"The Baggies\"? West Bromwich Albion",
+    "Which listed club is nicknamed \"The Baggies\"? West Bromwich Albion",
     "Which player is known as \"Captain America\"? Christian Pulisic",
     "Which country is Victor Osimhen from? Nigeria",
     "What is the maximum number of yellow cards before a player is sent off in a match? 2",
@@ -2836,7 +2756,7 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which player wore number 7 for Manchester United after David Beckham? Cristiano Ronaldo",
     "Which country is Achraf Hakimi from? Morocco",
     "What is the standard width of a football goal in metres? 7.32m",
-    "Which club is known as \"The Hammers\"? West Ham United",
+    "Which listed club is known as \"The Hammers\"? West Ham United",
     "Who is Real Madrid's all-time leading scorer? Cristiano Ronaldo",
     "Which nationality is Kevin De Bruyne? Belgian",
     "Which club plays at the City Ground? Nottingham Forest",
@@ -2845,41 +2765,40 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which club's home stadium is Molineux? Wolves",
     "Which country is Alphonso Davies from? Canada",
     "Which player has the most Premier League appearances? Gareth Barry",
-    "Which club is nicknamed \"The Eagles\"? Crystal Palace",
+    "Which listed club is nicknamed \"The Eagles\"? Crystal Palace",
     "Which nationality is Rodri? Spanish",
-    "How many officials are typically on the field during a match? 3",
     "Which club plays at Selhurst Park? Crystal Palace",
     "Which player has scored the most goals for England? Harry Kane",
     "Which country is Khvicha Kvaratskhelia from? Georgia",
-    "Which club is nicknamed \"The Clarets\"? Burnley",
+    "Which listed club is nicknamed \"The Clarets\"? Burnley",
     "Which stadium is home to Bayern Munich? Allianz Arena",
     "Which nationality is Emiliano Martínez? Argentinian",
     "Which player is known as \"The King of Egypt\"? Mohamed Salah",
     "Which club plays at St Mary's Stadium? Southampton",
     "Which country is Darwin Núñez from? Uruguay",
     "What number is traditionally associated with a centre-forward? 9",
-    "Which club is nicknamed \"The Cherries\"? Bournemouth",
+    "Which listed club is nicknamed \"The Cherries\"? Bournemouth",
     "Which player scored the famous \"Hand of God\" goal? Diego Maradona",
     "Which country is Bruno Fernandes from? Portugal",
     "Which club plays at Bramall Lane? Sheffield United",
     "Which player has the most appearances for Spain? Sergio Ramos",
     "Which nationality is Manuel Neuer? German",
-    "Which club is nicknamed \"The Canaries\"? Norwich City",
+    "Which listed club is nicknamed \"The Canaries\"? Norwich City",
     "Which player is famous for the quote \"I am a Special One\"? José Mourinho",
     "Which country is Federico Valverde from? Uruguay",
     "Which club plays at Deepdale? Preston North End",
     "Which player scored the fastest goal in World Cup history? Hakan Şükür",
     "Which nationality is Jamal Musiala internationally associated with? Germany",
-    "Which club is nicknamed \"The Terriers\"? Huddersfield Town",
+    "Which listed club is nicknamed \"The Terriers\"? Huddersfield Town",
     "What is the distance from the penalty spot to the centre of the goal? 12 yards",
     "Which player has the most international appearances in men's football? Cristiano Ronaldo",
     "Which club plays at Kenilworth Road? Luton Town",
     "Which player became the first footballer to score at five different World Cups? Cristiano Ronaldo",
     "Which player transferred from Southampton to Liverpool for around £75 million? Virgil van Dijk",
     "Which nation has appeared in the most World Cup tournaments? Brazil",
-    "Which club is nicknamed \"The Old Lady\"? Juventus",
+    "Which listed club is nicknamed \"The Old Lady\"? Juventus",
     "Guess the player: Played for Sporting CP Manchester United Real Madrid Juventus Cristiano Ronaldo",
-    "Which stadium hosts the home matches of Argentina? Monumental",
+    "Which stadium is most closely associated with Argentina's home matches? Monumental",
     "Who holds the record for the most Premier League appearances by a goalkeeper? David James",
     "Which player's transfer from Barcelona to PSG triggered the €222 million release clause? Neymar",
     "Which national team is nicknamed \"La Albiceleste\"? Argentina",
@@ -2891,7 +2810,7 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Guess the player: Won league titles in England, Spain, Italy and Germany Played for Bayern Munich, Juventus and Barcelona Arturo Vidal",
     "Which stadium is home to Borussia Mönchengladbach? Borussia-Park",
     "Which country has played the most World Cup matches? Brazil",
-    "Which club is nicknamed \"The Yellow Submarine\"? Villarreal",
+    "Which listed club is nicknamed \"The Yellow Submarine\"? Villarreal",
     "Who was the most expensive goalkeeper transfer when joining Chelsea from Athletic Bilbao? Kepa Arrizabalaga",
     "Guess the player: Played for Liverpool, Barcelona and Atlético Madrid Nicknamed \"El Pistolero\" Luis Suárez",
     "Which national team is nicknamed \"The Three Lions\"? England",
@@ -2902,7 +2821,7 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Guess the player: Played for Sporting CP Manchester United Real Madrid Al-Nassr Cristiano Ronaldo",
     "Which stadium is home to Napoli? Diego Armando Maradona Stadium",
     "Who scored the most goals in a single Bundesliga season? Robert Lewandowski",
-    "Which club is nicknamed \"The Rossoneri\"? AC Milan",
+    "Which listed club is nicknamed \"The Rossoneri\"? AC Milan",
     "Which player joined Manchester City from Aston Villa for £100 million? Jack Grealish",
     "Guess the player: Played for Ajax Juventus Manchester United Edwin van der Sar",
     "Which country is nicknamed \"A Seleção\"? Brazil",
@@ -2912,7 +2831,7 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Guess the player: Played for Manchester United Real Madrid PSG David Beckham",
     "Which stadium is home to Celtic? Celtic Park",
     "Which nation has scored the most goals in World Cup history? Brazil",
-    "Which club is nicknamed \"The Eagles of Lisbon\"? Benfica",
+    "Which listed club is nicknamed \"The Eagles of Lisbon\"? Benfica",
     "Who became the most expensive defender in history when joining Manchester United in 2019? Harry Maguire",
     "Guess the player: Played for Monaco Juventus Manchester United Patrice Evra",
     "Which stadium is home to Rangers? Ibrox",
@@ -2923,13 +2842,12 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Guess the player: Played for Monaco Arsenal Barcelona Chelsea Won a World Cup Thierry Henry",
     "Which stadium is home to PSV Eindhoven? Philips Stadion",
     "Which player has the most appearances for Germany? Lothar Matthäus",
-    "Which club is nicknamed \"The Dragons\"? Porto",
-    "Which transfer took Gareth Bale from Southampton to Tottenham? £10m",
+    "Which listed club is nicknamed \"The Dragons\"? Porto",
     "Guess the player: Played for Ajax Liverpool Barcelona Atlético Madrid Luis Suárez",
     "Which stadium is home to Athletic Club? San Mamés",
     "Which nation has appeared in the most European Championship tournaments? Germany",
-    "Which club is nicknamed \"The Bhoys\"? Celtic",
-    "Who was transferred from Atlético Madrid to Chelsea in 2017 for around £60 million? Álvaro Morata",
+    "Which listed club is nicknamed \"The Bhoys\"? Celtic",
+    "Who transferred from Real Madrid to Chelsea in 2017 for a reported fee of around £60 million? Álvaro Morata",
     "Guess the player: Played for Manchester United Juventus Real Madrid Returned to Manchester United Cristiano Ronaldo",
     "Which stadium is home to Marseille? Stade Vélodrome",
     "Who has the most caps for England? Peter Shilton",
@@ -2938,7 +2856,6 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Guess the player: Played for Dortmund Arsenal Chelsea Pierre-Emerick Aubameyang",
     "Which stadium is home to Sevilla? Ramón Sánchez-Pizjuán",
     "Who scored the most goals in international football before Cristiano Ronaldo broke the record? Ali Daei",
-    "Which club is nicknamed \"The Blue Moon\"? Manchester City",
     "Which player transferred from Liverpool to Barcelona in January 2018? Philippe Coutinho",
     "Guess the player: Played for Southampton Tottenham Real Madrid Bayern Munich Gareth Bale",
     "Which stadium is home to Feyenoord? De Kuip",
@@ -2962,7 +2879,6 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which stadium is home to Valencia? Mestalla",
     "Who has the most appearances in World Cup history? Lionel Messi",
     "Which national team is nicknamed \"The Indomitable Lions\"? Cameroon",
-    "Which player moved from Ajax to Manchester United in 2022? Both A and B",
     "Guess the player: Played for Atlético Madrid Liverpool Chelsea AC Milan Fernando Torres",
     "Which stadium is home to Real Sociedad? Anoeta (Reale Arena)",
     "Who is Spain's all-time leading goalscorer? David Villa",
@@ -2971,50 +2887,48 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Which stadium is home to Eintracht Frankfurt? Deutsche Bank Park",
     "Who is Argentina's all-time appearance leader? Lionel Messi",
     "Which national team is nicknamed \"The Reggae Boyz\"? Jamaica",
-    "Which defender became the first £50 million defender when moving from Benfica to Manchester City? Rúben Dias",
     "Guess the player: Played for Le Havre Arsenal Barcelona Thierry Henry",
     "Which stadium is home to Fenerbahçe? Şükrü Saracoğlu Stadium",
     "Who scored the most goals in Serie A history? Silvio Piola",
-    "Which club is nicknamed \"The Old Gold\"? Wolves",
+    "Which listed club is nicknamed \"The Old Gold\"? Wolves",
     "Which player moved from Southampton to Liverpool alongside Rickie Lambert in 2014? Adam Lallana",
     "Guess the player: Played for Boca Juniors Barcelona Villarreal Juan Román Riquelme",
     "Which stadium is home to Red Star Belgrade? Rajko Mitić Stadium",
-    "Who has the most appearances in La Liga history? Andoni Zubizarreta",
+    "Which listed player shares the record for the most La Liga appearances? Andoni Zubizarreta",
     "Which national team is nicknamed \"The Socceroos\"? Australia",
-    "Which player joined Chelsea from Leicester in 2023 for around £115 million? Moisés Caicedo",
+    "Which player joined Chelsea from Brighton in 2023 for a reported fee of around £115 million? Moisés Caicedo",
     "Guess the player: Played for Monaco Real Madrid Arsenal Thierry Henry",
     "Which stadium is home to Olympiacos? Karaiskakis Stadium",
     "Who scored the most goals in Premier League history? Alan Shearer",
-    "Which club is nicknamed \"The Tractor Boys\"? Ipswich Town",
+    "Which listed club is nicknamed \"The Tractor Boys\"? Ipswich Town",
     "Which player transferred from Benfica to Chelsea in January 2023? Enzo Fernández",
     "Guess the player: Played for PSG AC Milan LA Galaxy Zlatan Ibrahimović",
     "Which stadium is home to Club Brugge? Jan Breydel Stadium",
     "Who is Portugal's all-time appearance leader? Cristiano Ronaldo",
     "Which national team is nicknamed \"The Green Falcons\"? Saudi Arabia",
-    "Which listed player moved from Borussia Dortmund to Barcelona in 2022? None of the above",
     "Guess the player: Played for PSV Manchester United Real Madrid Ruud van Nistelrooy",
     "Which stadium is home to Anderlecht? Lotto Park",
     "Who scored the most goals in Bundesliga history? Gerd Müller",
-    "Which club is nicknamed \"The Addicks\"? Charlton Athletic",
+    "Which listed club is nicknamed \"The Addicks\"? Charlton Athletic",
     "Which player transferred from Aston Villa to Manchester City in 2021 for £100 million? Jack Grealish",
     "Guess the player: Played for Inter Milan Barcelona PSG Manchester United Zlatan Ibrahimović",
-    "Which stadium is home to Dynamo Kyiv? NSC Olimpiyskiy",
+    "Which stadium is traditionally associated with Dynamo Kyiv? NSC Olimpiyskiy",
     "Who is Italy's all-time appearance leader? Gianluigi Buffon",
     "Which national team is nicknamed \"The Blue Samurai\"? Japan",
     "Which listed player transferred from Ajax to Arsenal in 2023? Jurriën Timber",
     "Guess the player: Played for Sporting CP Barcelona Manchester United Luís Figo",
     "Which stadium is home to Flamengo? Maracanã",
-    "Which club is nicknamed \"The Railwaymen\"? Crewe Alexandra",
+    "Which listed club is nicknamed \"The Railwaymen\"? Crewe Alexandra",
     "Which player moved from Benfica to Liverpool in 2022? Darwin Núñez",
     "Guess the player: Played for Real Madrid Arsenal Sevilla José Antonio Reyes",
-    "Which stadium is home to Shakhtar Donetsk? Donbass Arena",
+    "Which stadium was Shakhtar Donetsk's home before the club left Donetsk? Donbass Arena",
     "Who has the most appearances in Serie A history? Gianluigi Buffon",
     "Which national team is nicknamed \"The Canaleros\"? Panama",
     "Which player transferred from Chelsea to Arsenal in 2019? David Luiz",
     "Guess the player: Played for Monaco PSG Manchester United Radamel Falcao",
     "Which stadium is home to Besiktas? Tüpraş Stadium (Vodafone Park)",
     "Who is France's all-time top goalscorer? Olivier Giroud",
-    "Which club is nicknamed \"The Chairboys\"? Wycombe Wanderers",
+    "Which listed club is nicknamed \"The Chairboys\"? Wycombe Wanderers",
     "Guess the player: Played for Ajax Juventus Inter Milan Real Madrid Won league titles in four countries Clarence Seedorf",
     "Which English club is known as \"The Red Devils\"? Manchester United",
     "Which country hosted the 2022 FIFA World Cup? Qatar",
@@ -3039,11 +2953,9 @@ const SUPPLIED_FOOTBALL_FACTS = [
     "Who scored the famous volley in the 2002 Champions League final? Zinedine Zidane",
     "Which club did Ronaldo Nazario join after leaving Barcelona in 1997? Inter Milan",
     "Which stadium does Liverpool play at? Anfield",
-    "Which stadium does AC Milan play at? the San Siro",
     "Which stadium does Borussia Dortmund play at? Signal Iduna Park",
     "Which stadium does Aston Villa play at? Villa Park",
     "Which stadium does Arsenal play at? the Emirates Stadium",
-    "Which stadium does Everton play at? Goodison Park",
     "Which stadium does Fulham play at? Craven Cottage",
     "Which stadium does Nottingham Forest play at? the City Ground",
     "Which stadium does Crystal Palace play at? Selhurst Park",
