@@ -9,6 +9,9 @@ const {
 const {
     EUROPEAN_TOP_SCORERS
 } = require("./europeanTopScorers");
+const {
+    ENGLISH_FIRST_DIVISION_TABLES
+} = require("./englishFirstDivisionTables");
 
 const KNOWLEDGE_COVERAGE = {
     targetStartYear: 1966,
@@ -679,7 +682,10 @@ const POSITION_FACTS = {
 };
 
 const LEAGUE_TABLES = {
-    england: PREMIER_LEAGUE_TABLES
+    england: {
+        ...ENGLISH_FIRST_DIVISION_TABLES,
+        ...PREMIER_LEAGUE_TABLES
+    }
 };
 
 const LEAGUE_AWARDS = {

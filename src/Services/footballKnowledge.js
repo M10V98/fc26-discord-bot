@@ -398,7 +398,13 @@ function competitionFromText(text) {
         };
     }
 
-    if (lower.includes("premier league") || lower.includes("english top flight") || lower.includes("england league")) {
+    if (
+        lower.includes("premier league") ||
+        lower.includes("english top flight") ||
+        lower.includes("england league") ||
+        lower.includes("football league first division") ||
+        lower.includes("english first division")
+    ) {
         return {
             type: "league",
             key: "england",
@@ -441,7 +447,13 @@ function competitionFromText(text) {
     return null;
 }
 
-function leagueLabel(leagueKey) {
+function leagueLabel(leagueKey, year = null) {
+    if (leagueKey === "england" && year) {
+        return Number(year) < 1993
+            ? "Football League First Division"
+            : "Premier League";
+    }
+
     return LEAGUES[leagueKey]?.label || leagueKey;
 }
 
@@ -477,6 +489,25 @@ function findMentionedTeam(text, table) {
     );
 }
 
+function findMentionedTeams(text, table) {
+    const normalizedText =
+        normalizeEntity(text);
+    const direct =
+        table.filter(team =>
+            normalizedText.includes(normalizeEntity(team))
+        );
+
+    if (direct.length >= 2) {
+        return direct;
+    }
+
+    return table.filter(team =>
+        teamAliasKeys(team).some(key =>
+            normalizedText.includes(key)
+        )
+    );
+}
+
 function getCandidateTables(text) {
     const item =
         competitionFromText(text);
@@ -505,7 +536,7 @@ function answerLeagueTableQuestion(text, year) {
     const lower =
         normalizeTopic(text);
 
-    if (!/\b(finish|finished|place|placed|position|table)\b/.test(lower)) {
+    if (!/\b(finish|finished|place|placed|position|table|higher|lower|above|below)\b/.test(lower)) {
         return null;
     }
 
@@ -520,12 +551,39 @@ function answerLeagueTableQuestion(text, year) {
             continue;
         }
 
+        const mentionedTeams =
+            findMentionedTeams(text, table);
+
+        if (
+            mentionedTeams.length >= 2 &&
+            /\b(higher|lower|above|below)\b/.test(lower)
+        ) {
+            const [first, second] =
+                mentionedTeams.slice(0, 2);
+            const firstPlace =
+                table.indexOf(first) + 1;
+            const secondPlace =
+                table.indexOf(second) + 1;
+            const asksHigher =
+                /\b(higher|above)\b/.test(lower);
+            const selected =
+                asksHigher
+                    ? firstPlace < secondPlace
+                        ? first
+                        : second
+                    : firstPlace > secondPlace
+                        ? first
+                        : second;
+
+            return `${selected} finished ${asksHigher ? "higher" : "lower"}: ${first} were ${ordinalLabel(firstPlace)} and ${second} were ${ordinalLabel(secondPlace)} in the ${leagueLabel(league.key, year)} in ${year}.`;
+        }
+
         if (ordinal && /\bwho\b/.test(lower)) {
             const team =
                 table[ordinal - 1];
 
             if (team) {
-                return `${team} finished ${ordinalLabel(ordinal)} in the ${leagueLabel(league.key)} in ${year}.`;
+                return `${team} finished ${ordinalLabel(ordinal)} in the ${leagueLabel(league.key, year)} in ${year}.`;
             }
         }
 
@@ -536,7 +594,7 @@ function answerLeagueTableQuestion(text, year) {
             const place =
                 table.indexOf(team) + 1;
 
-            return `${team} finished ${ordinalLabel(place)} in the ${leagueLabel(league.key)} in ${year}.`;
+            return `${team} finished ${ordinalLabel(place)} in the ${leagueLabel(league.key, year)} in ${year}.`;
         }
     }
 
@@ -857,7 +915,7 @@ function answerFootballKnowledge(text) {
 
 function isFootballKnowledgeQuestion(text) {
     return topicMatches(text, "") === false ||
-        /\b(world cup|fifa world cup|euros?|european championship|champions league|european cup|premier league|english top flight|la liga|serie a|bundesliga|ligue 1|ballon|d'or|dor|golden boot|top scorer|top goalscorer|torjagerkanone|golden ball|finished|finish|position|table|history|record|trophy|winner)\b/i
+        /\b(world cup|fifa world cup|euros?|european championship|champions league|european cup|premier league|english top flight|football league first division|english first division|la liga|serie a|bundesliga|ligue 1|ballon|d'or|dor|golden boot|top scorer|top goalscorer|torjagerkanone|golden ball|finished|finish|position|table|history|record|trophy|winner)\b/i
             .test(String(text || ""));
 }
 

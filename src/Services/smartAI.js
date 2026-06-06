@@ -1237,6 +1237,13 @@ async function answerSmartMessage(message) {
             return clubMatch;
         }
 
+        const footballKnowledge =
+            answerFootballKnowledge(content);
+
+        if (footballKnowledge) {
+            return footballKnowledge;
+        }
+
         const legacy =
             detectIntent(content) !== "unknown"
                 ? await answerQuestion(

@@ -31,6 +31,9 @@ const {
 const {
     SUPPLIED_FOOTBALL_TRIVIA
 } = require("../Services/suppliedFootballTrivia");
+const {
+    GENERATED_FOOTBALL_QUIZ_QUESTIONS
+} = require("../Services/generatedFootballQuiz");
 
 const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 20;
@@ -76,6 +79,7 @@ function deduplicateQuestions(questions) {
 const STATIC_QUESTIONS = deduplicateQuestions([
     ...CLUB_LORE_QUIZ_QUESTIONS,
     ...SUPPLIED_FOOTBALL_TRIVIA,
+    ...GENERATED_FOOTBALL_QUIZ_QUESTIONS,
     ["In Clubs data, what does pass success rate tell you better than raw completed passes?", ["How efficiently a player keeps possession when attempting distribution", "How many shots a player should have taken", "Whether a player was offside", "How many saves the goalkeeper made"], 0],
     ["What does a high expected assists profile usually suggest about a player?", ["They are creating valuable chances for teammates", "They are avoiding forward passes", "They are mostly making defensive clearances", "They are guaranteed to score next game"], 0],
     ["Why is average rating useful when judging a player beyond goals and assists?", ["It captures broader match influence across several actions", "It ignores defensive work completely", "It only counts penalties", "It replaces the need to watch games"], 0],
@@ -242,7 +246,7 @@ const STATIC_QUESTIONS = deduplicateQuestions([
     ["Which club won the Champions League in 2011 at Wembley?", ["Barcelona", "Manchester United", "Chelsea", "Bayern Munich"], 0]
 ]);
 
-function shuffleAnswers(question, answers, correctIndex) {
+function shuffleAnswers(question, answers, correctIndex, factKey = null) {
     const correctAnswer =
         String(answers?.[correctIndex] || "").trim();
     const unique =
@@ -271,7 +275,8 @@ function shuffleAnswers(question, answers, correctIndex) {
     return {
         question,
         answers: rows.map(row => row.answer),
-        correct: rows.findIndex(row => row.correct)
+        correct: rows.findIndex(row => row.correct),
+        factKey
     };
 }
 
@@ -298,7 +303,7 @@ function staticQuestion() {
             Math.floor(Math.random() * STATIC_QUESTIONS.length)
         ];
 
-    return shuffleAnswers(row[0], row[1], row[2]);
+    return shuffleAnswers(row[0], row[1], row[2], row[3]);
 }
 
 function historyQuestion() {
@@ -987,6 +992,10 @@ function createQuestionId() {
 }
 
 function questionKey(question) {
+    if (question?.factKey) {
+        return question.factKey;
+    }
+
     return String(question?.question || "")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, " ")
