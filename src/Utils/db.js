@@ -215,6 +215,18 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS quiz_question_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id TEXT,
+        question_key TEXT,
+        asked_at INTEGER
+    )
+    `,
+    `
+    CREATE INDEX IF NOT EXISTS idx_quiz_question_history_guild_id
+    ON quiz_question_history (guild_id, id DESC)
+    `,
+    `
     CREATE TABLE IF NOT EXISTS mod_infractions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         guild_id TEXT,

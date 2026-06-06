@@ -44,7 +44,6 @@ const QUIZ_WATCHDOG_INTERVAL_MS = 5000;
 const MIN_SPECIAL_HISTORY_SEASONS = 10;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
-const recentQuizQuestions = new Map();
 let quizWatchdog = null;
 
 const POSITION_QUIZ_CHOICES = {
@@ -294,28 +293,28 @@ function staticQuestion() {
             : null;
     };
 
-    if (roll < 0.08) {
+    if (roll < 0.02) {
         const position =
             positionQuestion();
 
         if (position) return position;
     }
 
-    if (roll < 0.38) {
+    if (roll < 0.32) {
         const history =
             historyQuestion();
 
         if (history) return history;
     }
 
-    if (roll < 0.58) {
+    if (roll < 0.52) {
         const lore =
             fromPool(CLUB_LORE_QUIZ_QUESTIONS);
 
         if (lore) return lore;
     }
 
-    if (roll < 0.68) {
+    if (roll < 0.62) {
         const supplied =
             fromPool(SUPPLIED_FOOTBALL_TRIVIA);
 
@@ -1071,9 +1070,9 @@ async function nextQuestion(guildId) {
 
         if (
             dynamic &&
-            !wasRecentlyAsked(guildId, dynamic)
+            !await wasRecentlyAsked(guildId, dynamic)
         ) {
-            rememberQuestion(guildId, dynamic);
+            await rememberQuestion(guildId, dynamic);
             return dynamic;
         }
 
@@ -1091,8 +1090,8 @@ async function nextQuestion(guildId) {
         fallback =
             fallback || candidate;
 
-        if (!wasRecentlyAsked(guildId, candidate)) {
-            rememberQuestion(guildId, candidate);
+        if (!await wasRecentlyAsked(guildId, candidate)) {
+            await rememberQuestion(guildId, candidate);
             return candidate;
         }
     }
@@ -1103,7 +1102,7 @@ async function nextQuestion(guildId) {
             .map(row => shuffleAnswers(row[0], row[1], row[2]))
             .find(Boolean);
 
-    rememberQuestion(guildId, safeFallback);
+    await rememberQuestion(guildId, safeFallback);
     return safeFallback;
 }
 
@@ -1120,7 +1119,7 @@ function questionKey(question) {
         .trim();
 }
 
-function wasRecentlyAsked(guildId, question) {
+async function wasRecentlyAsked(guildId, question) {
     const key =
         questionKey(question);
 
@@ -1128,11 +1127,31 @@ function wasRecentlyAsked(guildId, question) {
         return false;
     }
 
-    return (recentQuizQuestions.get(guildId) || [])
-        .includes(key);
+    const row =
+        await db.get(
+            `
+            SELECT 1
+            FROM (
+                SELECT question_key
+                FROM quiz_question_history
+                WHERE guild_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+            )
+            WHERE question_key = ?
+            LIMIT 1
+            `,
+            [
+                guildId,
+                RECENT_QUESTION_MEMORY,
+                key
+            ]
+        );
+
+    return Boolean(row);
 }
 
-function rememberQuestion(guildId, question) {
+async function rememberQuestion(guildId, question) {
     const key =
         questionKey(question);
 
@@ -1140,15 +1159,36 @@ function rememberQuestion(guildId, question) {
         return;
     }
 
-    const recent =
-        recentQuizQuestions.get(guildId) || [];
+    await db.run(
+        `
+        INSERT INTO quiz_question_history
+        (guild_id, question_key, asked_at)
+        VALUES (?, ?, ?)
+        `,
+        [
+            guildId,
+            key,
+            Date.now()
+        ]
+    );
 
-    recent.unshift(key);
-
-    recentQuizQuestions.set(
-        guildId,
-        [...new Set(recent)]
-            .slice(0, RECENT_QUESTION_MEMORY)
+    await db.run(
+        `
+        DELETE FROM quiz_question_history
+        WHERE guild_id = ?
+        AND id NOT IN (
+            SELECT id
+            FROM quiz_question_history
+            WHERE guild_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+        )
+        `,
+        [
+            guildId,
+            guildId,
+            RECENT_QUESTION_MEMORY
+        ]
     );
 }
 
