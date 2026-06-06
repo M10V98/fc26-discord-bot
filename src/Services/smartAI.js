@@ -1268,6 +1268,13 @@ async function answerSmartMessage(message) {
         return "Ball knowledge is reading the game properly: tactics, roles, decision-making, form, stats, and club lore. If you want the room tested, run `/quiz start`.";
     }
 
+    const trustedClubKnowledge =
+        answerClubKnowledge(content);
+
+    if (trustedClubKnowledge) {
+        return trustedClubKnowledge;
+    }
+
     if (decision.mode === "helpful" || decision.mode === "analysis") {
         const learnedKnowledge =
             await answerLearnedKnowledge(
@@ -1277,13 +1284,6 @@ async function answerSmartMessage(message) {
 
         if (learnedKnowledge) {
             return learnedKnowledge;
-        }
-
-        const clubKnowledge =
-            answerClubKnowledge(content);
-
-        if (clubKnowledge) {
-            return clubKnowledge;
         }
 
         const clubMatch =

@@ -140,40 +140,37 @@ function tableQuestions() {
                 ]);
             });
 
-            for (let first = 0; first < table.length; first++) {
-                for (let second = first + 1; second < table.length; second++) {
-                    const higher =
-                        table[first];
-                    const lower =
-                        table[second];
-                    const pair =
-                        [higher, lower];
-                    const neitherOptions = [
+            const first =
+                Number(year) % Math.max(table.length - 1, 1);
+            const second =
+                Math.min(
+                    first + 1 + (Number(year) % Math.max(table.length - first - 1, 1)),
+                    table.length - 1
+                );
+            const higher =
+                table[first];
+            const lower =
+                table[second];
+
+            if (higher && lower && higher !== lower) {
+                const asksHigher =
+                    Number(year) % 2 === 0;
+                const correct =
+                    asksHigher ? higher : lower;
+                const other =
+                    asksHigher ? lower : higher;
+
+                questions.push([
+                    `Which club finished ${asksHigher ? "higher" : "lower"} in the ${seasonLabel} in ${year}: ${higher} or ${lower}?`,
+                    [
+                        correct,
+                        other,
                         "They finished level",
                         "Neither club played in the league"
-                    ];
-
-                    questions.push([
-                        `Which club finished higher in the ${seasonLabel} in ${year}: ${higher} or ${lower}?`,
-                        [
-                            higher,
-                            lower,
-                            ...neitherOptions
-                        ],
-                        0,
-                        `higher:${leagueKey}:${year}:${higher}:${lower}`
-                    ]);
-                    questions.push([
-                        `Which club finished lower in the ${seasonLabel} in ${year}: ${pair.join(" or ")}?`,
-                        [
-                            lower,
-                            higher,
-                            ...neitherOptions
-                        ],
-                        0,
-                        `lower:${leagueKey}:${year}:${higher}:${lower}`
-                    ]);
-                }
+                    ],
+                    0,
+                    `${asksHigher ? "higher" : "lower"}:${leagueKey}:${year}:${higher}:${lower}`
+                ]);
             }
         }
     }

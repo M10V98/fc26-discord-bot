@@ -764,10 +764,136 @@ const EXTRA_LORE_QUIZ_QUESTIONS = [
     ["Which statement best summarises the betrayal storyline?", ["Lucas and Ryan attempted to recruit players to their reject club", "Lucas and Ryan were considered loyal heroes", "Cobra and H411ison left together", "Pigeon formed Boys FC"], 0]
 ];
 
+const VPC_SEASON_7_RESULTS = [
+    ["21 January 2026", "MidTierMandem", "1-1", "draw"],
+    ["21 January 2026", "VPC TNS", "0-1", "loss"],
+    ["21 January 2026", "Bald Ballers FC", "1-0", "win"],
+    ["28 January 2026", "GattusoBall", "2-2", "draw"],
+    ["28 January 2026", "Sids Neck FC", "4-0", "win"],
+    ["28 January 2026", "Athletico London", "3-2", "win"],
+    ["4 February 2026", "Astar Ballerz", "1-0", "win"],
+    ["4 February 2026", "Royal Arms", "0-3", "loss"],
+    ["4 February 2026", "LoveOfTheGame FC", "0-2", "loss"],
+    ["11 February 2026", "Gunshot FC", "1-3", "loss"],
+    ["11 February 2026", "DLF x CLF", "1-0", "win"],
+    ["11 February 2026", "Mamba Esports", "1-0", "win"],
+    ["18 February 2026", "Vincolo eSports", "1-0", "win"],
+    ["18 February 2026", "ChippyChips CF", "2-1", "win"],
+    ["18 February 2026", "Dusty Dynamos FC", "0-2", "loss"],
+    ["25 February 2026", "MidTierMandem", "1-0", "win"],
+    ["25 February 2026", "VPC TNS", "2-2", "draw"],
+    ["25 February 2026", "Bald Ballers FC", "1-0", "win"],
+    ["4 March 2026", "GattusoBall", "1-0", "win"],
+    ["4 March 2026", "Sids Neck FC", "1-2", "loss"],
+    ["4 March 2026", "Athletico London", "2-1", "win"],
+    ["11 March 2026", "Astar Ballerz", "2-2", "draw"],
+    ["11 March 2026", "Royal Arms", "3-3", "draw"],
+    ["11 March 2026", "LoveOfTheGame FC", "2-5", "loss"],
+    ["18 March 2026", "Gunshot FC", "2-2", "draw"],
+    ["18 March 2026", "DLF x CLF", "6-2", "win"],
+    ["18 March 2026", "Mamba Esports", "2-1", "win"],
+    ["25 March 2026", "Vincolo eSports", "1-0", "win"],
+    ["25 March 2026", "ChippyChips CF", "1-2", "loss"],
+    ["25 March 2026", "Dusty Dynamos FC", "5-2", "win"]
+];
+
+const VPC_SEASON_7_TABLE = [
+    ["Gunshot FC", 30, 21, 5, 4, 61, 21, 40, 67],
+    ["ChippyChips CF", 30, 21, 5, 4, 40, 13, 27, 67],
+    ["Dusty Dynamos", 30, 19, 6, 5, 43, 19, 24, 62],
+    ["Mamba Esports", 30, 17, 7, 6, 38, 25, 13, 57],
+    ["GattusoBall", 30, 17, 8, 5, 43, 27, 16, 56],
+    ["Bella Ciao FC", 30, 16, 8, 6, 50, 41, 9, 54],
+    ["LoveOfTheGame FC", 30, 17, 10, 3, 37, 32, 5, 54],
+    ["Royal Arms", 30, 15, 11, 4, 33, 26, 7, 49],
+    ["Sids Neck FC", 30, 14, 12, 4, 29, 30, -1, 46],
+    ["Astar Ballerz", 30, 11, 13, 6, 27, 27, 0, 39],
+    ["VPC TNS", 30, 9, 17, 4, 24, 36, -12, 31],
+    ["DLF x CLF", 30, 8, 18, 4, 26, 61, -35, 28],
+    ["Athletico London", 30, 7, 18, 5, 19, 45, -26, 26],
+    ["MidTierMandem", 30, 7, 20, 3, 15, 27, -12, 24],
+    ["Vincolo eSports", 30, 6, 20, 4, 14, 38, -24, 22],
+    ["Bald Ballers FC", 30, 0, 27, 3, 3, 34, -31, 3]
+];
+
+const VPC_SEASON_7_QUIZ_QUESTIONS = [
+    ["Where did Bella Ciao FC finish in VPC Season 7?", ["6th", "4th", "7th", "10th"], 0],
+    ["How many points did Bella Ciao FC earn in VPC Season 7?", ["54", "67", "57", "49"], 0],
+    ["What was Bella Ciao FC's VPC Season 7 league record?", ["16 wins, 8 losses and 6 draws", "16 wins, 6 losses and 8 draws", "17 wins, 8 losses and 5 draws", "15 wins, 8 losses and 7 draws"], 0],
+    ["How many goals did Bella Ciao FC score in VPC Season 7?", ["50", "41", "54", "61"], 0],
+    ["How many goals did Bella Ciao FC concede in VPC Season 7?", ["41", "50", "32", "27"], 0],
+    ["What was Bella Ciao FC's goal difference in VPC Season 7?", ["+9", "+5", "+13", "-1"], 0],
+    ["Which VPC Season 7 club finished on the same points as Bella Ciao FC?", ["LoveOfTheGame FC", "GattusoBall", "Royal Arms", "Mamba Esports"], 0],
+    ["Who won VPC Season 7?", ["Gunshot FC", "ChippyChips CF", "Dusty Dynamos", "Bella Ciao FC"], 0],
+    ["Which team did Bella Ciao FC beat 6-2 in VPC Season 7?", ["DLF x CLF", "Dusty Dynamos FC", "Sids Neck FC", "Mamba Esports"], 0],
+    ["Which team did Bella Ciao FC beat 5-2 in their final VPC Season 7 match?", ["Dusty Dynamos FC", "LoveOfTheGame FC", "Athletico London", "DLF x CLF"], 0],
+    ["Which team did Bella Ciao FC beat 4-0 in VPC Season 7?", ["Sids Neck FC", "Bald Ballers FC", "Vincolo eSports", "Astar Ballerz"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao FC beat twice by 1-0?", ["Bald Ballers FC", "MidTierMandem", "GattusoBall", "Astar Ballerz"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao FC beat twice, 1-0 and 2-1?", ["Mamba Esports", "ChippyChips CF", "VPC TNS", "Royal Arms"], 0],
+    ["Which VPC Season 7 opponent took six points from Bella Ciao FC?", ["LoveOfTheGame FC", "Gunshot FC", "Royal Arms", "Sids Neck FC"], 0],
+    ["What was Bella Ciao FC's VPC Season 7 result away to Royal Arms?", ["3-3 draw", "3-0 win", "3-0 loss", "2-2 draw"], 0],
+    ["What was Bella Ciao FC's VPC Season 7 result away to Gunshot FC?", ["2-2 draw", "3-1 win", "3-1 loss", "1-0 win"], 0],
+    ["What was Bella Ciao FC's VPC Season 7 result away to Sids Neck FC?", ["4-0 win", "2-1 win", "2-1 loss", "1-1 draw"], 0],
+    ["What was Bella Ciao FC's VPC Season 7 result at home to LoveOfTheGame FC?", ["2-5 loss", "5-2 win", "2-2 draw", "2-0 win"], 0],
+    ["What was Bella Ciao FC's final VPC Season 7 result?", ["5-2 win over Dusty Dynamos FC", "2-1 loss to ChippyChips CF", "6-2 win over DLF x CLF", "1-0 win over Vincolo eSports"], 0],
+    ["How many VPC Season 7 league matches did Bella Ciao FC play?", ["30", "28", "32", "34"], 0]
+];
+
+const CURRENT_ROSTER_QUIZ_QUESTIONS = [
+    ["In early 2026, which current roster player wore shirt number 69?", ["Gehad", "Connor", "M10", "Lynxsy"], 0],
+    ["In early 2026, which player's description was linked to Kanye's \"room full of winners\" tweet?", ["Sifer", "Pedri", "Connor", "DontGoToTheDark"], 0],
+    ["During the first recorded lineup of 2026, who was positioned directly behind Schnitzler?", ["OMT", "Ryan", "Astrea", "Up The Tigers"], 0],
+    ["In early 2026, which pairing consisted of two current main-position defenders?", ["Cobra and King", "King and Pedri", "Cobra and Gehad", "King and Connor"], 0],
+    ["In early 2026, which player could NOT be included in a midfield built entirely from CDMs?", ["Gehad", "Pedri", "H411ison", "Sifer"], 0],
+    ["In early 2026, which player had the highest shirt number on the website roster?", ["Nicole", "Pigeon", "Connor", "Gehad"], 0],
+    ["In early 2026, which player shared a nationality with Schnitzler?", ["Nicole", "Connor", "Pedri", "Lynxsy"], 0],
+    ["Which answer correctly completes the first recorded 2026 defence?", ["Gullit, Cobra, Lucas and Alan", "Cobra, King, Lucas and Alan", "Gullit, King, Lucas and Alan", "Cobra, Dadto4kids, Alan and Lucas"], 0],
+    ["In early 2026, which midfielder had the lowest shirt number?", ["Pedri", "Sifer", "H411ison", "M10"], 0],
+    ["Which player was NOT in the first recorded lineup of 2026?", ["Connor", "Ryan", "OMT", "Astrea"], 0],
+    ["In early 2026, what was Gehad's website description?", ["Interesting Playmaker", "Quick Feet", "Wide Creator", "Pass Sprayer"], 0],
+    ["In early 2026, which defender wore number 44?", ["Iced", "Cobra", "King", "Dadto4kids"], 0],
+    ["Which Bella Ciao player was both German and a goalkeeper in early 2026?", ["Nicole", "Pigeon", "Gehad", "Schnitzler"], 0],
+    ["In the first recorded lineup of 2026, which pair occupied the wide attacking roles?", ["Ryan and Iced Out", "Ryan and OMT", "OMT and Iced Out", "Astrea and Ryan"], 0],
+    ["Which answer contains only current website midfielders from early 2026?", ["Pedri, Gehad and Connor", "Pedri, King and Connor", "Gehad, Cobra and Connor", "Connor, Nicole and Pedri"], 0],
+    ["In early 2026, which player was described as \"Comes and goes, knows and grows\"?", ["Pigeon", "Nicole", "King", "Cobra"], 0],
+    ["In early 2026, which defender wore the smallest shirt number?", ["Dadto4kids", "Cobra", "King", "Iced"], 0],
+    ["Which player had the website description \"Wide Creator\" in early 2026?", ["Connor", "Lynxsy", "Gehad", "M10"], 0],
+    ["Which player was positioned closest to Ryan in the first recorded lineup of 2026?", ["OMT", "Iced Out", "Lucas", "Pigeon"], 0],
+    ["Which current roster player shared Gehad's nationality in early 2026?", ["Nicole", "Connor", "Lynxsy", "H411ison"], 0],
+    ["Which answer correctly lists both current website goalkeepers from early 2026?", ["Nicole and Pigeon", "Nicole and Emim", "Nicole and Schnitzler", "Pigeon and Christopher"], 0],
+    ["Which early-2026 player had the website description \"Gets the job done\"?", ["King", "Cobra", "Iced", "Dadto4kids"], 0],
+    ["Who does the nickname \"OurMightyCog\" refer to?", ["H411ison", "Pedri", "Sifer", "Big Snitch"], 0],
+    ["In early 2026, which midfielder had the highest shirt number?", ["Gehad", "Connor", "Lynxsy", "M10"], 0],
+    ["Which current early-2026 player was both a midfielder and German?", ["Gehad", "Connor", "Pedri", "H411ison"], 0],
+    ["Which player had the website description \"Technical Ball Carrier\" in early 2026?", ["Lynxsy", "Connor", "Pedri", "Gehad"], 0],
+    ["Who was the striker in the first recorded 2026 lineup?", ["Schnitzler", "Viking", "Apex", "Bean"], 0],
+    ["Which files and location appeared in a Bella Ciao newspaper soon after Jayden's death?", ["Penguin files and Little Polar Peak", "Epstein files and Little Saint James", "Pigeon files and Micro Cordian Land", "Apex files and Anger and Despair Land"], 0],
+    ["In early 2026, which player wore shirt number 77?", ["Connor", "Lynxsy", "M10", "Gehad"], 0],
+    ["Which player could play both LM and CDM according to the early-2026 website?", ["DontGoToTheDark", "Connor", "Pedri", "Gehad"], 0],
+    ["Which player had the website description \"Quick Feet\" in early 2026?", ["M10", "Gehad", "Connor", "Lynxsy"], 0],
+    ["Which pair played CDM in the first recorded lineup of 2026?", ["Astrea and Up The Tigers", "Dirk and Astrea", "Ryan and Astrea", "Schnitzler and Astrea"], 0],
+    ["In early 2026, which player wore shirt number 52?", ["DontGoToTheDark", "Pedri", "Sifer", "Connor"], 0],
+    ["Which players started directly behind OMT in the first recorded lineup of 2026?", ["Astrea and Up The Tigers", "Astrea and Ryan", "Up The Tigers and Ryan", "Ryan and Iced Out"], 0],
+    ["Which defender had the website description \"Defensive Leader\" in early 2026?", ["Cobra", "King", "Dadto4kids", "Iced"], 0],
+    ["Which player was NOT listed as a midfielder on the early-2026 website?", ["Apex", "Connor", "Gehad", "M10"], 0],
+    ["In early 2026, which player wore shirt number 8?", ["H411ison", "Pedri", "Sifer", "Gollum"], 0],
+    ["In early 2026, which player wore shirt number 4?", ["Pedri", "King", "M10", "Cobra"], 0],
+    ["Which current roster player was Dutch in early 2026?", ["DontGoToTheDark", "Connor", "Gehad", "Lynxsy"], 0],
+    ["Who said \"I was going to win it so I shot\"?", ["Cobra", "Craig", "Gehad", "H411ison"], 0],
+    ["Who said \"That was interesting\" after a disasterclass?", ["Gehad", "H411ison", "Craig", "Stealth"], 0],
+    ["Who sent the message \"We need to talk\"?", ["Magnus", "Lucas", "Ryan", "Connor"], 0],
+    ["Who was known as Viking?", ["Magnus", "Lucas", "Connor", "Pigeon"], 0],
+    ["Which player was recruited by Pigeon and praised for loyalty?", ["Cobra", "Ryan", "Lucas", "Connor"], 0],
+    ["Which incident involved somebody performing crosses so bad that the style was named after them?", ["Fyzo Cross", "Sebastian Slip", "Weeping Woods", "Ahhh I Gerri"], 0],
+    ["Which incident involved a young opponent repeatedly saying \"big bean\" while being battered?", ["Big Bean Incident", "What Tribe Incident", "Through Ball Incident", "Weeping Woods"], 0]
+];
+
 const CLUB_LORE_QUIZ_QUESTIONS = [
     ...BASE_QUIZ_QUESTIONS,
     ...CLUB_LORE_ITEMS.flatMap(item => item.quiz || []),
-    ...EXTRA_LORE_QUIZ_QUESTIONS
+    ...EXTRA_LORE_QUIZ_QUESTIONS,
+    ...VPC_SEASON_7_QUIZ_QUESTIONS,
+    ...CURRENT_ROSTER_QUIZ_QUESTIONS
 ];
 
 const STOPWORDS = new Set([
@@ -1069,6 +1195,106 @@ function getRelevantClubLore(question, limit = 3) {
         .map(candidate => candidate.item.answer);
 }
 
+function answerVPCSeason7Knowledge(question) {
+    const text =
+        normalize(question);
+
+    if (
+        !/\bvpc\b/.test(text) ||
+        !/\b(season 7|season seven|s7)\b/.test(text)
+    ) {
+        return null;
+    }
+
+    const formatTableRow = (row, index) => {
+        const [team, played, wins, losses, draws, scored, conceded, difference, points] =
+            row;
+        const signedDifference =
+            difference > 0 ? `+${difference}` : String(difference);
+
+        return `${index + 1}. ${team} - ${points} pts (${played}P, ${wins}W, ${draws}D, ${losses}L, ${scored}-${conceded}, GD ${signedDifference})`;
+    };
+    const clubKey = value =>
+        compact(
+            String(value || "")
+                .replace(/\b(?:fc|cf|esports)\b/gi, "")
+        );
+    const asksFullTable =
+        /\b(full|whole|complete|all|final)\b.*\b(table|standings)\b/.test(text) ||
+        /\b(table|standings)\b.*\b(full|whole|complete|all|final)\b/.test(text);
+
+    if (asksFullTable || /^(?:what|show|give|list).*\bvpc season 7 (?:table|standings)\b/.test(text)) {
+        return VPC_SEASON_7_TABLE
+            .map(formatTableRow)
+            .join("\n");
+    }
+
+    const positionMatch =
+        text.match(/\b(?:finished|finish|position|place|placed)\s+(\d{1,2})(?:st|nd|rd|th)?\b/);
+
+    if (positionMatch) {
+        const index =
+            Number(positionMatch[1]) - 1;
+        const row =
+            VPC_SEASON_7_TABLE[index];
+
+        return row
+            ? formatTableRow(row, index)
+            : null;
+    }
+
+    const tableRow =
+        VPC_SEASON_7_TABLE
+            .map((row, index) => ({
+                row,
+                index,
+                key: clubKey(row[0])
+            }))
+            .filter(candidate =>
+                candidate.key.length > 3 &&
+                compact(text).includes(candidate.key)
+            )
+            .sort((a, b) => b.key.length - a.key.length)[0];
+    const asksTableFact =
+        /\b(table|standings|finish|finished|position|place|points|pts|record|wins|losses|draws|goals|scored|conceded|goal difference|gd)\b/
+            .test(text);
+
+    if (tableRow && asksTableFact) {
+        return formatTableRow(tableRow.row, tableRow.index);
+    }
+
+    const opponent =
+        VPC_SEASON_7_RESULTS
+            .map(row => ({
+                name: row[1],
+                key: clubKey(row[1])
+            }))
+            .filter(candidate =>
+                candidate.key.length > 3 &&
+                compact(text).includes(candidate.key)
+            )
+            .sort((a, b) => b.key.length - a.key.length)[0];
+
+    if (opponent) {
+        const matches =
+            VPC_SEASON_7_RESULTS.filter(row =>
+                row[1] === opponent.name
+            );
+
+        return matches
+            .map(([date, name, score, outcome]) =>
+                `${date}: Bella Ciao FC ${score} ${name} (${outcome})`
+            )
+            .join("\n");
+    }
+
+    if (/\b(bella ciao|bella|our|we|us|season|record|summary|how did)\b/.test(text)) {
+        return "Bella Ciao FC finished 6th in VPC Season 7 with 54 points from 30 matches: 16 wins, 6 draws and 8 losses, scoring 50 and conceding 41 for a +9 goal difference.";
+    }
+
+    return null;
+}
+
 function answerClubQuizKnowledge(question) {
     const text =
         normalize(question)
@@ -1085,7 +1311,7 @@ function answerClubQuizKnowledge(question) {
     const numbers =
         text.match(/\b\d+(?:\/\d+)?\b/g) || [];
     const ranked =
-        BASE_QUIZ_QUESTIONS
+        CLUB_LORE_QUIZ_QUESTIONS
             .map(([quizQuestion, answers, correctIndex]) => {
                 const candidate =
                     normalize(quizQuestion);
@@ -1108,7 +1334,7 @@ function answerClubQuizKnowledge(question) {
                     numbersMatch:
                         !numbers.length ||
                         !candidateNumbers.length ||
-                        numbers.some(number =>
+                        numbers.every(number =>
                             candidateNumbers.includes(number)
                         )
                 };
@@ -1147,6 +1373,13 @@ function answerClubQuizKnowledge(question) {
 function answerClubKnowledge(question) {
     const text =
         normalize(question);
+    const vpcSeason7 =
+        answerVPCSeason7Knowledge(question);
+
+    if (vpcSeason7) {
+        return vpcSeason7;
+    }
+
     const quizAnswer =
         answerClubQuizKnowledge(question);
 
@@ -1202,6 +1435,8 @@ function isClubKnowledgeQuestion(question) {
 
 module.exports = {
     CLUB_LORE_QUIZ_QUESTIONS,
+    VPC_SEASON_7_RESULTS,
+    VPC_SEASON_7_TABLE,
     answerClubKnowledge,
     getRelevantClubLore,
     isPassiveClubKnowledgeQuestion,

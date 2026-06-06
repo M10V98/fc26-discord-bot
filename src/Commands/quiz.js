@@ -283,6 +283,14 @@ function shuffleAnswers(question, answers, correctIndex, factKey = null) {
 function staticQuestion() {
     const roll =
         Math.random();
+    const fromPool = pool => {
+        const row =
+            pool[Math.floor(Math.random() * pool.length)];
+
+        return row
+            ? shuffleAnswers(row[0], row[1], row[2], row[3])
+            : null;
+    };
 
     if (roll < 0.08) {
         const position =
@@ -291,19 +299,28 @@ function staticQuestion() {
         if (position) return position;
     }
 
-    if (roll < 0.62) {
+    if (roll < 0.38) {
         const history =
             historyQuestion();
 
         if (history) return history;
     }
 
-    const row =
-        STATIC_QUESTIONS[
-            Math.floor(Math.random() * STATIC_QUESTIONS.length)
-        ];
+    if (roll < 0.58) {
+        const lore =
+            fromPool(CLUB_LORE_QUIZ_QUESTIONS);
 
-    return shuffleAnswers(row[0], row[1], row[2], row[3]);
+        if (lore) return lore;
+    }
+
+    if (roll < 0.68) {
+        const supplied =
+            fromPool(SUPPLIED_FOOTBALL_TRIVIA);
+
+        if (supplied) return supplied;
+    }
+
+    return fromPool(STATIC_QUESTIONS);
 }
 
 function historyQuestion() {
