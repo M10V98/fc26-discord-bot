@@ -957,13 +957,105 @@ const CURRENT_ROSTER_QUIZ_QUESTIONS = [
     ["Which incident involved a young opponent repeatedly saying \"big bean\" while being battered?", ["Big Bean Incident", "What Tribe Incident", "Through Ball Incident", "Weeping Woods"], 0]
 ];
 
-const CLUB_LORE_QUIZ_QUESTIONS = [
+const EXPANDED_CLUB_QUIZ_QUESTIONS = [
+    ["How old was Gofish when he bought Bow City and renamed it Hella Bow?", ["24", "18", "35", "44"], 0],
+    ["Which club identity came directly before Bella Ciao?", ["Hella Bow", "Bow City", "Boys FC", "Into the Hole FC"], 0],
+    ["Which sequence correctly follows the club's historic identities?", ["Bow City, Hella Bow, Bella Ciao", "Hella Bow, Bow City, Bella Ciao", "Bella Ciao, Hella Bow, Bow City", "Bow City, Bella Ciao, Hella Bow"], 0],
+    ["What happened one year after Bow City was formed?", ["Caprice and Sniffler helped it reach the top division", "It was liquidated", "Gofish bought it", "It became Bella Ciao"], 0],
+    ["What were city funds diverted toward during the 1984 supporter violence?", ["Repairs", "A new stadium", "Player wages", "The Mexican laboratory"], 0],
+    ["Which two early Bow City figures retired after the club's liquidation?", ["Caprice and Sniffler", "Gofish and Hellash", "Bean and Gollum", "Jake and Coltan"], 0],
+    ["Who owned Hella Bow immediately before Hellash Xiao?", ["Gofish", "Pigeon", "Bellash", "Gary"], 0],
+    ["What links the names Bellash and Bella Ciao?", ["Bella Ciao was renamed out of Hellash Xiao's love for his son Bellash", "Bellash founded Bow City", "Bellash managed Boys FC", "Bellash designed the Mercedes Benz stadium"], 0],
+    ["Which event happened in the year after Bella Ciao's 2012 rebrand?", ["Gofish returned and Hellash Bow purchased the Mercedes Benz stadium", "Bow City was liquidated", "Boys FC rose to Bella Ciao's division", "Stealth registered the Esport team"], 0],
+    ["Which three people witnessed De Ridder's famous 2022 shot?", ["Eatmyshorts, Stelthsmokylake and H411ison", "Pigeon, Cobra and Ryan", "Gofish, Gary and Lucas", "Bean, Gollum and Schnitzler"], 0],
+    ["What role did Johny Sinns and Kanye West share in 2023?", ["Holding midfielders", "Goalkeepers", "Strikers", "Centre-backs"], 0],
+    ["Which 2023 loan superstar recorded 281 G/A in the summary?", ["Johny Sinns", "Kanye West", "Gollum", "Bean Alejandro"], 0],
+    ["Which 2023 loan superstar recorded 267 G/A in the summary?", ["Kanye West", "Johny Sinns", "Schnitzler", "Pigeon"], 0],
+    ["What connected Bean and Gollum to Bella Ciao's Mexican investment?", ["The laboratory funded and gave them to the club", "They purchased the laboratory", "They moved the investment to Madrid", "They managed its football team"], 0],
+    ["Which prime-era player was signed for 25,000,000?", ["Gollum", "Bean Alejandro", "Johny Sinns", "Schnitzler"], 0],
+    ["What milestone did prime Bella Ciao exceed in 2023-24?", ["More than 1000 games played", "More than 100 trophies", "More than 100 stadiums", "More than 100 managers"], 0],
+    ["Who ran Boys FC during their December 2023 rise?", ["Penguin and ButterBean", "Pigeon and Cobra", "Gofish and Gary", "Lucas and Ryan"], 0],
+    ["What did Boys FC supporters whisper after losing 3-0 to Bella Ciao?", ["The date of the next fixture", "The name of a new manager", "The score of the ATB final", "The location of the academy"], 0],
+    ["What happened immediately before the Jayden Syrett tragedy in the 2024 rematch?", ["Bean scored a last-minute winner", "Pigeon was demoted", "Gollum left for Scunthorpe", "Boys FC were banned"], 0],
+    ["Which player reacted to the Jayden incident by eating the Boys FC manager?", ["Gollum", "Bean Alejandro", "Shane Syrett", "Pigeon"], 0],
+    ["About how many league games accompanied Gollum's roughly 1100 assists?", ["800", "100", "1500", "25"], 0],
+    ["Which player left for the Fein factories of Scunthorpe?", ["Gollum", "Bean Alejandro", "Schnitzler", "Johny Sinns"], 0],
+    ["Which player left for Real Madrid academy with roughly 1500 goals?", ["Bean Alejandro", "Gollum", "Kanye West", "Cobra"], 0],
+    ["What were Boys FC limited to after being banned from major leagues?", ["Unofficial cameos", "Academy matches", "Only cup finals", "Only VPC matches"], 0],
+    ["Who trial-managed Bella Ciao through August going into 24/25?", ["Gary/Garry", "Pigeon", "Lucas Gaugue", "Gazz Bryant"], 0],
+    ["What happened to the Mexican investment during the dark 24/25 spell?", ["It moved out to Madrid", "It bought Boys FC", "It funded Little Polar Peak", "It purchased the Mercedes Benz stadium"], 0],
+    ["Which former failed academy player replaced Gollum?", ["Randy Cabbage", "Broyale", "Astrea", "Cobra"], 0],
+    ["What did Sean and Sollum persuade the owners to do?", ["Sign the real Bean and Gollum as wrestlers", "Bring back Boys FC", "Sell the Mercedes Benz stadium", "Rename Bella Ciao Bow City"], 0],
+    ["Which player was described as Sniffer Sebust/TCL's son?", ["Schnitzler", "Astrea", "Lucas Gaugue", "Bean Alejandro"], 0],
+    ["Which player came from Ark before later arriving with Schnitzler from FC Hoffenheim?", ["Astrea", "Ryan", "Cobra", "OMT"], 0],
+    ["What did Bella Ciao create during its end-of-2025 identity changes?", ["Its own brand and a new badge", "A new rival club", "A Mexican laboratory", "Little Polar Peak"], 0],
+    ["What did the 2025 merge agreement promise to preserve?", ["Bella Ciao's identity", "Boys FC's manager", "The Mexican investment", "Bow City's old squad"], 0],
+    ["Why could the merge incident's new owners not satisfy the fans?", ["They could not match Gofish's tactical genius", "They refused to sign a goalkeeper", "They sold the new badge", "They banned the academy"], 0],
+    ["Who remained as the only merged manager?", ["Lucas Gaugue", "Gofish", "Pigeon", "Gary"], 0],
+    ["Which partnership was viewed as a future contender among Bella Ciao's best?", ["Lucas Gaugue and Schnitzler", "Pigeon and Cobra", "Jake and Coltan", "Sean and Sollum"], 0],
+    ["Who occupied the full-back positions in the first official 2026 lineup?", ["Alan and Lucas", "Gullit and Cobra", "Astrea and Up the Tigers", "Ryan and Iced Out"], 0],
+    ["Who occupied the two CDM positions in the first official 2026 lineup?", ["Astrea and Up the Tigers", "Lucas and Alan", "Gullit and Cobra", "Ryan and OMT"], 0],
+    ["Which player was LAM in the first official 2026 lineup?", ["Iced Out", "Ryan", "OMT", "Astrea"], 0],
+    ["Which player was RAM in the first official 2026 lineup?", ["Ryan", "Iced Out", "OMT", "Schnitzler"], 0],
+    ["Before becoming manager, how did Pigeon contribute behind the scenes?", ["He helped with team sheets and back-room management", "He designed the new badge", "He ran the Mexican laboratory", "He bought the stadium"], 0],
+    ["Which role did Pigeon play while winning games during his rise to power?", ["Goalkeeper", "Striker", "Centre-back", "CAM"], 0],
+    ["Which player links the names Penguin and Pigeon?", ["The same 2026 drama figure", "Two different Boys FC managers", "Two Bella Ciao strikers", "Two Bow City founders"], 0],
+    ["Which Pigeon-linked incident involved repeatedly rushing out in goal?", ["The Breast incident", "The Craig through ball incident", "The Fyzo Cross incident", "The Sebastian Slip incident"], 0],
+    ["Which Pigeon-linked incident involved a claim that he deliberately let Bella Ciao win?", ["The CPL throw incident", "The Breast incident", "The What Tribe incident", "The merge incident"], 0],
+    ["What does the lore say was really behind Pigeon's CPL Chelsea performance?", ["He was playing badly and lagging", "He had been paid to throw", "He was protesting the badge", "He was playing striker"], 0],
+    ["What happened to Pigeon after the 2026 management drama?", ["He was demoted", "He bought Boys FC", "He became the club hero", "He joined Real Madrid academy"], 0],
+    ["Which group formed around Ryan, Ola, Cobra and Lucas after Pigeon became manager?", ["The Union of the Rejects", "The Mexican laboratory", "The Hella Bow academy", "The Penguin files"], 0],
+    ["Which two names did the Rejects' club use?", ["Into the Hole FC and Sainsbury's FC", "Bow City and Hella Bow", "Boys FC and VPC Millwall", "CPL Chelsea and VFL Newcastle"], 0],
+    ["What made Magnus a hero during the 2026 drama?", ["He helped expose the betrayal plot", "He became Boys FC manager", "He scored against VFL Newcastle", "He won the CPL Ballon d'Or"], 0],
+    ["What phrase did Magnus send Gofish at the peak of the drama?", ["We need to talk", "That was interesting", "What tribe?", "See you next week buddy"], 0],
+    ["Which pair messaged people to join a reject team?", ["Lucas Gauge and Ryan", "Pigeon and Cobra", "Stealth and Harrison", "Sean and Sollum"], 0],
+    ["Why was Gofish suspended for a year?", ["He criticised how the league handled the Jayden incident", "He formed the Union of the Rejects", "He threw against CPL Chelsea", "He failed a medical"], 0],
+    ["What were Stealth's and Harrison's former roles before registering the Esport team?", ["Youth team manager and physiotherapist", "Striker and goalkeeper", "Owner and director", "Scout and referee"], 0],
+    ["Which two figures shared the 2025 club POTY honour?", ["Sniffer Subust/TCL and Maurice Caprice", "Pigeon and Cobra", "Bean and Gollum", "Schnitzler and Astrea"], 0],
+    ["What squad-building principle did Bella Ciao target in 2026?", ["Merit over favouritism", "Favouritism over form", "Only historic players", "Only new signings"], 0],
+    ["Which two final defeats shaped the 2026 comeback message?", ["The VFL Playoff final and ATB final", "The World Cup final and CPL final", "The VPC final and Boys FC final", "The Hella Bow final and PSL final"], 0],
+    ["Which incident involved a late equaliser after an intercepted central through ball?", ["Craig Through Ball", "Breast", "CPL Throw", "Fyzo Cross"], 0],
+    ["Which person suggested TP-Link alongside Dirk?", ["Bloke", "Pigeon", "Craig", "Magnus"], 0],
+    ["What unusual weight is attached to Gollum in the lore?", ["221 pounds", "144 pounds", "25 pounds", "800 pounds"], 0],
+    ["Which location is associated with the Penguin files?", ["Little Polar Peak", "Scunthorpe", "Mercedes Benz stadium", "Real Madrid academy"], 0],
+    ["Which VPC Season 7 match was Bella Ciao's highest-scoring league win?", ["6-2 against DLF x CLF", "5-2 against Dusty Dynamos FC", "4-0 against Sids Neck FC", "3-2 against Athletico London"], 0],
+    ["Which VPC Season 7 opponent beat Bella Ciao 1-0 before drawing the return match 2-2?", ["VPC TNS", "MidTierMandem", "Royal Arms", "Gunshot FC"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao beat 1-0 in both meetings?", ["Bald Ballers FC", "Vincolo eSports", "GattusoBall", "MidTierMandem"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao beat 4-0 before losing the return fixture 2-1?", ["Sids Neck FC", "Dusty Dynamos FC", "LoveOfTheGame FC", "ChippyChips CF"], 0],
+    ["Which VPC Season 7 opponent beat Bella Ciao 3-0 before a 3-3 return draw?", ["Royal Arms", "Gunshot FC", "LoveOfTheGame FC", "VPC Millwall"], 0],
+    ["Which VPC Season 7 opponent drew 2-2 with Bella Ciao before losing the return match 1-0?", ["GattusoBall", "Astar Ballerz", "VPC TNS", "Gunshot FC"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao beat in both meetings by 1-0 and 2-1?", ["VPC Millwall", "ChippyChips CF", "Athletico London", "DLF x CLF"], 0],
+    ["How many VPC Season 7 clubs finished on 54 points?", ["Two", "One", "Three", "Four"], 0],
+    ["Which club shared 54 points with Bella Ciao in VPC Season 7?", ["LoveOfTheGame FC", "GattusoBall", "Royal Arms", "VPC TNS"], 0]
+];
+
+function deduplicateQuizQuestions(questions) {
+    const seen = new Set();
+
+    return questions.filter(question => {
+        const key =
+            String(question?.[0] || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim();
+
+        if (!key || seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
+}
+
+const CLUB_LORE_QUIZ_QUESTIONS = deduplicateQuizQuestions([
     ...BASE_QUIZ_QUESTIONS,
     ...CLUB_LORE_ITEMS.flatMap(item => item.quiz || []),
     ...EXTRA_LORE_QUIZ_QUESTIONS,
     ...VPC_SEASON_7_QUIZ_QUESTIONS,
-    ...CURRENT_ROSTER_QUIZ_QUESTIONS
-];
+    ...CURRENT_ROSTER_QUIZ_QUESTIONS,
+    ...EXPANDED_CLUB_QUIZ_QUESTIONS
+]);
 
 const STOPWORDS = new Set([
     "a",
@@ -1456,10 +1548,6 @@ function answerClubKnowledge(question) {
     const vpcSeason7 =
         answerVPCSeason7Knowledge(question);
 
-    if (vpcSeason7) {
-        return vpcSeason7;
-    }
-
     if (isPersonIdentityQuestion(text)) {
         const person =
             answerPersonLore(text);
@@ -1486,6 +1574,10 @@ function answerClubKnowledge(question) {
 
     if (quizAnswer) {
         return quizAnswer;
+    }
+
+    if (vpcSeason7) {
+        return vpcSeason7;
     }
 
     if (
