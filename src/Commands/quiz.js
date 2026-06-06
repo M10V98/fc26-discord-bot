@@ -32,7 +32,8 @@ const {
 const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 20;
 const RESULTS_PAGE_SIZE = 15;
-const RECENT_QUESTION_MEMORY = 30;
+const RECENT_QUESTION_MEMORY = 60;
+const MIN_SPECIAL_HISTORY_SEASONS = 10;
 const quizTimers = new Map();
 const advancingQuestions = new Set();
 const recentQuizQuestions = new Map();
@@ -219,10 +220,23 @@ const STATIC_QUESTIONS = [
 ];
 
 function shuffleAnswers(question, answers, correctIndex) {
+    const correctAnswer =
+        String(answers?.[correctIndex] || "").trim();
+    const unique =
+        uniqueAnswers(
+            correctAnswer,
+            (answers || [])
+                .filter((_, index) => index !== correctIndex)
+        );
+
+    if (!question || !unique) {
+        return null;
+    }
+
     const rows =
-        answers.map((answer, index) => ({
+        unique.map((answer, index) => ({
             answer,
-            correct: index === correctIndex
+            correct: index === 0
         }));
 
     for (let index = rows.length - 1; index > 0; index--) {
@@ -249,7 +263,7 @@ function staticQuestion() {
         if (position) return position;
     }
 
-    if (roll < 0.5) {
+    if (roll < 0.62) {
         const history =
             historyQuestion();
 
@@ -272,7 +286,7 @@ function historyQuestion() {
         ]
             .sort(() => Math.random() - 0.5);
 
-    if (Math.random() < 0.55) {
+    if (Math.random() < 0.15) {
         for (const build of special) {
             const question =
                 build();
@@ -283,39 +297,56 @@ function historyQuestion() {
         }
     }
 
-    const pools = [
-        ...Object.values(AWARDS),
-        ...Object.values(COMPETITIONS),
-        ...Object.values(LEAGUES)
-    ];
-    const selectedPool =
-        pools[Math.floor(Math.random() * pools.length)];
+    const pools =
+        [
+            ...Object.values(AWARDS),
+            ...Object.values(COMPETITIONS),
+            ...Object.values(LEAGUES)
+        ]
+            .filter(pool =>
+                Object.keys(pool.winners || {}).length >= 4
+            );
     const entries =
-        Object.entries(selectedPool.winners || {});
+        pools.flatMap(pool =>
+            Object.entries(pool.winners || {})
+                .map(([year, winner]) => ({
+                    pool,
+                    year,
+                    winner
+                }))
+        );
 
     if (entries.length < 4) {
         return null;
     }
 
-    const [year, winner] =
+    const selected =
         entries[Math.floor(Math.random() * entries.length)];
-    const distractors =
-        entries
-            .map(([, value]) => value)
-            .filter(value => value !== winner)
+    const sameCompetition =
+        Object.values(selected.pool.winners || {})
+            .filter(value => value !== selected.winner)
             .sort(() => Math.random() - 0.5)
-            .slice(0, 3);
+    const allWinners =
+        entries
+            .map(row => row.winner)
+            .filter(value => value !== selected.winner)
+            .sort(() => Math.random() - 0.5);
+    const answers =
+        uniqueAnswers(
+            selected.winner,
+            [
+                ...sameCompetition,
+                ...allWinners
+            ]
+        );
 
-    if (distractors.length < 3) {
+    if (!answers) {
         return null;
     }
 
     return shuffleAnswers(
-        `Who won the ${selectedPool.label} in ${year}?`,
-        [
-            winner,
-            ...distractors
-        ],
+        `Who won the ${selected.pool.label} in ${selected.year}?`,
+        answers,
         0
     ) ||
     special
@@ -353,12 +384,15 @@ function leagueTableQuestion() {
     const leagueEntries =
         Object.entries(LEAGUE_TABLES || {})
             .flatMap(([leagueKey, seasons]) =>
-                Object.entries(seasons || {})
+                Object.keys(seasons || {}).length >=
+                    MIN_SPECIAL_HISTORY_SEASONS
+                    ? Object.entries(seasons || {})
                     .map(([year, table]) => ({
                         leagueKey,
                         year,
                         table
                     }))
+                    : []
             )
             .filter(row =>
                 Array.isArray(row.table) &&
@@ -415,7 +449,7 @@ function leagueAwardQuestion() {
                 row.award?.winners?.length
             );
 
-    if (!entries.length) {
+    if (entries.length < MIN_SPECIAL_HISTORY_SEASONS) {
         return null;
     }
 
@@ -870,7 +904,7 @@ async function dynamicQuestion(guildId) {
 async function nextQuestion(guildId) {
     let fallback = null;
 
-    if (Math.random() < 0.45) {
+    if (Math.random() < 0.2) {
         const dynamic =
             await dynamicQuestion(guildId);
 
@@ -889,6 +923,10 @@ async function nextQuestion(guildId) {
         const candidate =
             staticQuestion();
 
+        if (!candidate) {
+            continue;
+        }
+
         fallback =
             fallback || candidate;
 
@@ -898,8 +936,14 @@ async function nextQuestion(guildId) {
         }
     }
 
-    rememberQuestion(guildId, fallback);
-    return fallback;
+    const safeFallback =
+        fallback ||
+        STATIC_QUESTIONS
+            .map(row => shuffleAnswers(row[0], row[1], row[2]))
+            .find(Boolean);
+
+    rememberQuestion(guildId, safeFallback);
+    return safeFallback;
 }
 
 function createQuestionId() {
