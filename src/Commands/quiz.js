@@ -1827,6 +1827,21 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
     try {
         const current =
             JSON.parse(session.current_question_json || "{}");
+        const answerCount =
+            await getCurrentQuestionAnswerCount(session);
+
+        if (
+            reason === "time" &&
+            answerCount === 0
+        ) {
+            await stopQuizForNoAnswers(
+                client,
+                session,
+                current
+            );
+            return;
+        }
+
         const next =
             await nextQuestion(
                 session.guild_id,
