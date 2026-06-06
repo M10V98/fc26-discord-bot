@@ -6,8 +6,13 @@ const {
     LEAGUES,
     POSITION_FACTS
 } = require("./footballHistoryData");
+const {
+    SUPPLIED_FOOTBALL_FACTS,
+    SUPPLIED_FOOTBALL_TRIVIA
+} = require("./suppliedFootballTrivia");
 
 const FOOTBALL_FACTS = [
+    ...SUPPLIED_FOOTBALL_FACTS,
     "Uruguay won the first men's FIFA World Cup in 1930.",
     "Brazil have won the most men's FIFA World Cups.",
     "Miroslav Klose is the all-time leading scorer in men's FIFA World Cup history.",
@@ -185,6 +190,82 @@ function normalizeTopic(text) {
         .replace(/[^a-z0-9\s]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function normalizeKnowledgeText(text) {
+    return normalizeTopic(text)
+        .replace(/\bground\b/g, "stadium")
+        .replace(/\bvenue\b/g, "stadium")
+        .replace(/\bucl\b/g, "champions league")
+        .replace(/\bstaged\b/g, "hosted")
+        .replace(/\bheld\b/g, "hosted")
+        .replace(/\bnetted\b/g, "scored")
+        .replace(/\bgot both goals\b/g, "scored both goals")
+        .replace(/\bgoalscorer\b/g, "scorer")
+        .replace(/\brecord scorer\b/g, "top scorer")
+        .replace(/\bgoals record\b/g, "top scorer")
+        .replace(/\bteam\b/g, "club")
+        .replace(/\bside\b/g, "club")
+        .replace(/\bcalled\b/g, "known")
+        .replace(/\benglish\b/g, "england")
+        .replace(/\bplays home matches\b/g, "plays")
+        .replace(/\bhome ground\b/g, "stadium")
+        .replace(/\bhome venue\b/g, "stadium")
+        .replace(/\bscored more (.*?) goals than anyone else\b/g, "$1 top scorer")
+        .replace(/\brecord goalscorer\b/g, "top scorer")
+        .replace(/\bmost goals\b/g, "top scorer")
+        .replace(/\bscored more goals than anyone else\b/g, "top scorer")
+        .replace(/\bmore goals than anyone else\b/g, "top scorer")
+        .replace(/\bleading scorer\b/g, "top scorer")
+        .replace(/\ball time\b/g, "record")
+        .replace(/\bmaximum\b/g, "most")
+        .replace(/\bnationality\b/g, "country")
+        .replace(/\bfrom which country\b/g, "country");
+}
+
+function knowledgeIntent(text) {
+    const lower =
+        normalizeKnowledgeText(text);
+    const intents = [];
+    const add = intent =>
+        intents.push(intent);
+
+    if (/\bstadium\b|\bplays at\b|\bplays\b.*\bhome\b/.test(lower)) add("stadium");
+    if (/\bwhere\b|\bwhich stadium\b/.test(lower)) add("asks-location");
+    if (/\bwhich club\b/.test(lower)) add("asks-club");
+    if (/\bnickname\b|\bknown as\b/.test(lower)) add("nickname");
+    if (/\btransfer|\bjoin|\bjoined|\bmoved|\bleave|\bleft\b/.test(lower)) add("transfer");
+    if (/\bcountry|\bnation|\binternationally\b/.test(lower)) add("country");
+    if (/\btop scorer|\bscored the most|\bgoals record\b/.test(lower)) add("scorer");
+    if (/\bappearances|\bcaps\b/.test(lower)) add("appearances");
+    if (/\bassists\b/.test(lower)) add("assists");
+    if (/\bclean sheets\b/.test(lower)) add("clean-sheets");
+    if (/\bhosted\b/.test(lower)) add("host");
+    if (/\bwon|\bwinner|\bchampion|\btitle\b/.test(lower)) add("winner");
+    if (/\bhow many|\bnumber|\bdistance|\blength|\bwidth|\bradius|\bdiameter|\bcircumference\b/.test(lower)) add("quantity");
+    if (/\bmanager|\bmanaged\b/.test(lower)) add("manager");
+    if (/\bguess the player|\bplayed for\b/.test(lower)) add("career");
+
+    return [...new Set(intents)];
+}
+
+function knowledgeDomains(text) {
+    const lower =
+        normalizeKnowledgeText(text);
+    const domains = [];
+    const add = domain =>
+        domains.push(domain);
+
+    if (lower.includes("premier league")) add("premier-league");
+    if (lower.includes("champions league") || lower.includes("european cup")) add("champions-league");
+    if (lower.includes("world cup")) add("world-cup");
+    if (/\beuro\b|european championship/.test(lower)) add("euros");
+    if (lower.includes("la liga")) add("la-liga");
+    if (lower.includes("serie a")) add("serie-a");
+    if (lower.includes("bundesliga")) add("bundesliga");
+    if (lower.includes("ligue 1")) add("ligue-1");
+
+    return domains;
 }
 
 function normalizeEntity(text) {
@@ -524,7 +605,12 @@ function answerStructuredHistory(text) {
         return leagueAwardAnswer;
     }
 
-    if (item && year) {
+    const lower =
+        normalizeTopic(text);
+    const asksForWinner =
+        /\b(win|won|winner|champion|title|lift|lifted|who was)\b/.test(lower);
+
+    if (item && year && asksForWinner) {
         const winner =
             item.data?.winners?.[year];
 
@@ -535,8 +621,6 @@ function answerStructuredHistory(text) {
         return `I do not have a stored ${item.data.label} winner for ${year} yet.`;
     }
 
-    const lower =
-        normalizeTopic(text);
     const positionKey =
         Object.keys(POSITION_FACTS)
             .find(key =>
@@ -580,10 +664,14 @@ function topicMatches(text, fact) {
 }
 
 function getRelevantFootballKnowledge(text, limit = 6) {
+    const normalized =
+        normalizeKnowledgeText(text);
     const tokens =
-        tokenize(text);
+        tokenize(normalized);
     const years =
         extractYears(text);
+    const intents =
+        knowledgeIntent(text);
 
     if (!tokens.length) {
         return [];
@@ -593,6 +681,13 @@ function getRelevantFootballKnowledge(text, limit = 6) {
         .filter(fact =>
             topicMatches(text, fact) &&
             (
+                !intents.length ||
+                !knowledgeIntent(fact).length ||
+                intents.some(intent =>
+                    knowledgeIntent(fact).includes(intent)
+                )
+            ) &&
+            (
                 !years.length ||
                 years.some(year => fact.includes(year))
             )
@@ -601,6 +696,9 @@ function getRelevantFootballKnowledge(text, limit = 6) {
             fact,
             score:
                 scoreFact(tokens, fact) +
+                intents.filter(intent =>
+                    knowledgeIntent(fact).includes(intent)
+                ).length * 3 +
                 years.reduce(
                     (score, year) =>
                         fact.includes(year)
@@ -615,7 +713,127 @@ function getRelevantFootballKnowledge(text, limit = 6) {
         .map(row => row.fact);
 }
 
+function findSuppliedFootballAnswer(text) {
+    const normalizedQuestion =
+        normalizeKnowledgeText(text);
+    const tokens =
+        tokenize(normalizedQuestion);
+    const queryYears =
+        extractYears(text);
+    const queryIntents =
+        knowledgeIntent(text);
+    const queryDomains =
+        knowledgeDomains(text);
+    const ranked =
+        SUPPLIED_FOOTBALL_TRIVIA
+        .map(([question, answers, correctIndex]) => {
+            const questionYears =
+                extractYears(question);
+            const normalizedCandidate =
+                normalizeKnowledgeText(question);
+            const candidateIntents =
+                knowledgeIntent(question);
+            const candidateDomains =
+                knowledgeDomains(question);
+            const candidateTokens =
+                new Set(tokenize(normalizedCandidate));
+            const matchedTokens =
+                tokens.filter(token =>
+                    candidateTokens.has(token)
+                );
+            const intentMatches =
+                queryIntents.filter(intent =>
+                    candidateIntents.includes(intent)
+                ).length;
+            const intentConflict =
+                queryIntents.length &&
+                candidateIntents.length &&
+                (
+                    intentMatches === 0 ||
+                    (
+                        queryIntents.includes("asks-location") &&
+                        candidateIntents.includes("asks-club")
+                    ) ||
+                    (
+                        queryIntents.includes("asks-club") &&
+                        candidateIntents.includes("asks-location")
+                    )
+                );
+            const coverage =
+                tokens.length
+                    ? matchedTokens.length / tokens.length
+                    : 0;
+
+            return {
+                answer: answers[correctIndex],
+                exact:
+                    normalizedCandidate === normalizedQuestion,
+                score:
+                    matchedTokens.length +
+                    (intentMatches * 3) +
+                    (coverage * 4) +
+                    (questionYears.length && queryYears.length ? 4 : 0) -
+                    (intentConflict ? 5 : 0),
+                question:
+                    normalizedCandidate,
+                coverage,
+                intentConflict,
+                domainConflict:
+                    queryDomains.length &&
+                    candidateDomains.length &&
+                    !queryDomains.some(domain =>
+                        candidateDomains.includes(domain)
+                    ),
+                yearsMatch:
+                    !queryYears.length ||
+                    !questionYears.length ||
+                    queryYears.some(year =>
+                        questionYears.includes(year)
+                    )
+            };
+        })
+        .filter(row =>
+            row.yearsMatch &&
+            !row.intentConflict &&
+            !row.domainConflict &&
+            (
+                row.exact ||
+                row.coverage >= 0.62
+            )
+        )
+        .sort((a, b) =>
+            Number(b.exact) - Number(a.exact) ||
+            b.score - a.score
+        );
+    const best =
+        ranked[0];
+    const second =
+        ranked[1];
+
+    if (
+        !best ||
+        (
+            !best.exact &&
+            second &&
+            best.answer !== second.answer &&
+            best.coverage < 0.8 &&
+            best.score - second.score < 0.75
+        )
+    ) {
+        return null;
+    }
+
+    return best;
+}
+
 function answerFootballKnowledge(text) {
+    const supplied =
+        findSuppliedFootballAnswer(text);
+
+    if (supplied?.exact) {
+        return supplied.answer;
+    }
+
     const structured =
         answerStructuredHistory(text);
 
@@ -623,8 +841,12 @@ function answerFootballKnowledge(text) {
         return structured;
     }
 
+    if (supplied) {
+        return supplied.answer;
+    }
+
     const facts =
-        getRelevantFootballKnowledge(text, 3);
+        getRelevantFootballKnowledge(text, 1);
 
     if (!facts.length) {
         return null;

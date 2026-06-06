@@ -792,6 +792,7 @@ const STOPWORDS = new Set([
     "is",
     "it",
     "of",
+    "our",
     "on",
     "or",
     "tell",
@@ -814,6 +815,7 @@ const STOPWORDS = new Set([
 function normalize(value) {
     return String(value || "")
         .toLowerCase()
+        .replace(/([a-z])['’]s\b/g, "$1")
         .replace(/[’‘]/g, "'")
         .replace(/&/g, " and ")
         .replace(/[^a-z0-9'+/\s-]/g, " ")
@@ -1067,9 +1069,90 @@ function getRelevantClubLore(question, limit = 3) {
         .map(candidate => candidate.item.answer);
 }
 
+function answerClubQuizKnowledge(question) {
+    const text =
+        normalize(question)
+            .replace(/\bbeans\b/g, "bean")
+            .replace(/\bgollums\b/g, "gollum")
+            .replace(/\bshirt number\b/g, "number")
+            .replace(/\bseven\b/g, "7")
+            .replace(/\bsigniture\b/g, "signature")
+            .replace(/\bmean\b/g, "stand for")
+            .replace(/\bretire\b/g, "retirement")
+            .replace(/\b2023\/24\b/g, "23/24");
+    const tokens =
+        tokenize(text);
+    const numbers =
+        text.match(/\b\d+(?:\/\d+)?\b/g) || [];
+    const ranked =
+        BASE_QUIZ_QUESTIONS
+            .map(([quizQuestion, answers, correctIndex]) => {
+                const candidate =
+                    normalize(quizQuestion);
+                const candidateTokens =
+                    new Set(tokenize(candidate));
+                const candidateNumbers =
+                    candidate.match(/\b\d+(?:\/\d+)?\b/g) || [];
+                const matched =
+                    tokens.filter(token =>
+                        candidateTokens.has(token)
+                    ).length;
+
+                return {
+                    answer: answers[correctIndex],
+                    coverage:
+                        tokens.length
+                            ? matched / tokens.length
+                            : 0,
+                    exact: candidate === text,
+                    numbersMatch:
+                        !numbers.length ||
+                        !candidateNumbers.length ||
+                        numbers.some(number =>
+                            candidateNumbers.includes(number)
+                        )
+                };
+            })
+            .filter(row =>
+                row.numbersMatch &&
+                (
+                    row.exact ||
+                    row.coverage >= 0.7
+                )
+            )
+            .sort((a, b) =>
+                Number(b.exact) - Number(a.exact) ||
+                b.coverage - a.coverage
+            );
+    const best =
+        ranked[0];
+    const second =
+        ranked[1];
+
+    if (
+        !best ||
+        (
+            !best.exact &&
+            second &&
+            best.answer !== second.answer &&
+            best.coverage - second.coverage < 0.15
+        )
+    ) {
+        return null;
+    }
+
+    return best.answer;
+}
+
 function answerClubKnowledge(question) {
     const text =
         normalize(question);
+    const quizAnswer =
+        answerClubQuizKnowledge(question);
+
+    if (quizAnswer) {
+        return quizAnswer;
+    }
 
     if (startsWithPersonCue(text)) {
         const person =

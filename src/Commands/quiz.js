@@ -28,6 +28,9 @@ const {
 const {
     CLUB_LORE_QUIZ_QUESTIONS
 } = require("../Services/clubKnowledge");
+const {
+    SUPPLIED_FOOTBALL_TRIVIA
+} = require("../Services/suppliedFootballTrivia");
 
 const QUIZ_XP = 1;
 const TIME_LIMIT_SECONDS = 20;
@@ -51,8 +54,28 @@ const POSITION_QUIZ_CHOICES = {
     "false nine": "Starts high, drops into midfield, pulls defenders out, and opens space for runners."
 };
 
-const STATIC_QUESTIONS = [
+function deduplicateQuestions(questions) {
+    const seen = new Set();
+
+    return questions.filter(question => {
+        const key =
+            String(question?.[0] || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim();
+
+        if (!key || seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
+}
+
+const STATIC_QUESTIONS = deduplicateQuestions([
     ...CLUB_LORE_QUIZ_QUESTIONS,
+    ...SUPPLIED_FOOTBALL_TRIVIA,
     ["In Clubs data, what does pass success rate tell you better than raw completed passes?", ["How efficiently a player keeps possession when attempting distribution", "How many shots a player should have taken", "Whether a player was offside", "How many saves the goalkeeper made"], 0],
     ["What does a high expected assists profile usually suggest about a player?", ["They are creating valuable chances for teammates", "They are avoiding forward passes", "They are mostly making defensive clearances", "They are guaranteed to score next game"], 0],
     ["Why is average rating useful when judging a player beyond goals and assists?", ["It captures broader match influence across several actions", "It ignores defensive work completely", "It only counts penalties", "It replaces the need to watch games"], 0],
@@ -217,7 +240,7 @@ const STATIC_QUESTIONS = [
     ["Which manager led Barcelona to the 2009 sextuple?", ["Pep Guardiola", "Frank Rijkaard", "Luis Enrique", "Johan Cruyff"], 0],
     ["Which player scored Barcelona's second goal in the 2009 Champions League final?", ["Lionel Messi", "Samuel Eto'o", "Xavi", "Andres Iniesta"], 0],
     ["Which club won the Champions League in 2011 at Wembley?", ["Barcelona", "Manchester United", "Chelsea", "Bayern Munich"], 0]
-];
+]);
 
 function shuffleAnswers(question, answers, correctIndex) {
     const correctAnswer =
