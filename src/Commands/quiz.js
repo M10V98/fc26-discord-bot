@@ -1287,8 +1287,7 @@ async function recordAttempt(guildId, userId, correct) {
 }
 
 async function getActiveQuiz(guildId) {
-    const session =
-        await db.get(
+    return db.get(
         `
         SELECT *
         FROM quiz_sessions
@@ -1298,28 +1297,6 @@ async function getActiveQuiz(guildId) {
         `,
         [guildId]
     );
-
-    if (
-        session &&
-        !quizTimers.has(session.session_id)
-    ) {
-        await db.run(
-            `
-            UPDATE quiz_sessions
-            SET active = 0,
-                updated_at = ?
-            WHERE session_id = ?
-            `,
-            [
-                Date.now(),
-                session.session_id
-            ]
-        );
-
-        return null;
-    }
-
-    return session;
 }
 
 async function getEligibleAnswerCount(guild) {
@@ -1730,7 +1707,12 @@ async function advanceQuiz(client, sessionId, expectedQuestionId, reason = "time
     }
 }
 
-function scheduleQuizAdvance(client, sessionId, expectedQuestionId) {
+function scheduleQuizAdvance(
+    client,
+    sessionId,
+    expectedQuestionId,
+    delayMs = TIME_LIMIT_SECONDS * 1000
+) {
     clearQuizTimer(sessionId);
 
     const timer =
@@ -1743,9 +1725,48 @@ function scheduleQuizAdvance(client, sessionId, expectedQuestionId) {
             ).catch(err =>
                 console.error("quiz advance error:", err)
             );
-        }, TIME_LIMIT_SECONDS * 1000);
+        }, Math.max(0, delayMs));
 
     quizTimers.set(sessionId, timer);
+}
+
+async function restoreActiveQuizzes(client) {
+    const sessions =
+        await db.all(
+            `
+            SELECT *
+            FROM quiz_sessions
+            WHERE active = 1
+            `
+        );
+
+    for (const session of sessions) {
+        const elapsed =
+            Date.now() - Number(session.updated_at || 0);
+        const remaining =
+            (TIME_LIMIT_SECONDS * 1000) - elapsed;
+
+        if (remaining <= 0) {
+            await advanceQuiz(
+                client,
+                session.session_id,
+                session.current_question_id,
+                "time"
+            );
+            continue;
+        }
+
+        scheduleQuizAdvance(
+            client,
+            session.session_id,
+            session.current_question_id,
+            remaining
+        );
+    }
+
+    if (sessions.length) {
+        console.log(`Restored ${sessions.length} active quiz session(s).`);
+    }
 }
 
 function startQuizWatchdog(client) {
@@ -1882,6 +1903,7 @@ module.exports = {
     },
 
     startQuizWatchdog,
+    restoreActiveQuizzes,
 
     async handleAnswer(interaction) {
         const [, sessionId, clickedQuestionId, answerRaw] =

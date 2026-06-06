@@ -90,15 +90,6 @@ client.once(
         console.log(`Logged in as ${readyClient.user.tag}`);
 
         await db.init();
-        await db.run(
-            `
-            UPDATE quiz_sessions
-            SET active = 0,
-                updated_at = ?
-            WHERE active = 1
-            `,
-            [Date.now()]
-        );
 
         try {
             const linkedClubs =
@@ -121,6 +112,9 @@ client.once(
 
         startAutoStatsSync();
         startScheduleSessionCleanup(readyClient);
+        await client.commands
+            .get("quiz")
+            ?.restoreActiveQuizzes?.(readyClient);
         client.commands
             .get("quiz")
             ?.startQuizWatchdog?.(readyClient);
