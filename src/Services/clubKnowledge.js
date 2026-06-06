@@ -528,6 +528,42 @@ const CLUB_LORE_ITEMS = [
             ["Who said \"that was interesting\"?", ["Gehad", "Olats", "Schnitzler", "Jake"], 0],
             ["Who was \"gussy or glendick\" asked to?", ["Fyzo", "Cobra", "Craig", "Bean"], 0]
         ]
+    },
+    {
+        aliases: [["fyzo"], ["50 jobs 0 hours", "50 jobs", "working", "docks", "mcdonalds", "gym", "pool", "sauna"]],
+        answer: "The Fyzo 50 Jobs 0 Hours incident is the running joke that Fyzo is always available despite claiming he has been working, is at the docks, works somewhere new, or has found a gym with a pool and sauna for £5.",
+        quiz: [
+            ["Fyzo joins the call and claims he's been busy working. Which would be MOST believable according to Bella Ciao history?", ["All of the above", "He's just finished a shift at the docks of Birmingham", "He's just finished a shift at McDonald's", "He's just finished a shift somewhere else he's never mentioned before"], 0],
+            ["According to Bella Ciao lore, which claim would fit perfectly into the Fyzo 50 Jobs 0 Hours incident?", ["All of the above", "I've been working", "I'm at the docks", "I've got a gym with a pool and sauna for £5"], 0]
+        ]
+    },
+    {
+        aliases: [["fyzo"], ["nightclub", "bird got smacked", "my bird just got smacked", "what tribe"], ["h411ison", "harrison"]],
+        answer: "In the nightclub exchange, Fyzo said \"my bird just got smacked outside the nightclub\" and H411ison replied \"what tribe?\".",
+        quiz: [
+            ["Complete the exchange: Fyzo said \"My bird just got smacked outside the nightclub.\" What did H411ison reply?", ["What tribe?", "That was interesting", "Stealth didn't get in", "We need to talk"], 0]
+        ]
+    },
+    {
+        aliases: [["fyzo"], ["fyzo cross", "cross incident", "crossing ability", "dangerous to watch"]],
+        answer: "The Fyzo Cross incident was created because Fyzo's crossing ability became dangerous to watch.",
+        quiz: [
+            ["Which incident was created purely because Fyzo's crossing ability became dangerous to watch?", ["Fyzo Cross Incident", "Breast Incident", "More Ping Than Points Incident", "Sebastian Slip Incident"], 0]
+        ]
+    },
+    {
+        aliases: [["fyzo"], ["gussy or glendick", "gussy", "glendick"], ["not answering", "refused to answer"]],
+        answer: "When Fyzo was asked \"Gussy or Glendick?\", he refused to choose and replied \"I'm not answering that.\"",
+        quiz: [
+            ["When asked \"Gussy or Glendick?\", what did Fyzo choose?", ["Refused to answer", "Picked Gussy", "Picked Glendick", "Left the call"], 0]
+        ]
+    },
+    {
+        aliases: [["fyzo"], ["incidents", "incident list"], ["fyzo cross", "what tribe", "50 jobs 0 hours"]],
+        answer: "The incidents directly tied to Fyzo are Fyzo Cross, What Tribe, and Fyzo 50 Jobs 0 Hours.",
+        quiz: [
+            ["Which combination contains ONLY incidents directly tied to Fyzo?", ["Fyzo Cross, What Tribe, Fyzo 50 Jobs 0 Hours", "What Is Schnitzel Doing, Fyzo Cross, What Tribe", "Breast Incident, Fyzo Cross, What Tribe", "Craig Through Ball, What Tribe, Fyzo 50 Jobs 0 Hours"], 0]
+        ]
     }
 ];
 
@@ -1380,6 +1416,18 @@ function answerClubKnowledge(question) {
         return vpcSeason7;
     }
 
+    if (
+        /\b(tell me about|explain|describe|what is|story behind)\b/.test(text) &&
+        /\b(fyzo|gussy|glendick|what tribe|50 jobs|nightclub|docks|sauna)\b/.test(text)
+    ) {
+        const facts =
+            getRelevantClubLore(text, 1);
+
+        if (facts.length) {
+            return facts.join("\n");
+        }
+    }
+
     const quizAnswer =
         answerClubQuizKnowledge(question);
 
@@ -1396,20 +1444,23 @@ function answerClubKnowledge(question) {
         }
     }
 
-    const overview =
-        answerHistoryOverview(text);
-
-    if (overview) {
-        return overview;
-    }
-
-    if (hasSpecificFactCue(text)) {
+    if (
+        hasSpecificFactCue(text) ||
+        /\b(fyzo|gussy|glendick|what tribe|50 jobs|nightclub|docks|sauna)\b/.test(text)
+    ) {
         const facts =
             getRelevantClubLore(text, 1);
 
         if (facts.length) {
             return facts.join("\n");
         }
+    }
+
+    const overview =
+        answerHistoryOverview(text);
+
+    if (overview) {
+        return overview;
     }
 
     const person =
