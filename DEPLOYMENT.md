@@ -25,6 +25,7 @@ AI_REPLY_COOLDOWN_MS=600000
 WORLD_CUP_SUPABASE_URL=https://pagoqdpzbxpckhpqjoif.supabase.co
 WORLD_CUP_SUPABASE_ANON_KEY=your_public_supabase_anon_key
 WORLD_CUP_TOURNAMENT_SLUG=world-cup-2026
+AUTOMODE_CHECK_INTERVAL_MS=120000
 ```
 
 For persistent SQLite storage, add a Railway volume and set:

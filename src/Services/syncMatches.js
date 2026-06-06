@@ -37,8 +37,8 @@ const syncingGuilds = new Set();
 
 const CHECK_INTERVAL_MS =
     Math.max(
-        10 * 1000,
-        Number(process.env.AUTOMODE_CHECK_INTERVAL_MS || 15 * 1000)
+        30 * 1000,
+        Number(process.env.AUTOMODE_CHECK_INTERVAL_MS || 2 * 60 * 1000)
     );
 const SYNC_FETCH_COUNT =
     Math.max(
@@ -50,6 +50,8 @@ const INACTIVITY_LIMIT_MS =
         45 * 60 * 1000,
         Number(process.env.AUTOMODE_INACTIVITY_LIMIT_MS || 90 * 60 * 1000)
     );
+const DIAGNOSTIC_INTERVAL_MS =
+    10 * 60 * 1000;
 
 function buildStopButtonRow(guildId) {
 
@@ -299,7 +301,13 @@ async function syncGuild(guildId, channel, options = {}) {
                 {
                     forceRefresh: true,
                     limit: 1,
-                    maxResultCount: SYNC_FETCH_COUNT
+                    maxResultCount: SYNC_FETCH_COUNT,
+                    onFetchError: (matchType, err) => {
+                        console.error(
+                            `AutoMode ${matchType} fetch failed for guild ${guildId}:`,
+                            err?.message || err
+                        );
+                    }
                 }
             );
 
@@ -337,6 +345,21 @@ async function syncGuild(guildId, channel, options = {}) {
             latestMatchId !== lastPostedMatchId;
 
         if (!shouldPost) {
+            const active =
+                activeGuilds.get(guildId);
+
+            if (
+                active &&
+                now - Number(active.lastDiagnosticAt || 0) >=
+                    DIAGNOSTIC_INTERVAL_MS
+            ) {
+                active.lastDiagnosticAt = now;
+
+                console.log(
+                    `AutoMode waiting for EA for guild ${guildId}: latest remains ${latestMatchId} (${latestMatch.matchType || "unknown"}, ${latestMatch.timestamp || "no timestamp"})`
+                );
+            }
+
             return {
                 status: "not_new",
                 matchId: latestMatchId
@@ -455,7 +478,8 @@ function startAutoMode(
         guildId,
         {
             interval,
-            channelId: channel.id
+            channelId: channel.id,
+            lastDiagnosticAt: Date.now()
         }
     );
 

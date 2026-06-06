@@ -259,10 +259,22 @@ async function getRecentMatches(clubId, options = {}) {
         maxResultCount
     };
 
+    const fetchType = async matchType => {
+        try {
+            return await getMatches(
+                clubId,
+                matchType,
+                fetchOpts
+            );
+        } catch (err) {
+            options.onFetchError?.(matchType, err);
+            return [];
+        }
+    };
     const [league, playoff, friendly] = await Promise.all([
-        getMatches(clubId, "leagueMatch", fetchOpts).catch(() => []),
-        getMatches(clubId, "playoffMatch", fetchOpts).catch(() => []),
-        getMatches(clubId, "friendlyMatch", fetchOpts).catch(() => [])
+        fetchType("leagueMatch"),
+        fetchType("playoffMatch"),
+        fetchType("friendlyMatch")
     ]);
 
     const tag = arr => Array.isArray(arr) ? arr : [];
