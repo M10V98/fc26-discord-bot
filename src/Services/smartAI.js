@@ -1019,6 +1019,7 @@ async function classifyWithOpenAI(message, memory, ruleDecision) {
             .test(message.content || "");
 
     if (
+        !ruleDecision.shouldReply &&
         !situation.direct &&
         !situation.botCue &&
         !ambiguousConversationCandidate

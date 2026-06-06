@@ -193,8 +193,9 @@ function interpretationPrompt() {
         "Distinguish direct speech from people merely discussing the bot.",
         "Detect implied meaning, jokes, teasing, rhetorical questions, sarcasm, mixed emotions, and complex requests.",
         "Do not treat the word 'bot' alone as proof that the bot is addressed.",
-        "Be conservative: ordinary human conversation, emotional conversations between people, planning, and unclear messages should stay silent.",
+        "Be conservative: emotional conversations between people, planning, conflict, and unclear messages should stay silent.",
         "A direct bot question or request may receive a reply. A useful unaddressed football fact question may receive a reply only with very high confidence.",
+        "The ruleDecision may occasionally preselect suitable ambient football chat or group banter. In that case, allow it only when joining in would feel natural, harmless, and relevant.",
         "Return JSON only.",
         `audience must be one of: ${AUDIENCES.join(", ")}`,
         `speechAct must be one of: ${SPEECH_ACTS.join(", ")}`,
@@ -297,6 +298,31 @@ function applyInterpretationGate(ruleDecision, interpretation) {
         ].includes(interpretation.primaryIntent) &&
         !situation.planning &&
         !situation.longStatement;
+    const safeAmbientReply =
+        ruleDecision.shouldReply &&
+        ["banter", "helpful"].includes(ruleDecision.mode) &&
+        ["group", "channel", "unclear"].includes(
+            interpretation.audience
+        ) &&
+        [
+            "football_banter",
+            "social_banter",
+            "share_information",
+            "joke"
+        ].includes(interpretation.primaryIntent) &&
+        [
+            "joke",
+            "teasing",
+            "reaction",
+            "opinion",
+            "information"
+        ].includes(interpretation.speechAct) &&
+        interpretation.confidence >= 0.84 &&
+        interpretation.hostility < 0.45 &&
+        !interpretation.needsEmpathy &&
+        !interpretation.needsDeescalation &&
+        !situation.planning &&
+        !situation.longStatement;
     const threshold =
         directToBot
             ? 0.68
@@ -305,10 +331,15 @@ function applyInterpretationGate(ruleDecision, interpretation) {
                 : 1;
     const shouldReply =
         interpretation.shouldReply &&
-        interpretation.confidence >= threshold &&
         (
-            directToBot ||
-            usefulPassiveQuestion
+            (
+                interpretation.confidence >= threshold &&
+                (
+                    directToBot ||
+                    usefulPassiveQuestion
+                )
+            ) ||
+            safeAmbientReply
         );
     const replaceableRuleIntents =
         new Set([

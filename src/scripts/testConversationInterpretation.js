@@ -112,6 +112,48 @@ assert.equal(
 
 assert.equal(
     applyInterpretationGate(
+        {
+            ...rule(),
+            shouldReply: true,
+            mode: "banter",
+            intent: "football_banter"
+        },
+        interpretation({
+            audience: "group",
+            speechAct: "joke",
+            primaryIntent: "football_banter",
+            socialContext: "friendly_banter",
+            responseStyle: "playful_banter",
+            mode: "banter",
+            confidence: 0.9
+        })
+    ).shouldReply,
+    true,
+    "Safe ambient football banter selected by the occasional reply rule should be allowed."
+);
+
+assert.equal(
+    applyInterpretationGate(
+        {
+            ...rule(),
+            shouldReply: true,
+            mode: "banter",
+            intent: "football_banter"
+        },
+        interpretation({
+            audience: "group",
+            speechAct: "teasing",
+            primaryIntent: "football_banter",
+            hostility: 0.8,
+            confidence: 0.95
+        })
+    ).shouldReply,
+    false,
+    "Hostile ambient conversation should remain silent."
+);
+
+assert.equal(
+    applyInterpretationGate(
         rule("news_lookup"),
         interpretation()
     ).intent,
