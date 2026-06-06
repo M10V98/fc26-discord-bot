@@ -19,6 +19,13 @@ const BASE_QUIZ_QUESTIONS = [
 
 const CLUB_LORE_ITEMS = [
     {
+        aliases: [["vpc millwall", "mamba esports"], ["season 7", "season 8", "name", "renamed", "replaced"]],
+        answer: "VPC Millwall is the correct identity for the club in VPC Season 7. After they were replaced in Season 8, the name changed to Mamba Esports.",
+        quiz: [
+            ["Which VPC Season 7 club later changed its name to Mamba Esports after being replaced in Season 8?", ["VPC Millwall", "VPC TNS", "MidTierMandem", "Royal Arms"], 0]
+        ]
+    },
+    {
         aliases: [["gollum"], ["born", "birth"], ["1440"]],
         answer: "Gollum was born in 1440.",
         quiz: [
@@ -812,7 +819,7 @@ const VPC_SEASON_7_RESULTS = [
     ["4 February 2026", "LoveOfTheGame FC", "0-2", "loss"],
     ["11 February 2026", "Gunshot FC", "1-3", "loss"],
     ["11 February 2026", "DLF x CLF", "1-0", "win"],
-    ["11 February 2026", "Mamba Esports", "1-0", "win"],
+    ["11 February 2026", "VPC Millwall", "1-0", "win"],
     ["18 February 2026", "Vincolo eSports", "1-0", "win"],
     ["18 February 2026", "ChippyChips CF", "2-1", "win"],
     ["18 February 2026", "Dusty Dynamos FC", "0-2", "loss"],
@@ -827,7 +834,7 @@ const VPC_SEASON_7_RESULTS = [
     ["11 March 2026", "LoveOfTheGame FC", "2-5", "loss"],
     ["18 March 2026", "Gunshot FC", "2-2", "draw"],
     ["18 March 2026", "DLF x CLF", "6-2", "win"],
-    ["18 March 2026", "Mamba Esports", "2-1", "win"],
+    ["18 March 2026", "VPC Millwall", "2-1", "win"],
     ["25 March 2026", "Vincolo eSports", "1-0", "win"],
     ["25 March 2026", "ChippyChips CF", "1-2", "loss"],
     ["25 March 2026", "Dusty Dynamos FC", "5-2", "win"]
@@ -837,7 +844,7 @@ const VPC_SEASON_7_TABLE = [
     ["Gunshot FC", 30, 21, 5, 4, 61, 21, 40, 67],
     ["ChippyChips CF", 30, 21, 5, 4, 40, 13, 27, 67],
     ["Dusty Dynamos", 30, 19, 6, 5, 43, 19, 24, 62],
-    ["Mamba Esports", 30, 17, 7, 6, 38, 25, 13, 57],
+    ["VPC Millwall", 30, 17, 7, 6, 38, 25, 13, 57],
     ["GattusoBall", 30, 17, 8, 5, 43, 27, 16, 56],
     ["Bella Ciao FC", 30, 16, 8, 6, 50, 41, 9, 54],
     ["LoveOfTheGame FC", 30, 17, 10, 3, 37, 32, 5, 54],
@@ -859,13 +866,13 @@ const VPC_SEASON_7_QUIZ_QUESTIONS = [
     ["How many goals did Bella Ciao FC score in VPC Season 7?", ["50", "41", "54", "61"], 0],
     ["How many goals did Bella Ciao FC concede in VPC Season 7?", ["41", "50", "32", "27"], 0],
     ["What was Bella Ciao FC's goal difference in VPC Season 7?", ["+9", "+5", "+13", "-1"], 0],
-    ["Which VPC Season 7 club finished on the same points as Bella Ciao FC?", ["LoveOfTheGame FC", "GattusoBall", "Royal Arms", "Mamba Esports"], 0],
+    ["Which VPC Season 7 club finished on the same points as Bella Ciao FC?", ["LoveOfTheGame FC", "GattusoBall", "Royal Arms", "VPC Millwall"], 0],
     ["Who won VPC Season 7?", ["Gunshot FC", "ChippyChips CF", "Dusty Dynamos", "Bella Ciao FC"], 0],
-    ["Which team did Bella Ciao FC beat 6-2 in VPC Season 7?", ["DLF x CLF", "Dusty Dynamos FC", "Sids Neck FC", "Mamba Esports"], 0],
+    ["Which team did Bella Ciao FC beat 6-2 in VPC Season 7?", ["DLF x CLF", "Dusty Dynamos FC", "Sids Neck FC", "VPC Millwall"], 0],
     ["Which team did Bella Ciao FC beat 5-2 in their final VPC Season 7 match?", ["Dusty Dynamos FC", "LoveOfTheGame FC", "Athletico London", "DLF x CLF"], 0],
     ["Which team did Bella Ciao FC beat 4-0 in VPC Season 7?", ["Sids Neck FC", "Bald Ballers FC", "Vincolo eSports", "Astar Ballerz"], 0],
     ["Which VPC Season 7 opponent did Bella Ciao FC beat twice by 1-0?", ["Bald Ballers FC", "MidTierMandem", "GattusoBall", "Astar Ballerz"], 0],
-    ["Which VPC Season 7 opponent did Bella Ciao FC beat twice, 1-0 and 2-1?", ["Mamba Esports", "ChippyChips CF", "VPC TNS", "Royal Arms"], 0],
+    ["Which VPC Season 7 opponent did Bella Ciao FC beat twice, 1-0 and 2-1?", ["VPC Millwall", "ChippyChips CF", "VPC TNS", "Royal Arms"], 0],
     ["Which VPC Season 7 opponent took six points from Bella Ciao FC?", ["LoveOfTheGame FC", "Gunshot FC", "Royal Arms", "Sids Neck FC"], 0],
     ["What was Bella Ciao FC's VPC Season 7 result away to Royal Arms?", ["3-3 draw", "3-0 win", "3-0 loss", "2-2 draw"], 0],
     ["What was Bella Ciao FC's VPC Season 7 result away to Gunshot FC?", ["2-2 draw", "3-1 win", "3-1 loss", "1-0 win"], 0],
@@ -1234,6 +1241,8 @@ function getRelevantClubLore(question, limit = 3) {
 function answerVPCSeason7Knowledge(question) {
     const text =
         normalize(question);
+    const lookupText =
+        text.replace(/\bmamba esports\b/g, "vpc millwall");
 
     if (
         !/\bvpc\b/.test(text) ||
@@ -1288,7 +1297,7 @@ function answerVPCSeason7Knowledge(question) {
             }))
             .filter(candidate =>
                 candidate.key.length > 3 &&
-                compact(text).includes(candidate.key)
+                compact(lookupText).includes(candidate.key)
             )
             .sort((a, b) => b.key.length - a.key.length)[0];
     const asksTableFact =
@@ -1307,7 +1316,7 @@ function answerVPCSeason7Knowledge(question) {
             }))
             .filter(candidate =>
                 candidate.key.length > 3 &&
-                compact(text).includes(candidate.key)
+                compact(lookupText).includes(candidate.key)
             )
             .sort((a, b) => b.key.length - a.key.length)[0];
 
