@@ -247,28 +247,68 @@ async function recommendLineup(guild, session, formation) {
         });
     }
 
-    const selected = [];
-    const used = new Set();
-    for (const [position, x, y] of FORMATIONS[formation] || FORMATIONS["4-2-3-1"]) {
-        const choice =
-    candidates
-        .filter(player => !used.has(player.userId))
-        .map(player => {
-            const exactPosition =
-                player.positions.includes(position);
+  const formationSlots =
+    FORMATIONS[formation] || FORMATIONS["4-2-3-1"];
 
-            return {
-                ...player,
-                score:
-                    playerScore(player.stat.recent, position) * 0.7 +
-                    playerScore(player.stat.all, position) * 0.3 +
-                    (exactPosition ? 100 : 0)
-            };
-        })
-        .sort((a, b) => b.score - a.score)[0] || null;
-        if (choice) used.add(choice.userId);
-        selected.push({ position, x, y, player: choice });
-    }
+const priorityOrder = [
+    "ST",
+    "CAM",
+    "LW",
+    "RW",
+    "LM",
+    "RM",
+    "CM",
+    "CDM",
+    "LWB",
+    "RWB",
+    "LB",
+    "RB",
+    "CB",
+    "GK"
+];
+
+const slotsByPriority =
+    formationSlots
+        .map((slot, index) => ({ slot, index }))
+        .sort((a, b) =>
+            priorityOrder.indexOf(a.slot[0]) -
+            priorityOrder.indexOf(b.slot[0])
+        );
+
+const selected =
+    Array(formationSlots.length);
+
+const used = new Set();
+
+for (const { slot, index } of slotsByPriority) {
+    const [position, x, y] = slot;
+
+    const choice =
+        candidates
+            .filter(player => !used.has(player.userId))
+            .map(player => {
+                const exactPosition =
+                    player.positions.includes(position);
+
+                return {
+                    ...player,
+                    score:
+                        playerScore(player.stat.recent, position) * 0.7 +
+                        playerScore(player.stat.all, position) * 0.3 +
+                        (exactPosition ? 100 : 0)
+                };
+            })
+            .sort((a, b) => b.score - a.score)[0] || null;
+
+    if (choice) used.add(choice.userId);
+
+    selected[index] = {
+        position,
+        x,
+        y,
+        player: choice
+    };
+}
 
     return {
         selected,
