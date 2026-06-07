@@ -329,7 +329,7 @@ if (isAdminClaimMenu) {
                     VALUES (?, ?, ?, ?)
                     `,
                     [
-                        interaction.user.id,
+                        targetDiscordId,
                         interaction.guild.id,
                         playerId || null,
                         playerName
