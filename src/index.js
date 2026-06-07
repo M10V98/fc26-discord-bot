@@ -223,14 +223,37 @@ client.on(
                     return;
                 }
 
-                if (interaction.customId !== "claim_player") {
-                    return;
-                }
+                const isClaimMenu =
+    interaction.customId === "claim_player";
+
+const isAdminClaimMenu =
+    interaction.customId.startsWith("adminclaim_player:");
+
+if (!isClaimMenu && !isAdminClaimMenu) {
+    return;
+}
 
                 await interaction.deferReply({
                     ephemeral: true
                 });
+let targetDiscordId =
+    interaction.user.id;
 
+if (isAdminClaimMenu) {
+
+    if (
+        !interaction.memberPermissions?.has(
+            PermissionFlagsBits.Administrator
+        )
+    ) {
+        return interaction.editReply(
+            "Only administrators can manually link players."
+        );
+    }
+
+    targetDiscordId =
+        interaction.customId.split(":")[1];
+}
                 const rawValue =
                     interaction.values[0];
 
@@ -268,25 +291,36 @@ client.on(
                     );
 
                 if (
-                    existing &&
-                    existing.discord_id !== interaction.user.id
-                ) {
-                    return interaction.editReply(
-                        "That player is already claimed."
-                    );
-                }
+    existing &&
+    existing.discord_id !== targetDiscordId &&
+    !isAdminClaimMenu
+) {
+    return interaction.editReply(
+        "That player is already claimed."
+    );
+}
 
                 await db.run(
-                    `
-                    DELETE FROM linked_players
-                    WHERE guild_id = ?
-                    AND discord_id = ?
-                    `,
-                    [
-                        interaction.guild.id,
-                        interaction.user.id
-                    ]
-                );
+    `
+    DELETE FROM linked_players
+    WHERE guild_id = ?
+    AND (
+        discord_id = ?
+        OR player_name = ?
+        OR (
+            ? IS NOT NULL
+            AND player_id = ?
+        )
+    )
+    `,
+    [
+        interaction.guild.id,
+        targetDiscordId,
+        playerName,
+        playerId || null,
+        playerId || null
+    ]
+);
 
                 await db.run(
                     `
@@ -307,8 +341,10 @@ client.on(
                 );
 
                 console.log(
-                    `${interaction.user.tag} claimed ${playerName}`
-                );
+    isAdminClaimMenu
+        ? `${interaction.user.tag} manually linked ${playerName} to ${targetDiscordId}`
+        : `${interaction.user.tag} claimed ${playerName}`
+);
 
                 return;
             }
