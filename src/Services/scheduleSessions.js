@@ -4,8 +4,11 @@ const {
     ButtonBuilder,
     ButtonStyle,
     EmbedBuilder,
+    ModalBuilder,
     PermissionFlagsBits,
-    StringSelectMenuBuilder
+    StringSelectMenuBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -489,18 +492,11 @@ function buildSessionButtons(sessionId) {
                     .setCustomId(`session_rsvp:${sessionId}:maybe`)
                     .setEmoji("❔")
                     .setLabel("Maybe")
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId(`session_more_options:${sessionId}`)
+                    .setLabel("More Options")
                     .setStyle(ButtonStyle.Secondary)
-            ),
-        new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`session_recommended_xi:${sessionId}`)
-                    .setLabel("Admin: Recommended XI")
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(`session_delete:${sessionId}`)
-                    .setLabel("Admin: Delete Event")
-                    .setStyle(ButtonStyle.Danger)
             )
     ];
 }
@@ -770,6 +766,178 @@ async function getAdminSession(interaction, prefix) {
     return session;
 }
 
+function buildMoreOptionsMenu(sessionId) {
+    return new StringSelectMenuBuilder()
+        .setCustomId(`session_more_action:${sessionId}`)
+        .setPlaceholder("Choose an event option")
+        .addOptions(
+            {
+                label: "Recommended XI",
+                value: "lineup",
+                description: "Create a recommended lineup"
+            },
+            {
+                label: "Edit Event",
+                value: "edit",
+                description: "Edit the title, league, date, and times"
+            },
+            {
+                label: "Delete Event",
+                value: "delete",
+                description: "Delete the event and Match Squad role"
+            }
+        );
+}
+
+async function handleMoreOptionsButton(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_more_options:");
+
+    if (!session) return;
+
+    return interaction.reply({
+        content: "Event options",
+        components: [
+            new ActionRowBuilder()
+                .addComponents(buildMoreOptionsMenu(session.session_id))
+        ],
+        ephemeral: true
+    });
+}
+
+function londonValue(timestamp, options) {
+    return new Intl.DateTimeFormat(
+        "en-GB",
+        {
+            timeZone: SESSION_TIME_ZONE,
+            ...options
+        }
+    ).format(new Date(Number(timestamp)));
+}
+
+function modalInput(customId, label, value) {
+    return new ActionRowBuilder()
+        .addComponents(
+            new TextInputBuilder()
+                .setCustomId(customId)
+                .setLabel(label)
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setValue(String(value || "").slice(0, 100))
+        );
+}
+
+function buildEditSessionModal(session) {
+    const date =
+        londonValue(
+            session.starts_at,
+            {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }
+        );
+    const time = timestamp =>
+        londonValue(
+            timestamp,
+            {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false
+            }
+        );
+
+    return new ModalBuilder()
+        .setCustomId(`session_edit_submit:${session.session_id}`)
+        .setTitle("Edit Scheduled Event")
+        .addComponents(
+            modalInput("title", "Event title", session.title),
+            modalInput("league", "League or competition", session.league),
+            modalInput("date", "Date (DD/MM/YYYY)", date),
+            modalInput(
+                "times",
+                "Load up | Kick-off | End",
+                `${time(session.load_up_at)} | ${time(session.starts_at)} | ${time(session.ends_at)}`
+            )
+        );
+}
+
+async function deleteSessionFromInteraction(interaction, session) {
+    if (interaction.isStringSelectMenu()) {
+        await interaction.update({
+            content: "Deleting scheduled event...",
+            components: []
+        });
+    } else {
+        await interaction.reply({
+            content: "Deleting scheduled event...",
+            ephemeral: true
+        });
+    }
+
+    if (session.role_id) {
+        const role =
+            await interaction.guild.roles.fetch(session.role_id).catch(() => null);
+        if (role?.editable) {
+            await role.delete("Scheduled event deleted by administrator").catch(() => null);
+        }
+    }
+
+    await db.run(
+        `DELETE FROM scheduled_sessions WHERE session_id = ?`,
+        [session.session_id]
+    );
+
+    const channel =
+        await interaction.guild.channels.fetch(session.channel_id).catch(() => null);
+    const message =
+        channel && session.message_id
+            ? await channel.messages.fetch(session.message_id).catch(() => null)
+            : null;
+
+    await message?.delete().catch(() => null);
+
+    return interaction.editReply("Scheduled event, reminders, and Match Squad role deleted.");
+}
+
+async function handleMoreOptionsAction(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_more_action:");
+
+    if (!session) return;
+
+    const action =
+        interaction.values[0];
+
+    if (action === "edit") {
+        return interaction.showModal(
+            buildEditSessionModal(session)
+        );
+    }
+
+    if (action === "delete") {
+        return deleteSessionFromInteraction(interaction, session);
+    }
+
+    const select =
+        new StringSelectMenuBuilder()
+            .setCustomId(`session_lineup_formation:${session.session_id}`)
+            .setPlaceholder("Choose the formation")
+            .addOptions(
+                Object.keys(FORMATIONS).map(formation => ({
+                    label: formation,
+                    value: formation
+                }))
+            );
+
+    return interaction.update({
+        content: "Choose a formation for the recommended XI.",
+        components: [
+            new ActionRowBuilder().addComponents(select)
+        ]
+    });
+}
+
 async function handleRecommendedXiButton(interaction) {
     const session =
         await getAdminSession(interaction, "session_recommended_xi:");
@@ -835,26 +1003,127 @@ async function handleDeleteSessionButton(interaction) {
 
     if (!session) return;
 
-    await interaction.reply({
-        content: "Deleting scheduled event...",
+    return deleteSessionFromInteraction(interaction, session);
+}
+
+async function handleEditSessionModal(interaction) {
+    const session =
+        await getAdminSession(interaction, "session_edit_submit:");
+
+    if (!session) return;
+
+    const title =
+        interaction.fields.getTextInputValue("title").trim();
+    const league =
+        interaction.fields.getTextInputValue("league").trim();
+    const date =
+        interaction.fields.getTextInputValue("date").trim();
+    const times =
+        interaction.fields.getTextInputValue("times")
+            .split("|")
+            .map(value => value.trim());
+
+    if (times.length !== 3 || times.some(value => !value)) {
+        return interaction.reply({
+            content: "Enter times as `Load up | Kick-off | End`, for example `19:30 | 20:00 | 22:00`.",
+            ephemeral: true
+        });
+    }
+
+    const [loadUpTime, kickoffTime, endTime] = times;
+    const loadUpAt = parseDateTime(`${date} ${loadUpTime}`);
+    const startsAt = parseDateTime(`${date} ${kickoffTime}`);
+    const endsAt = parseDateTime(`${date} ${endTime}`);
+
+    if (!loadUpAt || !startsAt || !endsAt) {
+        return interaction.reply({
+            content: "I could not understand the edited date or times. Use `DD/MM/YYYY` and `HH:MM`.",
+            ephemeral: true
+        });
+    }
+
+    if (loadUpAt >= startsAt || endsAt <= startsAt) {
+        return interaction.reply({
+            content: "Load up must be before kick-off, and the end must be after kick-off.",
+            ephemeral: true
+        });
+    }
+
+    if (loadUpAt <= Date.now()) {
+        return interaction.reply({
+            content: "The edited load-up time must be in the future.",
+            ephemeral: true
+        });
+    }
+
+    await interaction.deferReply({
         ephemeral: true
     });
+
+    const updated = {
+        ...session,
+        title,
+        league,
+        time_text: `${date} ${kickoffTime}`,
+        load_up_text: `${date} ${loadUpTime}`,
+        load_up_at: loadUpAt,
+        starts_at: startsAt,
+        ends_at: endsAt,
+        pre_tag_sent_at: null
+    };
+
+    await db.run(
+        `
+        UPDATE scheduled_sessions
+        SET title = ?,
+            league = ?,
+            time_text = ?,
+            load_up_text = ?,
+            load_up_at = ?,
+            starts_at = ?,
+            ends_at = ?,
+            pre_tag_sent_at = NULL
+        WHERE session_id = ?
+        `,
+        [
+            title,
+            league,
+            updated.time_text,
+            updated.load_up_text,
+            loadUpAt,
+            startsAt,
+            endsAt,
+            session.session_id
+        ]
+    );
 
     if (session.role_id) {
         const role =
             await interaction.guild.roles.fetch(session.role_id).catch(() => null);
+
         if (role?.editable) {
-            await role.delete("Scheduled event deleted by administrator").catch(() => null);
+            await role.setName(
+                `${league || "League"} Match Squad`.slice(0, 100),
+                "Scheduled event edited"
+            ).catch(() => null);
         }
     }
 
-    await db.run(
-        `DELETE FROM scheduled_sessions WHERE session_id = ?`,
-        [session.session_id]
-    );
-    await interaction.message.delete().catch(() => null);
+    const channel =
+        await interaction.guild.channels.fetch(session.channel_id).catch(() => null);
+    const message =
+        channel && session.message_id
+            ? await channel.messages.fetch(session.message_id).catch(() => null)
+            : null;
 
-    return interaction.editReply("Scheduled event, reminders, and Match Squad role deleted.");
+    await message?.edit({
+        embeds: [
+            buildSessionEmbed(updated, interaction.guild)
+        ],
+        components: buildSessionButtons(session.session_id)
+    }).catch(() => null);
+
+    return interaction.editReply("Scheduled event updated.");
 }
 
 async function cleanupSession(client, session) {
@@ -928,8 +1197,8 @@ async function sendDuePreTags(client) {
             FROM scheduled_sessions
             WHERE role_id IS NOT NULL
             AND pre_tag_sent_at IS NULL
-            AND starts_at > ?
-            AND (? >= starts_at - (COALESCE(pre_tag_minutes, 30) * 60 * 1000))
+            AND COALESCE(load_up_at, starts_at) > ?
+            AND (? >= COALESCE(load_up_at, starts_at) - (45 * 60 * 1000))
             `,
             [
                 now,
@@ -950,7 +1219,7 @@ async function sendDuePreTags(client) {
         }
 
         await channel.send(
-            `<@&${session.role_id}> ${escapeMarkdown(session.title || "Session")} starts ${formatRelativeTime(session.starts_at)}. Load up ${formatRelativeTime(session.load_up_at || session.starts_at)}.`
+            `<@&${session.role_id}> ${escapeMarkdown(session.title || "Session")} load-up is ${formatRelativeTime(session.load_up_at || session.starts_at)}. Kick-off is ${formatRelativeTime(session.starts_at)}.`
         ).catch(() => null);
 
         await db.run(
@@ -967,6 +1236,61 @@ async function sendDuePreTags(client) {
     }
 }
 
+async function refreshLiveSessionMessages(client = clientRef) {
+    if (!client) return;
+
+    const sessions =
+        await db.all(
+            `
+            SELECT *
+            FROM scheduled_sessions
+            WHERE COALESCE(ends_at, starts_at) > ?
+            `,
+            [Date.now()]
+        );
+
+    let refreshed = 0;
+
+    for (const session of sessions) {
+        const guild =
+            await client.guilds.fetch(session.guild_id).catch(() => null);
+        const channel =
+            guild
+                ? await guild.channels.fetch(session.channel_id).catch(() => null)
+                : null;
+        const message =
+            channel && session.message_id
+                ? await channel.messages.fetch(session.message_id).catch(() => null)
+                : null;
+
+        if (!guild || !message) continue;
+
+        if (session.role_id) {
+            const role =
+                await guild.roles.fetch(session.role_id).catch(() => null);
+
+            if (role?.editable) {
+                await role.setName(
+                    `${session.league || "League"} Match Squad`.slice(0, 100),
+                    "Refresh live scheduled event"
+                ).catch(() => null);
+            }
+        }
+
+        await message.edit({
+            embeds: [
+                buildSessionEmbed(session, guild)
+            ],
+            components: buildSessionButtons(session.session_id)
+        }).catch(() => null);
+        refreshed += 1;
+    }
+
+    if (refreshed) {
+        console.log(`Refreshed ${refreshed} live scheduled event message(s).`);
+    }
+}
+
 function startScheduleSessionCleanup(client) {
     clientRef = client;
 
@@ -974,6 +1298,9 @@ function startScheduleSessionCleanup(client) {
 
     cleanupExpiredSessions(client).catch(err => {
         console.error("schedule cleanup error:", err);
+    });
+    refreshLiveSessionMessages(client).catch(err => {
+        console.error("schedule live-message refresh error:", err);
     });
 
     interval =
@@ -997,9 +1324,13 @@ module.exports = {
     canManageSessions,
     createSession,
     handleDeleteSessionButton,
+    handleEditSessionModal,
     handleLineupFormationSelect,
+    handleMoreOptionsAction,
+    handleMoreOptionsButton,
     handleRecommendedXiButton,
     handleSessionButton,
     parseDateTime,
+    refreshLiveSessionMessages,
     startScheduleSessionCleanup
 };

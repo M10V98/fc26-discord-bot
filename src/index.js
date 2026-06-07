@@ -30,7 +30,10 @@ const {
 
 const {
     handleDeleteSessionButton,
+    handleEditSessionModal,
     handleLineupFormationSelect,
+    handleMoreOptionsAction,
+    handleMoreOptionsButton,
     handleRecommendedXiButton,
     handleSessionButton,
     startScheduleSessionCleanup
@@ -206,6 +209,13 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
+                if (
+                    interaction.customId.startsWith("session_more_action:")
+                ) {
+                    await handleMoreOptionsAction(interaction);
+                    return;
+                }
+
                 if (
                     interaction.customId.startsWith("session_lineup_formation:")
                 ) {
@@ -441,6 +451,13 @@ client.on(
                 }
 
                 if (
+                    interaction.customId.startsWith("session_more_options:")
+                ) {
+                    await handleMoreOptionsButton(interaction);
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("session_recommended_xi:")
                 ) {
                     await handleRecommendedXiButton(interaction);
@@ -502,6 +519,16 @@ client.on(
                     content: "AutoMode stopped.",
                     ephemeral: true
                 });
+
+                return;
+            }
+
+            if (interaction.isModalSubmit()) {
+                if (
+                    interaction.customId.startsWith("session_edit_submit:")
+                ) {
+                    await handleEditSessionModal(interaction);
+                }
             }
         } catch (err) {
             console.error("Interaction error:", err);
