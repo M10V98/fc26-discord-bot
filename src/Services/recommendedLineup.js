@@ -251,15 +251,21 @@ async function recommendLineup(guild, session, formation) {
     const used = new Set();
     for (const [position, x, y] of FORMATIONS[formation] || FORMATIONS["4-2-3-1"]) {
         const choice =
-            candidates
-                .filter(player => !used.has(player.userId) && player.positions.includes(position))
-                .map(player => ({
-                    ...player,
-                    score:
-                        playerScore(player.stat.recent, position) * 0.7 +
-                        playerScore(player.stat.all, position) * 0.3
-                }))
-                .sort((a, b) => b.score - a.score)[0] || null;
+    candidates
+        .filter(player => !used.has(player.userId))
+        .map(player => {
+            const exactPosition =
+                player.positions.includes(position);
+
+            return {
+                ...player,
+                score:
+                    playerScore(player.stat.recent, position) * 0.7 +
+                    playerScore(player.stat.all, position) * 0.3 +
+                    (exactPosition ? 100 : 0)
+            };
+        })
+        .sort((a, b) => b.score - a.score)[0] || null;
         if (choice) used.add(choice.userId);
         selected.push({ position, x, y, player: choice });
     }
