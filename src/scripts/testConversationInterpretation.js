@@ -11,6 +11,9 @@ const {
     applyInterpretationGate,
     sanitizeInterpretation
 } = require("../Services/conversationInterpretation");
+const {
+    classifyRuleBased
+} = require("../Services/smartAI");
 
 function rule(intent = "not_useful_enough", overrides = {}) {
     return {
@@ -159,6 +162,66 @@ assert.equal(
     ).intent,
     "news_lookup",
     "Operational intents must be preserved."
+);
+
+function discordMessage(content, overrides = {}) {
+    return {
+        content,
+        guild: {
+            id: "guild"
+        },
+        channel: {
+            id: "channel"
+        },
+        author: {
+            id: "human",
+            username: "Human"
+        },
+        client: {
+            user: {
+                id: "bot",
+                username: "Bella Ciao FC Bot"
+            }
+        },
+        mentions: {
+            everyone: false,
+            repliedUser: null,
+            users: new Map(),
+            ...overrides.mentions
+        },
+        ...overrides
+    };
+}
+
+for (const content of [
+    "Alright bro",
+    "As in World Cup",
+    "true true, his passing isnt great for how we build up tho compared to iced",
+    "Same Gehad haha. First of all, I should have levelled it up higher than 56"
+]) {
+    assert.equal(
+        classifyRuleBased(discordMessage(content), []).shouldReply,
+        false,
+        `Normal team chat must stay silent: ${content}`
+    );
+}
+
+assert.equal(
+    classifyRuleBased(
+        discordMessage("What is the maximum number of yellow cards before a player is sent off?"),
+        []
+    ).shouldReply,
+    false,
+    "An unaddressed general-football question must not bypass the high-confidence AI classifier."
+);
+
+assert.equal(
+    classifyRuleBased(
+        discordMessage("Alright bot, can you explain xG?"),
+        []
+    ).shouldReply,
+    true,
+    "A direct bot request should receive a reply."
 );
 
 console.log(

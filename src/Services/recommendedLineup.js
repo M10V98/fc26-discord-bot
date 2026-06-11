@@ -252,6 +252,7 @@ async function recommendLineup(guild, session, formation) {
 
 const priorityOrder = [
     "ST",
+    "GK",
     "CAM",
     "LW",
     "RW",
@@ -263,8 +264,7 @@ const priorityOrder = [
     "RWB",
     "LB",
     "RB",
-    "CB",
-    "GK"
+    "CB"
 ];
 
 const slotsByPriority =

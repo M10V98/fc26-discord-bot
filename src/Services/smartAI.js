@@ -53,8 +53,6 @@ const openai =
 
 const MAX_MEMORY = 8;
 const MEMORY_TTL_MS = 60 * 60 * 1000;
-const PASSIVE_REPLY_CHANCE = 0.35;
-const FOOTBALL_BANTER_CHANCE = 0.08;
 const AI_BACKOFF_MS =
     Number(process.env.AI_BACKOFF_MS || 30 * 60 * 1000);
 const RATINGS_NUDGE_CHANCE = 0.35;
@@ -151,22 +149,6 @@ function recentConversationWithBot(memory) {
         Number(row.should_reply || 0) === 1 &&
         Date.now() - Number(row.created_at || 0) < 4 * 60_000
     );
-}
-
-function isBroAddressedByLanguage(text) {
-    const lower =
-        normalize(text).toLowerCase();
-
-    if (!/^bro\b/.test(lower)) {
-        return false;
-    }
-
-    if (/^bro[.!?]*$/.test(lower)) {
-        return true;
-    }
-
-    return /\b(who|what|when|where|why|how|can|could|would|should|do|does|did|is|are|tell|show|explain|help|you good|you alive|you there|alright|thanks|cheers)\b/
-        .test(lower);
 }
 
 function hasSensitiveHumanContext(text) {
@@ -307,7 +289,7 @@ function hasQuestion(text) {
     const value =
         normalize(text);
 
-    return /\?|\b(who|what|when|where|why|how|which|whose|whos)\b/i
+    return /\?|^(who|what|when|where|why|how|which|whose|whos)\b/i
         .test(value) ||
         /^(can|could|should|would|do|does|did|are|is|was|were|has|have|had)\b/i
             .test(value) ||
@@ -345,9 +327,9 @@ function isDirectBotAddress(message) {
     }
 
     return (
-        /^(yo|hi|hello|hey|alright)\s+(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub|bro)\b/.test(text) ||
+        /^(yo|hi|hello|hey|alright)\s+(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text) ||
         /^(bella\s+ciao\s+bot|bella\s+bot|bot|ourproclub)\b/.test(text) ||
-        isBroAddressedByLanguage(text)
+        isBotAddressedByLanguage(text)
     );
 }
 
@@ -368,7 +350,7 @@ function isBotAddressedByLanguage(text) {
     const lower =
         normalize(text).toLowerCase();
     const botName =
-        "(?:bella\\s+ciao\\s+bot|bella\\s+bot|ourproclub|assistant|bot|bro)";
+        "(?:bella\\s+ciao\\s+bot|bella\\s+bot|ourproclub|assistant|bot)";
     const afterBotRequest =
         "(?:can you|could you|would you|will you|do you|are you|did you|have you|how|what|why|when|where|who|which|tell me|show me|check|find|explain|answer|reply|help|say)";
     const beforeBotRequest =
@@ -874,40 +856,6 @@ function classifyRuleBased(message, memory = []) {
                     message.channel.id,
                     text
                 ),
-            situation
-        };
-    }
-
-    if (
-        (
-            intent !== "unknown" ||
-            hasMeaningfulPassiveCue(text, signals)
-        ) &&
-        !signals.botHelp &&
-        !recentBotReply &&
-        text.length >= 12 &&
-        Math.random() < PASSIVE_REPLY_CHANCE
-    ) {
-        return {
-            shouldReply: true,
-            mode: "helpful",
-            intent,
-            confidence: 0.65,
-            reason: "Useful passive stat/help response.",
-            situation
-        };
-    }
-
-    if (
-        signals.matchBanter &&
-        Math.random() < FOOTBALL_BANTER_CHANCE
-    ) {
-        return {
-            shouldReply: true,
-            mode: "banter",
-            intent: "football_banter",
-            confidence: 0.55,
-            reason: "Low-risk football banter.",
             situation
         };
     }

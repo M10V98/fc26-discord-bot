@@ -597,6 +597,46 @@ const CLUB_LORE_ITEMS = [
         quiz: [
             ["Which combination contains ONLY incidents directly tied to Fyzo?", ["Fyzo Cross, What Tribe, Fyzo 50 Jobs 0 Hours", "What Is Schnitzel Doing, Fyzo Cross, What Tribe", "Breast Incident, Fyzo Cross, What Tribe", "Craig Through Ball, What Tribe, Fyzo 50 Jobs 0 Hours"], 0]
         ]
+    },
+    {
+        aliases: [["penguin"], ["blue mist", "bean", "gollum", "wwe", "wrestling", "entrance"]],
+        answer: "In Penguin's wrestling feud, he opposed Bean and Gollum and memorably used blue mist instead of conventional wrestling attacks. His entrance was famous for unexpectedly zesty shaking rather than terrifying music."
+    },
+    {
+        aliases: [["penguin"], ["missing", "disappearance", "2026", "boys fc", "vanished"]],
+        answer: "Penguin is currently missing, and the disappearance is especially strange because Boys FC has effectively vanished too, with no known Boys FC sightings throughout 2026. Bella Ciao, their biggest rivals, benefited most from the disappearance."
+    },
+    {
+        aliases: [["penguin files", "penguin"], ["unknown victim", "darkest", "video", "little polar peak", "island"]],
+        answer: "The Penguin Files are inseparable from Penguin's reputation and activities at Little Polar Peak, also called 'the island'. One of their darkest elements is a video involving an unknown victim."
+    },
+    {
+        aliases: [["harrisonboy", "harrison boy", "jacob"], ["boy", "boys fc", "gofish", "gary", "ocean", "sacrifice"]],
+        answer: "Jacob became suspicious to Gofish and Gary simply because his name contained 'Boy'. HarrisonBoy was linked to Boys FC on the same extremely weak evidence and was dropped into the ocean."
+    },
+    {
+        aliases: [["iced", "iced out", "iced_out_monkeys"], ["winger", "centre back", "center back", "cb", "astrea", "december 2025", "german"]],
+        answer: "Iced_Out_Monkeys is German and joined Bella Ciao as a winger in December 2025 before Astrea backed his potential and helped him develop into a top centre-back. Since joining, Iced has witnessed Bella Ciao's growth as a club."
+    },
+    {
+        aliases: [["iced", "iced out", "iced_out_monkeys"], ["camera incident", "microphone", "mic", "leo", "booty buns", "schnitzler", "corner", "knock on"]],
+        answer: "Iced has no microphone, which Leo regularly slanders while Astrea is more supportive. During the Iced Out Camera Incident, fans pretended his camera turned on even though it never did, then claimed he disappeared for about a week. Schnitzler called him 'Booty Buns' but appreciates Iced's knock-ons from corners."
+    },
+    {
+        aliases: [["lucas gough", "gough"], ["merge incident", "lt hutchy", "gough ball", "power cut", "sainsburys", "born to lose"]],
+        answer: "Lucas Gough arrived with LT Hutchy during the Merge Incident. His trademark Gough Ball deliveries usually found Schnitzler. His power-cut and disconnect stories appeared when Bella Ciao played badly; he later left for Sainsbury's FC and is on loan at Born To Lose FC to raise his level back up."
+    },
+    {
+        aliases: [["bean", "gollum"], ["durag", "noodle hair bean", "pace", "bicycle kick", "madrid", "messi"]],
+        answer: "Gollum famously wore a durag before Bean continued the tradition. Bean is listed at 6'7 and Gollum at 6'2; Noodle Hair Bean was Bean's 6'4 son. Bean's pace was revealed as 74-79, his bicycle-kick powershot hit the bar, and in Madrid he drew 3-3 with Messi as both scored hat-tricks."
+    },
+    {
+        aliases: [["apex"], ["chippy chips", "vpc", "golden boot", "ucl", "winning", "focus"]],
+        answer: "Apex is the Bella Ciao striker known for calling out teammates who joke instead of focusing on winning. He was formerly associated with Chippy Chips and won the VPC Golden Boot alongside a UCL trophy."
+    },
+    {
+        aliases: [["gazz bryant", "joe"], ["clash royale", "promo", "tables", "ladders", "chairs", "lets do this"]],
+        answer: "Gazz Bryant delivered the famous Clash Royale promo on Joe, saying Joe was hurting Harrison's feelings by choosing Clash Royale over Xbox and that COD was not good enough anymore. The challenge mentioned tables, ladders and chairs and ended with 'LET'S DO THIS!'."
     }
 ];
 
@@ -627,8 +667,8 @@ const PERSON_LORE = [
         answer: "Schnitzler is a Bella Ciao striker born in 2007 and later signed by Gofish in 2025 as Sniffer Sebust/TCL's son. He is from Germany, arrived with Astrea from FC Hoffenheim as a dual package, built a strong partnership with Lucas Gaugue, won the CPL Ballon d'Or, and is tied to the \"what is Schnitzel doing\" incident."
     },
     {
-        aliases: ["pigeon", "penguin"],
-        answer: "Pigeon is a 2026 Bella Ciao drama figure: formerly Penguin, linked to the Penguin files, a GK who won games from goal, recruited Cobra, helped with team sheets, then became manager. His management drama helped spark the Union of the Rejects before he was demoted, and he is also tied to the Breast incident and the CPL throw incident."
+        aliases: ["pigeon"],
+        answer: "Pigeon is a 2026 Bella Ciao drama figure: linked to the Penguin files, a GK who won games from goal, recruited Cobra, helped with team sheets, then became manager. His management drama helped spark the Union of the Rejects before he was demoted, and he is also tied to the Breast incident and the CPL throw incident."
     },
     {
         aliases: ["boys fc", "boys"],
@@ -743,6 +783,14 @@ const PERSON_LORE = [
         answer: "Fyzo is mostly known through incidents and jokes in the lore: the Fyzo cross incident, Fyzo 50 jobs 0 hours, and being the player whose crosses are named after him."
     },
     {
+        aliases: ["penguin"],
+        answer: "Penguin is the historic founder/leader figure inseparable from Boys FC, the Penguin Files and Little Polar Peak. He fought Bean and Gollum in WWE using blue mist, became known for an unexpectedly zesty entrance, and is currently missing alongside Boys FC after no known 2026 sightings."
+    },
+    {
+        aliases: ["iced", "iced out", "iced_out_monkeys"],
+        answer: "Iced_Out_Monkeys is a German Bella Ciao defender who joined as a winger in December 2025 and developed into a top centre-back with Astrea's backing. He has no microphone, is tied to the fake Iced Out Camera Incident, sends cheeky messages, and provides the corner knock-ons Schnitzler appreciates."
+    },
+    {
         aliases: ["spoondoodle", "spoondoodle1"],
         answer: "Spoondoodle1 appears in the incident list for shooting the wall on Ark and missing all his shots on H411ison."
     },
@@ -831,6 +879,84 @@ const EXTRA_LORE_QUIZ_QUESTIONS = [
     ["What did Into The Hole FC eventually become?", ["Sainsbury's FC", "Craydon Cottage FC", "Theatre of Beans FC", "Polar Peak FC"], 0],
     ["Why is Magnus remembered as a hero?", ["He exposed the betrayal plot", "He scored the winning goal", "He replaced Gofish", "He founded Bella Ciao"], 0],
     ["Which statement best summarises the betrayal storyline?", ["Lucas and Ryan attempted to recruit players to their reject club", "Lucas and Ryan were considered loyal heroes", "Cobra and H411ison left together", "Pigeon formed Boys FC"], 0]
+];
+
+const SUPPLIED_2026_LORE_QUIZ_QUESTIONS = [
+    ["Which unusual weapon did Penguin use against Bean and Gollum during their conflict?", ["Green mist", "Blue mist", "Ice shards", "A steel chair"], 1],
+    ["During Penguin's confrontation with Bean and Gollum, what made the attack particularly memorable?", ["He won instantly", "He used blue mist rather than conventional wrestling attacks", "He summoned Boys FC players", "He escaped immediately"], 1],
+    ["Which Bella Ciao duo directly opposed Penguin in WWE?", ["Apex and Schnitzler", "Bloke and Dirk", "Bean and Gollum", "Astrea and Connor"], 2],
+    ["What is the current known status of Penguin?", ["Managing Boys FC", "Playing in CPL", "Missing", "Retired as Bella Ciao manager"], 2],
+    ["What makes Penguin's disappearance particularly strange?", ["He left a note", "Boys FC has not been spotted throughout 2026", "He sold Little Polar Peak", "He joined Bella Ciao"], 1],
+    ["Which club has effectively vanished alongside Penguin during 2026?", ["Chippy Chips", "Sainsbury's FC", "Boys FC", "CPL Chelsea"], 2],
+    ["Which piece of evidence is considered one of the darkest elements of Penguin Files lore?", ["CPL records", "A video involving an unknown victim", "Match reports", "Stadium footage"], 1],
+    ["In Penguin lore, who became suspicious simply because his name contained \"Boy\"?", ["Sean", "Jacob", "Connor", "Pedri"], 1],
+    ["Which two figures decided Jacob could potentially be linked to Boys FC?", ["Bean and Gollum", "Apex and Schnitzler", "Gofish and Gary", "Sean and Sollum"], 2],
+    ["What happened to HarrisonBoy when he got linked to Boys FC?", ["Suspended", "Exiled to Little Polar Peak", "Dropped into the ocean", "Sent to Boys FC"], 2],
+    ["What was the primary evidence used against HarrisonBoy?", ["Messages with Penguin", "The word \"Boy\" in his name", "A Boys FC shirt", "Penguin Files documents"], 1],
+    ["Which Bella Ciao figure would most likely argue that HarrisonBoy's punishment was based on extremely weak evidence?", ["Gehad", "Connor", "Almost anyone with common sense", "Penguin"], 2],
+    ["Which of these happened AFTER the rise of Boys FC?", ["Bow City liquidation", "HarrisonBoy ocean sacrifice", "Bean being gifted by Mexican investors", "Gollum's birth"], 1],
+    ["Penguin's wrestling entrance is most famous for being:", ["Aggressive and hella dark", "Supportive towards Bella Ciao", "Unexpectedly zesty shaking ahh", "Completely silent walk to the ring"], 2],
+    ["How did Gofish shut down the Saudi league's attempt to buy Jacob?", ["Shaking ahh like Penguin's WWE entrance", "Scorched earth", "Gave them Gazz on loan instead", "Shot them on the spot"], 2],
+    ["A new fan in 2027 after the return of Penguin expects Penguin to enter to terrifying music. What would older fans tell them?", ["Nah buy front row seats for the ass shaking lil bro", "Cover your eyes its gonna get scary...", "Wait until you see Big Bean enter...", "He doesn't have an entrance pal"], 2],
+    ["Which phrase best describes Penguin's relationship with Boys FC?", ["Minor connection", "Historic founder/leader figure", "Goalkeeper only", "Referee"], 1],
+    ["Which event came first?", ["Penguin going missing", "Boys FC disappearing from 2026 sightings", "Penguin Files becoming infamous", "Penguin's wrestling feud"], 2],
+    ["Which organisation became inseparable from Penguin's reputation?", ["Chippy Chips", "CPL Chelsea", "Boys FC", "Born To Lose FC"], 2],
+    ["Which location is most associated with Penguin's activities?", ["Craydon Cottage", "Little Polar Peak", "Theatre of Beans", "Weeping Woods"], 1],
+    ["If somebody references \"the island\" during Penguin lore discussions, what are they probably referring to?", ["Little Polar Peak", "Villa Park", "Little Saint James", "Bean's island"], 0],
+    ["Which figure benefited most from Boys FC's disappearance in 2026?", ["Their biggest rivals, Bella Ciao", "Penguin", "HarrisonBoy", "Roy Keane"], 0],
+    ["Which Bella Ciao defender was originally a winger when he joined in December 2025?", ["Cobra", "Dadto4kids", "Iced_Out_Monkeys", "King"], 2],
+    ["Which Bella Ciao player is credited with believing in Iced's potential and allowing him to develop into a top CB?", ["Cobra", "Astrea", "Schnitzler", "Connor"], 1],
+    ["During the Iced Out Camera Incident, what did fans claim had happened?", ["Iced leaked tactics", "Iced turned his camera on", "Iced exposed Penguin Files", "Iced revealed his microphone setup"], 1],
+    ["What made the Iced Out Camera Incident so strange?", ["The camera never actually turned on", "Nobody knew who Iced was", "Leo started the rumour", "Schnitzler admitted it was fake"], 0],
+    ["Which player regularly slandered Iced for not having a microphone?", ["Gehad", "Astrea", "Leo", "Connor"], 2],
+    ["Which Bella Ciao teammate is most closely associated with helping Iced reach top-CB level?", ["Astrea", "King", "Pedri", "Connor"], 0],
+    ["What specific aspect of Iced's game does Schnitzler appreciate most?", ["Tackling", "Pace", "Knock-ons from corners", "Leadership"], 2],
+    ["Which pairing best represents opposite opinions on Iced having a mic?", ["Connor and Gehad", "Leo and Astrea", "Apex and Bean", "King and Nicole"], 1],
+    ["Which nationality is Iced_Out_Monkeys?", ["English", "Dutch", "German", "Mexican"], 2],
+    ["Which statement about Iced's microphone situation is accurate?", ["He uses push-to-talk", "He has a broken microphone", "He has no microphone", "He only speaks in matches"], 2],
+    ["A Bella Ciao player sends a cheeky message during a tense match. Which player is most likely responsible?", ["King", "Iced_Out_Monkeys", "Pedri", "Dadto4kids"], 1],
+    ["Which player once referred to Iced as \"Booty Buns\"?", ["Leo", "Astrea", "Connor", "Schnitzler"], 3],
+    ["Why is the \"Booty Buns\" comment considered unfair by some Bella Ciao fans?", ["Iced had scored", "Iced was captain", "Schnitzler didn't see the 10/10 version of Iced that day", "It happened after a trophy win"], 2],
+    ["Since joining in December 2025, what has Iced witnessed firsthand?", ["Bow City's liquidation", "Bella Ciao's growth as a club", "Bean joining from Mexico", "Gollum's retirement season"], 1],
+    ["Following the Camera Incident, how long did fans claim Iced mysteriously disappeared for?", ["One day", "Three days", "About a week", "A month"], 2],
+    ["Which statement best describes Iced's positional journey?", ["Striker to goalkeeper", "Winger to centre-back", "CDM to winger", "Full-back to striker"], 1],
+    ["Which of these incidents is directly associated with Iced?", ["Chingaling Incident", "Craig Through Ball Incident", "Iced Out Camera Incident", "CPL Throw Incident"], 2],
+    ["If Schnitzler scores from a flick-on at a corner, which teammate is most likely involved?", ["Connor", "Iced_Out_Monkeys", "King", "Pedri"], 1],
+    ["Which criticism of Iced appears most often throughout Bella Ciao?", ["Pace", "Finishing", "Lack of a microphone", "His looks"], 2],
+    ["Which statement about the Camera Incident is actually true?", ["Iced turned his camera on", "Fans pretended Iced turned his camera on", "The camera stayed on for an hour", "Leo recorded it"], 1],
+    ["During the infamous Boys FC shooting incident, where were Bella Ciao players forced to hide while chaos unfolded?", ["The dugout", "Stadium tunnels", "Lockers", "Referee room"], 2],
+    ["Which player's off-ball challenge is blamed for sending Ice Wizard into a dark phase lasting roughly a month?", ["Apex", "Bean", "Gollum", "Schnitzler"], 1],
+    ["Which missed chance is often mentioned alongside discussions about Bella Ciao failing to reach Elite Division?", ["Sean penalty", "Ice Wizard chip shot", "Schnitzler header", "Connor finesse"], 1],
+    ["Lucas Gough arrived at Bella Ciao alongside which figure during the Merge Incident?", ["Connor", "LT Hutchy", "Pigeon", "Gehad"], 1],
+    ["Which style of pass became so associated with Lucas that fans named it after him?", ["Fyzo Cross", "Craig Ball", "Gough Ball", "Apex Pass"], 2],
+    ["Which striker was usually on the receiving end of Lucas Gough's trademark deliveries?", ["Bean", "Apex", "Schnitzler", "Sean"], 2],
+    ["When Bella Ciao played poorly, Lucas often claimed what had happened?", ["Referee corruption", "Server maintenance", "Power cuts and disconnects", "Controller drift"], 2],
+    ["What was unusual about Lucas' power-cut stories?", ["They happened every match", "They only seemed to exist when Bella Ciao played badly", "They lasted months", "They were proven true"], 1],
+    ["Which club did Lucas leave for before attempting to recruit Bella Ciao players?", ["Boys FC", "Chippy Chips", "Sainsbury's FC", "CPL Chelsea"], 2],
+    ["Why is Lucas currently on loan to Born To Lose FC according to Bella Ciao lore?", ["Injury recovery", "Tactical education", "To raise his level back up", "Contract dispute"], 2],
+    ["Which major decision is Lucas forever linked with?", ["Signing Connor", "Leaving CPL Season 1", "Getting caught in the pigeon files", "Replacing Gehad"], 1],
+    ["Before switching hairstyles later in life, what did Gollum famously wear?", ["Bandana", "Durag", "Strap on", "Beanie"], 1],
+    ["Which Bella Ciao legend continued the durag tradition most prominently?", ["Bean", "Magnus", "Gehad", "Chunkz"], 0],
+    ["Which height combination is correct?", ["Bean 6'2, Gollum 6'7", "Bean 6'7, Gollum 6'2", "Bean 6'5, Gollum 6'5", "Bean 6'2, Gollum 6'4"], 1],
+    ["Noodle Hair Bean was described as:", ["Bean's cousin", "Bean's son", "Gollum's son", "Sean's brother"], 1],
+    ["How tall was Noodle Hair Bean?", ["5'11", "6'0", "6'4", "6'7"], 2],
+    ["Fans once massively overrated Bean's pace. What range was eventually revealed?", ["68-73", "74-79", "82-87", "90-95"], 1],
+    ["Which moment best represents Bean producing something ridiculous but not quite pulling it off?", ["Missed penalty", "Bicycle-kick powershot", "Own goal", "Missed one on one to make it 6 goals in 10 minutes"], 1],
+    ["What actually happened to Bean's bicycle-kick powershot?", ["Saved", "Top corner", "Hit the bar", "Went wide"], 2],
+    ["During Bean's spell in Madrid, he played a famous 3-3 draw against who?", ["Ronaldo", "Neymar", "Messi", "Mbappe"], 2],
+    ["Why is the Madrid match remembered?", ["Bean scored once", "Messi scored once", "Both scored hat-tricks", "Bean got sent off"], 2],
+    ["Which Bella Ciao striker is known for calling out teammates who joke around instead of focusing on winning?", ["Sean", "Apex", "Connor", "Gehad"], 1],
+    ["Which former club was Apex associated with before Bella Ciao?", ["Boys FC", "Chippy Chips", "Sainsbury's FC", "Into The Hole FC"], 1],
+    ["Had Apex remained at Chippy Chips, Bella Ciao could have faced him in which VPC season?", ["Season 6", "Season 7", "Season 8", "Season 9"], 2],
+    ["Which VPC individual award did Apex win?", ["Ballon d'Or", "Golden Glove", "Golden Boot", "Playmaker Award"], 2],
+    ["Which major trophy accompanied Apex' VPC golden boot?", ["Elite Division", "UCL", "CPL", "ATB"], 1],
+    ["During the 23/24 season, which player outscored Edward, Frankie and Ice Wizard?", ["Cobra", "Moretti", "Christopher", "King"], 1],
+    ["Which Hella Bow/Bella Ciao figure delivered the famous Clash Royale promo on Joe?", ["Connor", "Gazz Bryant", "Pigeon", "Craig"], 1],
+    ["According to Gazz whose feelings was Joe supposedly hurting?", ["Schnitzler's", "Bean's", "Harrison's", "Apex's"], 2],
+    ["What game was Joe accused of choosing over Xbox?", ["Fortnite", "Clash Royale", "Rocket League", "COD"], 1],
+    ["Which game was specifically named as not being \"good enough\" anymore?", ["FIFA", "Ark", "COD", "GTA"], 2],
+    ["What objects were specifically mentioned in Gazz Bryant's challenge?", ["Guns, bats and chains", "Tables, ladders and chairs", "Cars and bikes", "Goals and nets"], 1],
+    ["How did the Clash Royale promo ultimately conclude?", ["See you next week.", "Interesting.", "LET'S DO THIS!", "Big snitch."], 2]
 ];
 
 const VPC_SEASON_7_RESULTS = [
@@ -1052,6 +1178,7 @@ const CLUB_LORE_QUIZ_QUESTIONS = deduplicateQuizQuestions([
     ...BASE_QUIZ_QUESTIONS,
     ...CLUB_LORE_ITEMS.flatMap(item => item.quiz || []),
     ...EXTRA_LORE_QUIZ_QUESTIONS,
+    ...SUPPLIED_2026_LORE_QUIZ_QUESTIONS,
     ...VPC_SEASON_7_QUIZ_QUESTIONS,
     ...CURRENT_ROSTER_QUIZ_QUESTIONS,
     ...EXPANDED_CLUB_QUIZ_QUESTIONS
