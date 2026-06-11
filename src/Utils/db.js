@@ -65,6 +65,16 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS world_cup_raffle_links (
+        guild_id TEXT,
+        discord_id TEXT,
+        website_user_id TEXT,
+        website_username TEXT,
+        linked_at INTEGER,
+        PRIMARY KEY (guild_id, discord_id)
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS players (
         player_id TEXT,
         player_name TEXT,

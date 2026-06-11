@@ -210,6 +210,22 @@ client.on(
 
             if (interaction.isStringSelectMenu()) {
                 if (
+                    interaction.customId ===
+                    "worldcup_mynation_link"
+                ) {
+                    const command =
+                        client.commands.get("worldcup");
+
+                    if (command?.handleMyNationSelect) {
+                        await command.handleMyNationSelect(
+                            interaction
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
                     interaction.customId.startsWith("session_more_action:")
                 ) {
                     await handleMoreOptionsAction(interaction);

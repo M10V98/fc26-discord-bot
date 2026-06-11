@@ -4,6 +4,8 @@ const {
     calculateStandings
 } = require("../Services/worldCupApi");
 const {
+    accountLinkResponse,
+    myNationEmbeds,
     raffleEmbeds
 } = require("../Commands/worldcup");
 
@@ -90,5 +92,100 @@ assert.match(raffle[0].data.description, /Nations assigned:\*\* 1\/2/);
 assert.match(raffle[0].data.description, /£12\.50/);
 assert.match(raffle[1].data.description, /Argentina.*Alpha/s);
 assert.match(raffle[1].data.description, /Brazil.*Unassigned/s);
+
+const linkResponse =
+    accountLinkResponse({
+        participants: [
+            {
+                user_id: "user-a",
+                username: "Alpha"
+            }
+        ],
+        assignments: [
+            {
+                nation_id: "nation-a",
+                user_id: "user-a"
+            }
+        ],
+        nations: [
+            {
+                id: "nation-a",
+                name: "Mexico"
+            }
+        ]
+    });
+
+assert.equal(
+    linkResponse.components[0].components[0].data.custom_id,
+    "worldcup_mynation_link"
+);
+
+const myNations =
+    myNationEmbeds(
+        {
+            raffle: {
+                pool_total_pence: 6500
+            },
+            contributions: []
+        },
+        {
+            username: "Alpha"
+        },
+        [
+            {
+                assignment: {
+                    status: "active"
+                },
+                nation: {
+                    name: "Mexico",
+                    flag_emoji: "🇲🇽"
+                },
+                live: {
+                    team: {
+                        strTeamBadge: "https://example.com/mexico.png"
+                    },
+                    standing: {
+                        intRank: "1",
+                        intPoints: "0",
+                        intPlayed: "0",
+                        intWin: "0",
+                        intDraw: "0",
+                        intLoss: "0",
+                        intGoalDifference: "0",
+                        strDescription: "Group A"
+                    },
+                    groupStandings: [
+                        {
+                            intRank: "1",
+                            strTeam: "Mexico",
+                            intPoints: "0",
+                            intPlayed: "0",
+                            intWin: "0",
+                            intDraw: "0",
+                            intLoss: "0",
+                            intGoalDifference: "0"
+                        }
+                    ],
+                    upcoming: [
+                        {
+                            strHomeTeam: "Mexico",
+                            strAwayTeam: "South Africa",
+                            strTimestamp: "2026-06-11T19:00:00",
+                            strGroup: "A"
+                        }
+                    ],
+                    recent: []
+                }
+            }
+        ]
+    );
+
+assert.equal(myNations.length, 2);
+assert.match(myNations[0].data.description, /Community pool:\*\* £65/);
+assert.match(myNations[1].data.description, /Position:\*\* 1/);
+assert.match(
+    myNations[1].data.fields[0].value,
+    /Mexico vs South Africa/
+);
 
 console.log("World Cup standings checks passed.");

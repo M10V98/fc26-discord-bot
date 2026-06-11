@@ -3,9 +3,12 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags,
+    StringSelectMenuBuilder
 } = require("discord.js");
 
+const db = require("../Utils/db");
 const {
     FOOTER,
     escapeMarkdown,
@@ -16,6 +19,9 @@ const {
     getRaffleData,
     getWorldCupData
 } = require("../Services/worldCupApi");
+const {
+    getNationLiveData
+} = require("../Services/worldCupSportsDb");
 
 const BASE_URL =
     "https://bellaciaofc.com/fan-hub/world-cup";
@@ -62,6 +68,10 @@ const SECTIONS = {
     raffle: {
         label: "Raffle",
         description: "Open the World Cup raffle."
+    },
+    mynation: {
+        label: "My Nations",
+        description: "Link your website account and follow your raffle nations."
     }
 };
 
@@ -108,7 +118,9 @@ const NATION_STATUS = {
 };
 
 function sectionUrl(section) {
-    return `${BASE_URL}/${section}`;
+    return section === "mynation"
+        ? `${BASE_URL}/follow`
+        : `${BASE_URL}/${section}`;
 }
 
 function linkButton(section) {
@@ -120,7 +132,8 @@ function linkButton(section) {
 
 function linkRows() {
     const sections =
-        Object.keys(SECTIONS);
+        Object.keys(SECTIONS)
+            .filter(section => section !== "mynation");
 
     return [
         new ActionRowBuilder()
@@ -132,6 +145,20 @@ function linkRows() {
                 ...sections.slice(5, 10).map(linkButton)
             )
     ];
+}
+
+function rafflePool(data) {
+    const confirmed =
+        data.contributions
+            .filter(row => row.confirmed)
+            .reduce(
+                (total, row) =>
+                    total + Number(row.amount_pence || 0),
+                0
+            );
+
+    return Number(data.raffle.pool_total_pence || 0) ||
+        confirmed;
 }
 
 function websiteRow(section) {
@@ -515,17 +542,8 @@ function raffleEmbeds(data) {
                 assignment
             ])
         );
-    const confirmedContributions =
-        data.contributions
-            .filter(row => row.confirmed)
-            .reduce(
-                (total, row) =>
-                    total + Number(row.amount_pence || 0),
-                0
-            );
     const pool =
-        Number(data.raffle.pool_total_pence || 0) ||
-        confirmedContributions;
+        rafflePool(data);
     const summary =
         baseEmbed("raffle")
             .setTitle("🎟️ World Cup 2026 - Raffle Draw")
@@ -572,6 +590,296 @@ function raffleEmbeds(data) {
     return [summary, ...drawEmbeds];
 }
 
+function eventTime(event) {
+    const raw =
+        event.strTimestamp ||
+        (
+            event.dateEvent
+                ? `${event.dateEvent}T${event.strTime || "00:00:00"}Z`
+                : null
+        );
+
+    return raw
+        ? discordTime(raw, "f")
+        : "Time TBC";
+}
+
+function upcomingLines(events) {
+    return events.length
+        ? events.slice(0, 3).map(event =>
+            `${event.strHomeTeam} vs ${event.strAwayTeam}\n${eventTime(event)}${event.strGroup ? ` - Group ${event.strGroup}` : ""}`
+        ).join("\n\n")
+        : "No upcoming World Cup matches available yet.";
+}
+
+function resultLines(events) {
+    return events.length
+        ? events.slice(0, 3).map(event =>
+            `${event.strHomeTeam} **${event.intHomeScore ?? "-"}-${event.intAwayScore ?? "-"}** ${event.strAwayTeam}\n${eventTime(event)}`
+        ).join("\n\n")
+        : "No World Cup results available yet.";
+}
+
+function tableLines(rows) {
+    return rows.length
+        ? rows.map(row => {
+            const gd =
+                Number(row.intGoalDifference || 0);
+
+            return `${row.intRank}. **${escapeMarkdown(row.strTeam)}** - ${row.intPoints} pts | ${row.intPlayed}P ${row.intWin}W ${row.intDraw}D ${row.intLoss}L | GD ${gd > 0 ? "+" : ""}${gd}`;
+        }).join("\n")
+        : "Group standings have not been published yet.";
+}
+
+function progressLabel(status) {
+    const labels = {
+        active: "Group Stage",
+        group_stage: "Group Stage",
+        r16: "Round of 16",
+        quarter_finals: "Quarter-Final",
+        semi_finals: "Semi-Final",
+        third_place: "Third Place Match",
+        final: "Final",
+        champion: "World Champion",
+        runner_up: "Runner-Up",
+        third: "Third Place",
+        eliminated: "Eliminated"
+    };
+
+    return labels[status] || "Awaiting Tournament";
+}
+
+function prizeLabel(status) {
+    if (status === "champion") return "🏆 Winner prize secured";
+    if (status === "runner_up") return "🥈 Runner-up prize secured";
+    if (status === "third") return "🥉 Third-place prize secured";
+    if (status === "eliminated") return "❌ No longer eligible";
+    return "✅ Still eligible for a prize";
+}
+
+function myNationEmbeds(data, participant, nationData) {
+    const active =
+        nationData.filter(item =>
+            item.assignment.status !== "eliminated"
+        ).length;
+    const summary =
+        baseEmbed("mynation")
+            .setTitle(`🌍 My Nations - ${escapeMarkdown(participant.username)}`)
+            .setDescription(
+                [
+                    `🎟️ **Assigned nations:** ${nationData.length}`,
+                    `🟢 **Still active:** ${active}`,
+                    `🔴 **Eliminated:** ${nationData.length - active}`,
+                    `💷 **Community pool:** ${pounds(rafflePool(data))}`,
+                    "",
+                    nationData.map(item =>
+                        `${item.nation.flag_emoji || "🏳️"} **${escapeMarkdown(item.nation.name)}** - ${progressLabel(item.assignment.status)}`
+                    ).join("\n")
+                ].join("\n")
+            );
+    const details =
+        nationData.map(item => {
+            const {
+                nation,
+                assignment,
+                live
+            } = item;
+            const [statusEmoji, statusLabel] =
+                NATION_STATUS[assignment.status] ||
+                ["⚪", "Awaiting Tournament"];
+            const standing =
+                live.standing;
+            const embed =
+                baseEmbed("mynation")
+                    .setTitle(
+                        `${nation.flag_emoji || "🏳️"} ${nation.name}`
+                    )
+                    .setDescription(
+                        [
+                            `${statusEmoji} **${statusLabel}**`,
+                            `🏁 **Tournament progress:** ${progressLabel(assignment.status)}`,
+                            `🎁 **Prize eligibility:** ${prizeLabel(assignment.status)}`,
+                            standing
+                                ? `📊 **Position:** ${standing.intRank} | **Points:** ${standing.intPoints} | **Record:** ${standing.intPlayed}P ${standing.intWin}W ${standing.intDraw}D ${standing.intLoss}L | **GD:** ${standing.intGoalDifference}`
+                                : "📊 **Standings:** Awaiting published World Cup table"
+                        ].join("\n")
+                    )
+                    .addFields(
+                        {
+                            name: "📅 Upcoming Matches",
+                            value: upcomingLines(live.upcoming)
+                        },
+                        {
+                            name: "⚽ Results",
+                            value: resultLines(live.recent)
+                        },
+                        {
+                            name: `📋 ${standing?.strDescription || "Group Table"}`,
+                            value: tableLines(live.groupStandings).slice(0, 1024)
+                        }
+                    );
+
+            if (live.team?.strTeamBadge) {
+                embed.setThumbnail(live.team.strTeamBadge);
+            }
+
+            return embed;
+        });
+
+    return [summary, ...details];
+}
+
+function participantAssignments(data, participant) {
+    const nationById =
+        new Map(data.nations.map(nation => [nation.id, nation]));
+
+    return data.assignments
+        .filter(assignment =>
+            assignment.user_id === participant.user_id
+        )
+        .map(assignment => ({
+            assignment,
+            nation: nationById.get(assignment.nation_id)
+        }))
+        .filter(item => item.nation);
+}
+
+async function loadMyNationEmbeds(data, participant) {
+    const assignments =
+        participantAssignments(data, participant);
+    const live =
+        await Promise.all(
+            assignments.map(item =>
+                getNationLiveData(item.nation.name)
+                    .catch(err => {
+                        console.error(
+                            `World Cup live nation error (${item.nation.name}):`,
+                            err?.message || err
+                        );
+
+                        return {
+                            team: null,
+                            standing: null,
+                            groupStandings: [],
+                            upcoming: [],
+                            recent: []
+                        };
+                    })
+            )
+        );
+
+    return myNationEmbeds(
+        data,
+        participant,
+        assignments.map((item, index) => ({
+            ...item,
+            live: live[index]
+        }))
+    );
+}
+
+function accountLinkResponse(data) {
+    const options =
+        data.participants
+            .slice(0, 25)
+            .map(participant => {
+                const count =
+                    participantAssignments(data, participant).length;
+
+                return {
+                    label: participant.username.slice(0, 100),
+                    value: participant.user_id,
+                    description:
+                        `${count} drawn nation${count === 1 ? "" : "s"}`
+                };
+            });
+    const embed =
+        baseEmbed("mynation")
+            .setTitle("🔗 Link Your World Cup Raffle Account")
+            .setDescription(
+                "Choose your website username below. This private linking step is only visible to you; your My Nations dashboard will then post normally."
+            );
+    const menu =
+        new StringSelectMenuBuilder()
+            .setCustomId("worldcup_mynation_link")
+            .setPlaceholder("Choose your website username")
+            .addOptions(options);
+
+    return {
+        embeds: [embed],
+        components: [
+            new ActionRowBuilder().addComponents(menu)
+        ]
+    };
+}
+
+async function raffleLink(interaction) {
+    return db.get(
+        `
+        SELECT *
+        FROM world_cup_raffle_links
+        WHERE guild_id = ?
+        AND discord_id = ?
+        `,
+        [interaction.guild.id, interaction.user.id]
+    );
+}
+
+function linkedParticipant(link, data) {
+    return link
+        ? data.participants.find(participant =>
+            participant.user_id === link.website_user_id
+        )
+        : null;
+}
+
+async function handleMyNationSelect(interaction) {
+    await interaction.update({
+        content:
+            "Account linked. Publishing your My Nations dashboard...",
+        embeds: [],
+        components: []
+    });
+
+    const data =
+        await getRaffleData();
+    const participant =
+        data?.participants.find(row =>
+            row.user_id === interaction.values[0]
+        );
+
+    if (!participant) {
+        return interaction.followUp({
+            content:
+                "That website account is no longer in the raffle.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    await db.run(
+        `
+        INSERT OR REPLACE INTO world_cup_raffle_links
+        (guild_id, discord_id, website_user_id, website_username, linked_at)
+        VALUES (?, ?, ?, ?, ?)
+        `,
+        [
+            interaction.guild.id,
+            interaction.user.id,
+            participant.user_id,
+            participant.username,
+            Date.now()
+        ]
+    );
+
+    const embeds =
+        await loadMyNationEmbeds(data, participant);
+
+    return interaction.followUp({
+        embeds: embeds.slice(0, 10),
+        components: [websiteRow("mynation")]
+    });
+}
+
 function liveEmbeds(section, data) {
     if (section === "tournament") return [overviewEmbed(data)];
     if (section === "participants") return participantsEmbeds(data);
@@ -584,6 +892,9 @@ function liveEmbeds(section, data) {
 }
 
 module.exports = {
+    accountLinkResponse,
+    handleMyNationSelect,
+    myNationEmbeds,
     raffleEmbeds,
 
     data: new SlashCommandBuilder()
@@ -603,13 +914,74 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        await interaction.deferReply();
-
         const section =
             interaction.options.getString("section") ||
             "tournament";
 
         try {
+            if (section === "mynation") {
+                const link =
+                    await raffleLink(interaction);
+
+                await interaction.deferReply(
+                    link
+                        ? {}
+                        : { flags: MessageFlags.Ephemeral }
+                );
+
+                const data =
+                    await getRaffleData();
+                const participant =
+                    data
+                        ? linkedParticipant(link, data)
+                        : null;
+
+                if (!data) {
+                    throw new Error("Raffle data unavailable");
+                }
+
+                if (!participant) {
+                    if (link) {
+                        await db.run(
+                            `
+                            DELETE FROM world_cup_raffle_links
+                            WHERE guild_id = ?
+                            AND discord_id = ?
+                            `,
+                            [
+                                interaction.guild.id,
+                                interaction.user.id
+                            ]
+                        );
+
+                        return interaction.editReply({
+                            embeds: [
+                                baseEmbed("mynation")
+                                    .setTitle("🔗 Account Link Expired")
+                                    .setDescription(
+                                        "Your linked website account is no longer in the raffle. Run `/worldcup section:My Nations` again to privately choose an account."
+                                    )
+                            ],
+                            components: []
+                        });
+                    }
+
+                    return interaction.editReply(
+                        accountLinkResponse(data)
+                    );
+                }
+
+                const embeds =
+                    await loadMyNationEmbeds(data, participant);
+
+                return interaction.editReply({
+                    embeds: embeds.slice(0, 10),
+                    components: [websiteRow("mynation")]
+                });
+            }
+
+            await interaction.deferReply();
+
             const data =
                 section === "raffle"
                     ? await getRaffleData()
@@ -636,6 +1008,10 @@ module.exports = {
                 "world cup live data error:",
                 err?.message || err
             );
+        }
+
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply();
         }
 
         const item =
