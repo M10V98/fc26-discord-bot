@@ -41,6 +41,16 @@ async function getTournament() {
     return tournaments[0] || null;
 }
 
+async function getRaffle() {
+    const raffles =
+        await rows("raffles", {
+            select: "*",
+            slug: `eq.${TOURNAMENT_SLUG}`
+        });
+
+    return raffles[0] || null;
+}
+
 async function getProfiles(userIds) {
     const ids =
         [...new Set(userIds.filter(Boolean))];
@@ -53,6 +63,26 @@ async function getProfiles(userIds) {
         select: "id,username,avatar_url",
         id: `in.(${ids.join(",")})`
     });
+}
+
+function attachProfiles(participants, profiles) {
+    const profileById =
+        new Map(
+            profiles.map(profile => [
+                profile.id,
+                profile
+            ])
+        );
+
+    return participants.map(participant => ({
+        ...participant,
+        username:
+            profileById.get(participant.user_id)?.username ||
+            "Anonymous",
+        avatar_url:
+            profileById.get(participant.user_id)?.avatar_url ||
+            null
+    }));
 }
 
 async function getWorldCupData() {
@@ -97,29 +127,65 @@ async function getWorldCupData() {
         await getProfiles(
             participants.map(row => row.user_id)
         );
-    const profileById =
-        new Map(
-            profiles.map(profile => [
-                profile.id,
-                profile
-            ])
-        );
 
     return {
         tournament,
-        participants:
-            participants.map(participant => ({
-                ...participant,
-                username:
-                    profileById.get(participant.user_id)?.username ||
-                    "Anonymous",
-                avatar_url:
-                    profileById.get(participant.user_id)?.avatar_url ||
-                    null
-            })),
+        participants: attachProfiles(participants, profiles),
         nations,
         groups,
         matches
+    };
+}
+
+async function getRaffleData() {
+    const raffle =
+        await getRaffle();
+
+    if (!raffle) {
+        return null;
+    }
+
+    const [
+        participants,
+        assignments,
+        nations,
+        contributions
+    ] =
+        await Promise.all([
+            rows("raffle_participants", {
+                select: "*",
+                raffle_id: `eq.${raffle.id}`,
+                order: "registered_at.asc"
+            }),
+            rows("raffle_nation_assignments", {
+                select: "*",
+                raffle_id: `eq.${raffle.id}`,
+                order: "assigned_at.asc"
+            }),
+            raffle.tournament_id
+                ? rows("tournament_nations", {
+                    select: "*",
+                    tournament_id: `eq.${raffle.tournament_id}`,
+                    order: "pool_order.asc"
+                })
+                : [],
+            rows("raffle_contributions", {
+                select: "*",
+                raffle_id: `eq.${raffle.id}`,
+                order: "created_at.asc"
+            })
+        ]);
+    const profiles =
+        await getProfiles(
+            participants.map(row => row.user_id)
+        );
+
+    return {
+        raffle,
+        participants: attachProfiles(participants, profiles),
+        assignments,
+        nations,
+        contributions
     };
 }
 
@@ -203,5 +269,6 @@ function calculateStandings(participants, matches) {
 
 module.exports = {
     calculateStandings,
+    getRaffleData,
     getWorldCupData
 };

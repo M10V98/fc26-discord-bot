@@ -13,6 +13,7 @@ const {
 } = require("../Utils/embedStyle");
 const {
     calculateStandings,
+    getRaffleData,
     getWorldCupData
 } = require("../Services/worldCupApi");
 
@@ -81,6 +82,29 @@ const STAGE_LABELS = {
     sf: "Semi-Final",
     third: "Third Place",
     final: "Final"
+};
+
+const RAFFLE_STATUS_LABELS = {
+    draft: "Coming Soon",
+    registration_open: "Registration Open",
+    registration_closed: "Registration Closed",
+    draw: "Draw in Progress",
+    active: "Raffle Live",
+    completed: "Completed"
+};
+
+const NATION_STATUS = {
+    active: ["🟢", "Active"],
+    group_stage: ["🟢", "Group Stage"],
+    r16: ["🔵", "Round of 16"],
+    quarter_finals: ["🔵", "Quarter-Finals"],
+    semi_finals: ["🟣", "Semi-Finals"],
+    final: ["🟠", "Final"],
+    third_place: ["🟠", "Third Place Match"],
+    champion: ["🏆", "Champion"],
+    runner_up: ["🥈", "Runner-Up"],
+    third: ["🥉", "Third Place"],
+    eliminated: ["🔴", "Eliminated"]
 };
 
 function sectionUrl(section) {
@@ -462,6 +486,92 @@ function awardsEmbed(data) {
         );
 }
 
+function pounds(pence) {
+    return new Intl.NumberFormat(
+        "en-GB",
+        {
+            style: "currency",
+            currency: "GBP",
+            minimumFractionDigits:
+                Number(pence || 0) % 100 === 0
+                    ? 0
+                    : 2
+        }
+    ).format(Number(pence || 0) / 100);
+}
+
+function raffleEmbeds(data) {
+    const participantByUserId =
+        new Map(
+            data.participants.map(participant => [
+                participant.user_id,
+                participant
+            ])
+        );
+    const assignmentByNationId =
+        new Map(
+            data.assignments.map(assignment => [
+                assignment.nation_id,
+                assignment
+            ])
+        );
+    const confirmedContributions =
+        data.contributions
+            .filter(row => row.confirmed)
+            .reduce(
+                (total, row) =>
+                    total + Number(row.amount_pence || 0),
+                0
+            );
+    const pool =
+        Number(data.raffle.pool_total_pence || 0) ||
+        confirmedContributions;
+    const summary =
+        baseEmbed("raffle")
+            .setTitle("🎟️ World Cup 2026 - Raffle Draw")
+            .setDescription(
+                [
+                    `**Status:** ${RAFFLE_STATUS_LABELS[data.raffle.status] || data.raffle.status}`,
+                    `👥 **Participants:** ${data.participants.length}`,
+                    `🌍 **Nations assigned:** ${data.assignments.length}/${data.nations.length}`,
+                    `💷 **Community pool:** ${pounds(pool)}`,
+                    "",
+                    data.assignments.length
+                        ? "The raffle draw has taken place. Every nation and owner is listed below."
+                        : "The raffle draw has not started yet."
+                ].join("\n")
+            );
+    const lines =
+        data.nations.map(nation => {
+            const assignment =
+                assignmentByNationId.get(nation.id);
+            const participant =
+                participantByUserId.get(assignment?.user_id);
+            const [statusEmoji, statusLabel] =
+                NATION_STATUS[assignment?.status] ||
+                ["⚪", assignment ? "Awaiting Tournament" : "Awaiting Draw"];
+
+            return `${nation.flag_emoji || "🏳️"} **${escapeMarkdown(nation.name)}** — ${participant ? escapeMarkdown(participant.username) : "Unassigned"}\n↳ ${statusEmoji} ${statusLabel}`;
+        });
+    const chunks =
+        splitDescription(
+            lines.length
+                ? lines
+                : ["No raffle nations are available yet."],
+            3800
+        );
+    const drawEmbeds =
+        chunks.map((description, index) =>
+            baseEmbed("raffle")
+                .setTitle(
+                    `🌍 Raffle Nation Draw (${index + 1}/${chunks.length})`
+                )
+                .setDescription(description)
+        );
+
+    return [summary, ...drawEmbeds];
+}
+
 function liveEmbeds(section, data) {
     if (section === "tournament") return [overviewEmbed(data)];
     if (section === "participants") return participantsEmbeds(data);
@@ -474,6 +584,8 @@ function liveEmbeds(section, data) {
 }
 
 module.exports = {
+    raffleEmbeds,
+
     data: new SlashCommandBuilder()
         .setName("worldcup")
         .setDescription("Open the Bella Ciao FC World Cup tournament hub")
@@ -499,9 +611,16 @@ module.exports = {
 
         try {
             const data =
-                await getWorldCupData();
+                section === "raffle"
+                    ? await getRaffleData()
+                    : await getWorldCupData();
             const embeds =
-                data && liveEmbeds(section, data);
+                data &&
+                (
+                    section === "raffle"
+                        ? raffleEmbeds(data)
+                        : liveEmbeds(section, data)
+                );
 
             if (embeds) {
                 return interaction.editReply({
