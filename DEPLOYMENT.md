@@ -25,6 +25,7 @@ AI_REPLY_COOLDOWN_MS=600000
 WORLD_CUP_SUPABASE_URL=https://pagoqdpzbxpckhpqjoif.supabase.co
 WORLD_CUP_SUPABASE_ANON_KEY=your_public_supabase_anon_key
 WORLD_CUP_TOURNAMENT_SLUG=world-cup-2026
+ZAFRONIX_WORLD_CUP_API_KEY=your_zafronix_world_cup_api_key
 AUTOMODE_CHECK_INTERVAL_MS=120000
 ```
 

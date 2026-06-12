@@ -17,6 +17,7 @@ const {
 const BELLA_CLUB_ID = 525542;
 
 module.exports = {
+    hidden: true,
 
     data:
         new SlashCommandBuilder()

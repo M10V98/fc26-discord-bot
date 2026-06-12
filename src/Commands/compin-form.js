@@ -60,6 +60,7 @@ function top(players, linkedMaps, key) {
 }
 
 module.exports = {
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("compin-form")
         .setDescription("Show in-form competitive friendly players")

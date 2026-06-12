@@ -62,6 +62,7 @@ function ranked(players, linkedMaps, key, options = {}) {
 }
 
 module.exports = {
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("comptop")
         .setDescription("Show competitive friendly top players per stat"),

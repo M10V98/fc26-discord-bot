@@ -63,6 +63,7 @@ function perGame(total, games) {
 }
 
 module.exports = {
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("compplayerstats")
         .setDescription("View competitive friendly player stats")

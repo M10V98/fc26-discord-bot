@@ -79,6 +79,11 @@ for (const file of commandFiles) {
         const command =
             require(filePath);
 
+        if (command.hidden) {
+            console.log(`Skipped hidden command: ${command.data?.name || file}`);
+            continue;
+        }
+
         if ("data" in command && "execute" in command) {
             client.commands.set(command.data.name, command);
             console.log(`Loaded command: ${command.data.name}`);
@@ -439,6 +444,19 @@ if (isAdminClaimMenu) {
 
                     if (command?.handleMembersPageButton) {
                         await command.handleMembersPageButton(interaction);
+                    }
+
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("worldcup_page:")
+                ) {
+                    const command =
+                        client.commands.get("worldcup");
+
+                    if (command?.handleWorldCupPageButton) {
+                        await command.handleWorldCupPageButton(interaction);
                     }
 
                     return;

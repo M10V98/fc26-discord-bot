@@ -66,6 +66,13 @@ async function deployCommands() {
                 continue;
             }
 
+            if (command.hidden) {
+                console.log(
+                    `Skipped hidden command: ${command.data.name}`
+                );
+                continue;
+            }
+
             commands.push(
                 command.data.toJSON()
             );
@@ -177,5 +184,4 @@ if (require.main === module) {
 module.exports = {
     deployCommands
 };
-
 

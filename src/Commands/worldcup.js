@@ -20,8 +20,9 @@ const {
     getWorldCupData
 } = require("../Services/worldCupApi");
 const {
-    getNationLiveData
-} = require("../Services/worldCupSportsDb");
+    getNationLiveData,
+    getWorldCupLiveData
+} = require("../Services/worldCupZafronix");
 
 const BASE_URL =
     "https://bellaciaofc.com/fan-hub/world-cup";
@@ -29,48 +30,68 @@ const GOLD =
     "#d4af37";
 
 const SECTIONS = {
+    real_overview: {
+        label: "Real World Cup - Overview",
+        description: "View the real 2026 FIFA World Cup overview."
+    },
+    real_groups: {
+        label: "Real World Cup - Groups",
+        description: "View real 2026 World Cup group standings."
+    },
+    real_fixtures: {
+        label: "Real World Cup - Fixtures",
+        description: "View real upcoming 2026 World Cup fixtures."
+    },
+    real_results: {
+        label: "Real World Cup - Results",
+        description: "View real completed 2026 World Cup results."
+    },
+    real_bracket: {
+        label: "Real World Cup - Bracket",
+        description: "View the real 2026 World Cup knockout bracket."
+    },
     tournament: {
-        label: "Tournament",
+        label: "Bella Ciao Tournament - Overview",
         description: "Live tournament overview and registration status."
     },
     info: {
-        label: "Info & Rules",
+        label: "Bella Ciao Tournament - Info & Rules",
         description: "Read the format, schedule and tournament rules."
     },
     participants: {
-        label: "Participants",
+        label: "Bella Ciao Tournament - Participants",
         description: "See every registered player and their drawn nation."
     },
     draw: {
-        label: "Live Draw",
+        label: "Bella Ciao Tournament - Live Draw",
         description: "Follow the nation and group draws."
     },
     groups: {
-        label: "Groups",
+        label: "Bella Ciao Tournament - Groups",
         description: "View the drawn groups and live standings."
     },
     fixtures: {
-        label: "Fixtures",
+        label: "Bella Ciao Tournament - Fixtures",
         description: "See upcoming and live fixtures."
     },
     results: {
-        label: "Results",
+        label: "Bella Ciao Tournament - Results",
         description: "View completed tournament results."
     },
     bracket: {
-        label: "Bracket",
+        label: "Bella Ciao Tournament - Bracket",
         description: "Follow the knockout bracket."
     },
     awards: {
-        label: "Hall of Fame",
+        label: "Bella Ciao Tournament - Awards",
         description: "See tournament leaders and awards."
     },
     raffle: {
-        label: "Raffle",
+        label: "Bella Ciao World Cup Raffle",
         description: "Open the World Cup raffle."
     },
     mynation: {
-        label: "My Nations",
+        label: "Bella Ciao Raffle - My Nations",
         description: "Link your website account and follow your raffle nations."
     }
 };
@@ -118,6 +139,10 @@ const NATION_STATUS = {
 };
 
 function sectionUrl(section) {
+    if (section.startsWith("real_")) {
+        return "https://api.zafronix.com/docs";
+    }
+
     return section === "mynation"
         ? `${BASE_URL}/follow`
         : `${BASE_URL}/${section}`;
@@ -164,6 +189,58 @@ function rafflePool(data) {
 function websiteRow(section) {
     return new ActionRowBuilder()
         .addComponents(linkButton(section));
+}
+
+function worldCupPageButtons(section, page, totalPages) {
+    if (totalPages <= 1) {
+        return [];
+    }
+
+    return [
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`worldcup_page:${section}:${page - 1}`)
+                    .setLabel("Previous")
+                    .setEmoji("⬅️")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page <= 0),
+                new ButtonBuilder()
+                    .setCustomId(`worldcup_page:${section}:${page + 1}`)
+                    .setLabel("Next")
+                    .setEmoji("➡️")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(page >= totalPages - 1)
+            )
+    ];
+}
+
+function worldCupPagePayload(section, embeds, page = 0) {
+    const totalPages =
+        Math.max(1, embeds.length);
+    const safePage =
+        Math.max(
+            0,
+            Math.min(Number(page || 0), totalPages - 1)
+        );
+    const embed =
+        embeds[safePage];
+
+    if (totalPages > 1) {
+        embed.setFooter({
+            ...FOOTER,
+            text:
+                `${FOOTER.text} - Page ${safePage + 1}/${totalPages}`
+        });
+    }
+
+    return {
+        embeds: [embed],
+        components: [
+            ...worldCupPageButtons(section, safePage, totalPages),
+            websiteRow(section)
+        ]
+    };
 }
 
 function maps(data) {
@@ -250,6 +327,62 @@ function overviewEmbed(data) {
                 `**Registration closes:** ${closes}`
             ].join("\n")
         );
+}
+
+function infoEmbed(data) {
+    const tournament =
+        data.tournament;
+    const registrationOpens =
+        tournament.registration_opens_at
+            ? discordTime(tournament.registration_opens_at, "f")
+            : "Open now";
+    const registrationCloses =
+        tournament.registration_closes_at
+            ? discordTime(tournament.registration_closes_at, "f")
+            : "TBC";
+    const draw =
+        tournament.draw_at
+            ? discordTime(tournament.draw_at, "f")
+            : "TBC";
+
+    return baseEmbed("info")
+        .setDescription(
+            [
+                tournament.subtitle
+                    ? `*${escapeMarkdown(tournament.subtitle)}*`
+                    : SECTIONS.info.description,
+                "",
+                `**Status:** ${STATUS_LABELS[tournament.status] || tournament.status}`,
+                `**Registration opens:** ${registrationOpens}`,
+                `**Registration closes:** ${registrationCloses}`,
+                `**Draw:** ${draw}`,
+                `**Format:** ${tournament.group_count || "TBC"} groups of ${tournament.group_size || "TBC"}`,
+                `**Registered players:** ${data.participants.length}${tournament.max_participants ? `/${tournament.max_participants}` : ""}`,
+                "",
+                "The website button below has the full tournament rules."
+            ].join("\n")
+        );
+}
+
+function drawEmbeds(data) {
+    const assigned =
+        data.participants.filter(row => row.nation_id).length;
+    const grouped =
+        data.participants.filter(row => row.group_id).length;
+    const summary =
+        baseEmbed("draw")
+            .setDescription(
+                [
+                    `**Nations drawn:** ${assigned}/${data.participants.length}`,
+                    `**Players placed into groups:** ${grouped}/${data.participants.length}`,
+                    "",
+                    assigned
+                        ? "The current live draw is shown below."
+                        : "The nation draw has not started yet."
+                ].join("\n")
+            );
+
+    return [summary, ...participantsEmbeds(data)];
 }
 
 function participantsEmbeds(data) {
@@ -605,19 +738,47 @@ function eventTime(event) {
 }
 
 function upcomingLines(events) {
-    return events.length
-        ? events.slice(0, 3).map(event =>
+    const upcoming =
+        [...events].sort((a, b) =>
+            eventDate(a) - eventDate(b)
+        );
+
+    return upcoming.length
+        ? upcoming.slice(0, 1).map(event =>
             `${event.strHomeTeam} vs ${event.strAwayTeam}\n${eventTime(event)}${event.strGroup ? ` - Group ${event.strGroup}` : ""}`
         ).join("\n\n")
-        : "No upcoming World Cup matches available yet.";
+        : "No next World Cup fixture available yet.";
 }
 
 function resultLines(events) {
-    return events.length
-        ? events.slice(0, 3).map(event =>
+    const recent =
+        [...events].sort((a, b) =>
+            eventDate(b) - eventDate(a)
+        );
+
+    return recent.length
+        ? recent.slice(0, 3).map(event =>
             `${event.strHomeTeam} **${event.intHomeScore ?? "-"}-${event.intAwayScore ?? "-"}** ${event.strAwayTeam}\n${eventTime(event)}`
         ).join("\n\n")
         : "No World Cup results available yet.";
+}
+
+function eventDate(event) {
+    const raw =
+        event.strTimestamp ||
+        (
+            event.dateEvent
+                ? `${event.dateEvent}T${event.strTime || "00:00:00"}Z`
+                : null
+        );
+    const timestamp =
+        raw
+            ? Date.parse(raw)
+            : NaN;
+
+    return Number.isNaN(timestamp)
+        ? Number.MAX_SAFE_INTEGER
+        : timestamp;
 }
 
 function tableLines(rows) {
@@ -626,7 +787,7 @@ function tableLines(rows) {
             const gd =
                 Number(row.intGoalDifference || 0);
 
-            return `${row.intRank}. **${escapeMarkdown(row.strTeam)}** - ${row.intPoints} pts | ${row.intPlayed}P ${row.intWin}W ${row.intDraw}D ${row.intLoss}L | GD ${gd > 0 ? "+" : ""}${gd}`;
+            return `${row.intRank || "-"}. **${escapeMarkdown(row.strTeam)}** - ${row.intPoints} pts | ${row.intPlayed}P ${row.intWin}W ${row.intDraw}D ${row.intLoss}L | ${row.intGoalsFor || 0} GF ${row.intGoalsAgainst || 0} GA ${gd > 0 ? "+" : ""}${gd} GD`;
         }).join("\n")
         : "Group standings have not been published yet.";
 }
@@ -677,6 +838,32 @@ function myNationEmbeds(data, participant, nationData) {
                     ).join("\n")
                 ].join("\n")
             );
+
+    summary.addFields(
+        ...nationData.map(item => {
+            const standing =
+                item.live.standing;
+            const nextFixture =
+                upcomingLines(item.live.upcoming);
+            const recentResults =
+                resultLines(item.live.recent);
+
+            return {
+                name:
+                    `${item.nation.flag_emoji || "🏳️"} ${item.nation.name}`,
+                value: [
+                    standing
+                        ? [
+                            `**Group:** ${standing.strDescription || "TBC"} | **Position:** ${standing.intRank || "-"} | **Points:** ${standing.intPoints}`,
+                            `**Record:** ${standing.intPlayed}P ${standing.intWin}W ${standing.intDraw}D ${standing.intLoss}L | ${standing.intGoalsFor || 0} GF ${standing.intGoalsAgainst || 0} GA | GD ${Number(standing.intGoalDifference || 0) > 0 ? "+" : ""}${standing.intGoalDifference || 0}`
+                        ].join("\n")
+                        : "**Group table:** Awaiting published standings",
+                    `**Next:** ${nextFixture}`,
+                    `**Recent:** ${recentResults}`
+                ].join("\n").slice(0, 1024)
+            };
+        })
+    );
     const details =
         nationData.map(item => {
             const {
@@ -700,17 +887,17 @@ function myNationEmbeds(data, participant, nationData) {
                             `🏁 **Tournament progress:** ${progressLabel(assignment.status)}`,
                             `🎁 **Prize eligibility:** ${prizeLabel(assignment.status)}`,
                             standing
-                                ? `📊 **Position:** ${standing.intRank} | **Points:** ${standing.intPoints} | **Record:** ${standing.intPlayed}P ${standing.intWin}W ${standing.intDraw}D ${standing.intLoss}L | **GD:** ${standing.intGoalDifference}`
+                                ? `📊 **Group position:** ${standing.intRank || "-"} | **Points:** ${standing.intPoints}\n**Record:** ${standing.intPlayed}P ${standing.intWin}W ${standing.intDraw}D ${standing.intLoss}L | **Goals:** ${standing.intGoalsFor || 0} scored, ${standing.intGoalsAgainst || 0} conceded | **GD:** ${Number(standing.intGoalDifference || 0) > 0 ? "+" : ""}${standing.intGoalDifference || 0}`
                                 : "📊 **Standings:** Awaiting published World Cup table"
                         ].join("\n")
                     )
                     .addFields(
                         {
-                            name: "📅 Upcoming Matches",
+                            name: "📅 Next Fixture",
                             value: upcomingLines(live.upcoming)
                         },
                         {
-                            name: "⚽ Results",
+                            name: "⚽ Recent Results",
                             value: resultLines(live.recent)
                         },
                         {
@@ -874,15 +1061,329 @@ async function handleMyNationSelect(interaction) {
     const embeds =
         await loadMyNationEmbeds(data, participant);
 
-    return interaction.followUp({
-        embeds: embeds.slice(0, 10),
-        components: [websiteRow("mynation")]
+    return interaction.followUp(
+        worldCupPagePayload("mynation", embeds, 0)
+    );
+}
+
+function realWorldCupEmbed(section) {
+    return new EmbedBuilder()
+        .setColor(GOLD)
+        .setTitle(`🌍 ${SECTIONS[section].label}`)
+        .setURL("https://api.zafronix.com/docs")
+        .setFooter(FOOTER)
+        .setTimestamp();
+}
+
+function realWorldCupOverview(data) {
+    const tournament =
+        data.tournament?.tournament || {};
+    const teams =
+        data.tournament?.teams || [];
+    const finished =
+        data.matches.filter(match =>
+            match.status === "finished"
+        ).length;
+    const next =
+        data.matches
+            .filter(match =>
+                match.status !== "finished" &&
+                match.homeTeam &&
+                match.awayTeam
+            )
+            .sort((a, b) =>
+                new Date(a.kickoffUtc) - new Date(b.kickoffUtc)
+            )[0];
+
+    return realWorldCupEmbed("real_overview")
+        .setDescription(
+            [
+                `**Hosts:** ${(tournament.host || []).join(", ")}`,
+                `📅 **Dates:** ${tournament.datesIso?.start || "TBC"} to ${tournament.datesIso?.end || "TBC"}`,
+                `🏳️ **Teams:** ${teams.length || tournament.teamsCount || 48}`,
+                `⚽ **Matches:** ${finished} finished / ${data.matches.length || tournament.matchesCount || 104} total`,
+                `🏆 **Format:** 12 groups of 4, then a 32-team knockout stage`,
+                "",
+                next
+                    ? `⏭️ **Next fixture:** ${next.homeTeam} vs ${next.awayTeam}\n🕒 ${discordTime(next.kickoffUtc, "f")} | 🏟️ ${escapeMarkdown(next.stadium || "Venue TBC")}`
+                    : "⏭️ **Next fixture:** TBC"
+            ].join("\n")
+        );
+}
+
+function realStandingLine(row) {
+    const gd =
+        Number(row.goalDifference || 0);
+
+    return `${row.position || "-"}. **${escapeMarkdown(row.team)}** - ${row.points} pts | ${row.played}P ${row.won}W ${row.drawn}D ${row.lost}L | ${row.goalsFor} GF ${row.goalsAgainst} GA ${gd > 0 ? "+" : ""}${gd} GD`;
+}
+
+function flagEmoji(iso) {
+    const code =
+        String(iso || "")
+            .toUpperCase();
+
+    return /^[A-Z]{2}$/.test(code)
+        ? String.fromCodePoint(
+            ...[...code].map(char =>
+                127397 + char.charCodeAt(0)
+            )
+        )
+        : "🏳️";
+}
+
+function realTeamForStanding(teams, teamName) {
+    const aliases = {
+        "Côte d'Ivoire": "Ivory Coast",
+        Czechia: "Czech Republic",
+        "Korea Republic": "South Korea",
+        USA: "United States"
+    };
+    const expected =
+        aliases[teamName] || teamName;
+
+    return teams.find(item =>
+        String(item.name).localeCompare(
+            expected,
+            undefined,
+            { sensitivity: "base" }
+        ) === 0
+    );
+}
+
+function tableCell(value, width, alignRight = false) {
+    const text =
+        String(value ?? "-").slice(0, width);
+
+    return alignRight
+        ? text.padStart(width)
+        : text.padEnd(width);
+}
+
+function realGroupTable(rows, teams) {
+    const header =
+        " #  Team             P  W  D  L  GF GA  GD Pts";
+    const divider =
+        "──  ───────────────  ─  ─  ─  ─  ── ──  ── ───";
+    const lines =
+        rows.map((row, index) => {
+            const team =
+                realTeamForStanding(teams, row.team);
+            const marker =
+                row.position === 1 || row.position === 2
+                    ? "🟢"
+                    : row.position === 3
+                        ? "🟡"
+                        : row.position === 4
+                            ? "⚪"
+                            : "▫️";
+            const flag =
+                flagEmoji(team?.flag?.iso);
+            const gd =
+                Number(row.goalDifference || 0);
+            const position =
+                row.position || index + 1;
+
+            return `${marker} ${tableCell(position, 2, true)} ${flag} ${tableCell(row.team, 15)} ${tableCell(row.played, 2, true)} ${tableCell(row.won, 2, true)} ${tableCell(row.drawn, 2, true)} ${tableCell(row.lost, 2, true)} ${tableCell(row.goalsFor, 3, true)} ${tableCell(row.goalsAgainst, 2, true)} ${tableCell(gd > 0 ? `+${gd}` : gd, 3, true)} ${tableCell(row.points, 3, true)}`;
+        });
+
+    return `${header}\n${divider}\n${lines.join("\n")}`;
+}
+
+function realWorldCupGroups(data) {
+    const groups =
+        Object.entries(data.standings || {})
+            .sort(([a], [b]) => a.localeCompare(b));
+    const teams =
+        data.tournament?.teams || [];
+
+    return groups.map(([group, rows]) => {
+        const played =
+            Math.floor(
+                rows.reduce(
+                    (total, row) =>
+                        total + Number(row.played || 0),
+                    0
+                ) / 2
+            );
+        const goals =
+            rows.reduce(
+                (total, row) => total + Number(row.goalsFor || 0),
+                0
+            );
+
+        return (
+        realWorldCupEmbed("real_groups")
+            .setTitle(`🌍 WORLD CUP 2026 • GROUP ${group}`)
+            .setDescription(
+                [
+                    `📊 **Group ${group} Standings**`,
+                    `⚽ ${played} matches played • 🥅 ${goals} goals scored`,
+                    "",
+                    `\`\`\`text\n${realGroupTable(rows, teams)}\n\`\`\``,
+                    "🟢 Automatic qualification • 🟡 Third-place route • ⚪ Currently outside"
+                ].join("\n")
+            )
+        );
     });
+}
+
+function realMatchLine(match, includeResult = false) {
+    const teams =
+        includeResult
+            ? `${escapeMarkdown(match.homeTeam || match.homeRef || "TBC")} **${match.homeScore ?? "-"}-${match.awayScore ?? "-"}** ${escapeMarkdown(match.awayTeam || match.awayRef || "TBC")}`
+            : `**${escapeMarkdown(match.homeTeam || match.homeRef || "TBC")} vs ${escapeMarkdown(match.awayTeam || match.awayRef || "TBC")}**`;
+    const scorers =
+        includeResult && match.goals?.length
+            ? `\nScorers: ${match.goals.map(goal =>
+                `${escapeMarkdown(goal.scorer)} ${goal.minute}'`
+            ).join(", ")}`
+            : "";
+
+    return `⚽ ${teams}\n🕒 ${discordTime(match.kickoffUtc, "f")} | 🏟️ ${escapeMarkdown(match.stadium || "Venue TBC")}${scorers}`;
+}
+
+function realMatchEmbeds(section, matches, includeResult) {
+    const descriptions =
+        splitDescription(
+            matches.map(match =>
+                realMatchLine(match, includeResult)
+            ),
+            3800
+        );
+
+    return descriptions.map((description, index) =>
+        realWorldCupEmbed(section)
+            .setTitle(
+                `${SECTIONS[section].label} (${index + 1}/${descriptions.length})`
+            )
+            .setDescription(description)
+    );
+}
+
+function realWorldCupFixtures(data) {
+    const fixtures =
+        data.matches
+            .filter(match =>
+                match.status !== "finished" &&
+                match.homeTeam &&
+                match.awayTeam
+            )
+            .sort((a, b) =>
+                new Date(a.kickoffUtc) - new Date(b.kickoffUtc)
+            );
+    const byDate =
+        new Map();
+
+    for (const fixture of fixtures) {
+        const date =
+            fixture.date ||
+            String(fixture.kickoffUtc || "").slice(0, 10) ||
+            "Date TBC";
+
+        if (!byDate.has(date)) {
+            byDate.set(date, []);
+        }
+
+        byDate.get(date).push(fixture);
+    }
+
+    const pages =
+        [...byDate.entries()].map(([date, dayFixtures]) =>
+        realWorldCupEmbed("real_fixtures")
+            .setTitle(`📅 Real World Cup Fixtures - ${date}`)
+            .setDescription(
+                dayFixtures
+                    .map(match => realMatchLine(match, false))
+                    .join("\n\n")
+            )
+        );
+
+    return pages.length
+        ? pages
+        : [
+            realWorldCupEmbed("real_fixtures")
+                .setDescription("📅 No upcoming fixtures available.")
+        ];
+}
+
+function realWorldCupResults(data) {
+    const results =
+        data.matches
+            .filter(match =>
+                match.status === "finished" ||
+                (
+                    match.homeScore != null &&
+                    match.awayScore != null
+                )
+            )
+            .sort((a, b) =>
+                new Date(b.kickoffUtc) - new Date(a.kickoffUtc)
+            );
+
+    const pages = [];
+
+    for (let index = 0; index < results.length; index += 6) {
+        const pageResults =
+            results.slice(index, index + 6);
+
+        pages.push(
+            realWorldCupEmbed("real_results")
+                .setTitle(
+                    `⚽ Real World Cup Results - Most Recent ${index + 1}-${index + pageResults.length}`
+                )
+                .setDescription(
+                    pageResults
+                        .map(match => realMatchLine(match, true))
+                        .join("\n\n")
+                )
+        );
+    }
+
+    return pages.length
+        ? pages
+        : [
+            realWorldCupEmbed("real_results")
+                .setDescription("No completed matches yet.")
+        ];
+}
+
+function realWorldCupBracket(data) {
+    const matches =
+        data.matches.filter(match =>
+            !String(match.stage || "").startsWith("group_")
+        );
+    const descriptions =
+        splitDescription(
+            matches.map(match =>
+                `🏆 **Match ${match.matchNo} - ${String(match.stageNormalized || match.stage).replaceAll("_", " ")}**\n⚽ ${escapeMarkdown(match.homeTeam || match.homeRef || "TBC")} vs ${escapeMarkdown(match.awayTeam || match.awayRef || "TBC")} | 🕒 ${discordTime(match.kickoffUtc, "f")}`
+            ),
+            3800
+        );
+
+    return descriptions.map((description, index) =>
+        realWorldCupEmbed("real_bracket")
+            .setTitle(
+                `Real World Cup 2026 - Knockout Bracket (${index + 1}/${descriptions.length})`
+            )
+            .setDescription(description)
+    );
+}
+
+function realWorldCupEmbeds(section, data) {
+    if (section === "real_overview") return [realWorldCupOverview(data)];
+    if (section === "real_groups") return realWorldCupGroups(data);
+    if (section === "real_fixtures") return realWorldCupFixtures(data);
+    if (section === "real_results") return realWorldCupResults(data);
+    if (section === "real_bracket") return realWorldCupBracket(data);
+    return null;
 }
 
 function liveEmbeds(section, data) {
     if (section === "tournament") return [overviewEmbed(data)];
+    if (section === "info") return [infoEmbed(data)];
     if (section === "participants") return participantsEmbeds(data);
+    if (section === "draw") return drawEmbeds(data);
     if (section === "groups") return groupsEmbeds(data);
     if (section === "fixtures") return fixturesEmbeds(data);
     if (section === "results") return resultsEmbeds(data);
@@ -891,19 +1392,86 @@ function liveEmbeds(section, data) {
     return null;
 }
 
+async function buildWorldCupSectionEmbeds(interaction, section) {
+    if (section.startsWith("real_")) {
+        return realWorldCupEmbeds(
+            section,
+            await getWorldCupLiveData()
+        );
+    }
+
+    if (section === "raffle") {
+        const data =
+            await getRaffleData();
+
+        return data
+            ? raffleEmbeds(data)
+            : [];
+    }
+
+    if (section === "mynation") {
+        const [data, link] =
+            await Promise.all([
+                getRaffleData(),
+                raffleLink(interaction)
+            ]);
+        const participant =
+            data
+                ? linkedParticipant(link, data)
+                : null;
+
+        return participant
+            ? loadMyNationEmbeds(data, participant)
+            : [];
+    }
+
+    const data =
+        await getWorldCupData();
+
+    return data
+        ? liveEmbeds(section, data)
+        : [];
+}
+
+async function handleWorldCupPageButton(interaction) {
+    const [, section, page] =
+        interaction.customId.split(":");
+    await interaction.deferUpdate();
+
+    const embeds =
+        await buildWorldCupSectionEmbeds(
+            interaction,
+            section
+        );
+
+    if (!embeds.length) {
+        return interaction.followUp({
+            content: "That World Cup page is no longer available.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    return interaction.editReply(
+        worldCupPagePayload(section, embeds, Number(page || 0))
+    );
+}
+
 module.exports = {
     accountLinkResponse,
     handleMyNationSelect,
+    handleWorldCupPageButton,
+    liveEmbeds,
     myNationEmbeds,
+    realWorldCupEmbeds,
     raffleEmbeds,
 
     data: new SlashCommandBuilder()
         .setName("worldcup")
-        .setDescription("Open the Bella Ciao FC World Cup tournament hub")
+        .setDescription("Open real World Cup data, the raffle, or the Bella Ciao tournament")
         .addStringOption(option =>
             option
                 .setName("section")
-                .setDescription("Show live tournament data or open a page")
+                .setDescription("Choose real World Cup, raffle, or tournament data")
                 .addChoices(
                     ...Object.entries(SECTIONS)
                         .map(([value, item]) => ({
@@ -916,7 +1484,7 @@ module.exports = {
     async execute(interaction) {
         const section =
             interaction.options.getString("section") ||
-            "tournament";
+            "real_overview";
 
         try {
             if (section === "mynation") {
@@ -974,13 +1542,23 @@ module.exports = {
                 const embeds =
                     await loadMyNationEmbeds(data, participant);
 
-                return interaction.editReply({
-                    embeds: embeds.slice(0, 10),
-                    components: [websiteRow("mynation")]
-                });
+                return interaction.editReply(
+                    worldCupPagePayload("mynation", embeds, 0)
+                );
             }
 
             await interaction.deferReply();
+
+            if (section.startsWith("real_")) {
+                const data =
+                    await getWorldCupLiveData();
+                const embeds =
+                    realWorldCupEmbeds(section, data);
+
+                return interaction.editReply(
+                    worldCupPagePayload(section, embeds, 0)
+                );
+            }
 
             const data =
                 section === "raffle"
@@ -995,13 +1573,9 @@ module.exports = {
                 );
 
             if (embeds) {
-                return interaction.editReply({
-                    embeds: embeds.slice(0, 10),
-                    components:
-                        section === "tournament"
-                            ? linkRows()
-                            : [websiteRow(section)]
-                });
+                return interaction.editReply(
+                    worldCupPagePayload(section, embeds, 0)
+                );
             }
         } catch (err) {
             console.error(

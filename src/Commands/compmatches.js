@@ -73,6 +73,7 @@ function lineForMatch(match, clubId, linkedMaps) {
 }
 
 module.exports = {
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("compmatches")
         .setDescription("Show stored competitive friendly matches"),

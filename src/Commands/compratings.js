@@ -24,6 +24,7 @@ const {
 const eaApi = require("../Services/eaApi");
 
 module.exports = {
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("compratings")
         .setDescription("Competitive friendly-match rating leaderboard"),
