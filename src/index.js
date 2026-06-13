@@ -621,11 +621,4 @@ if (isAdminClaimMenu) {
     }
 );
 
-const footballAI =
-    require("./Events/messageCreate");
-
-client.on(
-    "messageCreate",
-    footballAI
-);
 client.login(discordToken);

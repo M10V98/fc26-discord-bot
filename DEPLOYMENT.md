@@ -29,6 +29,9 @@ ZAFRONIX_WORLD_CUP_API_KEY=your_zafronix_world_cup_api_key
 AUTOMODE_CHECK_INTERVAL_MS=120000
 ```
 
+Message autoresponses are currently disabled because the bot does not register a
+`messageCreate` listener.
+
 For persistent SQLite storage, add a Railway volume and set:
 
 ```sh
