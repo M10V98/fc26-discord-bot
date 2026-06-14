@@ -214,6 +214,17 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
+                if (interaction.customId === "unlink_club") {
+                    const command =
+                        client.commands.get("unlink");
+
+                    if (command?.handleSelect) {
+                        await command.handleSelect(interaction);
+                    }
+
+                    return;
+                }
+
                 if (
                     interaction.customId ===
                     "worldcup_mynation_link"

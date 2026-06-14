@@ -78,7 +78,7 @@ const FORMATIONS = {
 
 const POSITION_ALIASES = {
     GK: ["gk", "goalkeeper"],
-    CB: ["cb", "centre back", "center back"],
+    CB: ["cb", "lcb", "rcb", "centre back", "center back"],
     LB: ["lb", "left back", "full back", "fullback"],
     RB: ["rb", "right back", "full back", "fullback"],
     LWB: ["lwb", "left wing back", "wing back", "wingback"],
@@ -110,7 +110,7 @@ function rolePositions(member) {
         .filter(([, aliases]) =>
             names.some(name =>
                 aliases.some(alias =>
-                    name === alias || name.split(" ").includes(alias)
+                    ` ${name} `.includes(` ${alias} `)
                 )
             )
         )
@@ -142,25 +142,112 @@ function playerScore(player, position) {
 }
 
 function mergeStats(all, recent) {
+    const playerKey = player =>
+        normalize(player.name) ||
+        String(player.playerId);
     const allById =
-        new Map(all.map(player => [String(player.playerId), player]));
+        new Map(all.map(player => [playerKey(player), player]));
     const recentById =
-        new Map(recent.map(player => [String(player.playerId), player]));
+        new Map(recent.map(player => [playerKey(player), player]));
 
     return [...new Set([...allById.keys(), ...recentById.keys()])]
-        .map(playerId => ({
-            playerId,
-            all: allById.get(playerId) || {},
-            recent: recentById.get(playerId) || {}
+        .map(key => ({
+            playerId:
+                allById.get(key)?.playerId ||
+                recentById.get(key)?.playerId ||
+                key,
+            playerIds: [
+                ...new Set([
+                    ...(allById.get(key)?.playerIds || []),
+                    ...(recentById.get(key)?.playerIds || [])
+                ])
+            ],
+            all: allById.get(key) || {},
+            recent: recentById.get(key) || {}
         }));
 }
 
 function linkedStatPlayer(link, players) {
     const wantedName = normalize(link.player_name);
     return players.find(player =>
-        (link.player_id && String(player.playerId) === String(link.player_id)) ||
+        (
+            link.player_id &&
+            (
+                String(player.playerId) === String(link.player_id) ||
+                player.playerIds?.includes(String(link.player_id))
+            )
+        ) ||
         normalize(player.all.name || player.recent.name) === wantedName
     );
+}
+
+function emptyPlayerStats(link) {
+    const playerId =
+        String(link.player_id || link.player_name || "");
+    const name =
+        link.player_name || playerId;
+
+    return {
+        playerId,
+        all: {
+            playerId,
+            name
+        },
+        recent: {
+            playerId,
+            name
+        }
+    };
+}
+
+function aggregateMatchRows(matchRows) {
+    const combined = new Map();
+
+    for (const row of matchRows) {
+        for (const player of aggregateCompetitivePlayers([row.match], row.clubId)) {
+            const key =
+                normalize(player.name) ||
+                String(player.playerId);
+            const current =
+                combined.get(key) || {
+                    ...player,
+                    playerIds: new Set(),
+                    appearances: 0,
+                    goals: 0,
+                    assists: 0,
+                    tackles: 0,
+                    interceptions: 0,
+                    saves: 0,
+                    cleanSheets: 0,
+                    passes: 0,
+                    ratingTotal: 0
+                };
+
+            current.playerIds.add(String(player.playerId));
+            current.appearances += Number(player.appearances || 0);
+            current.goals += Number(player.goals || 0);
+            current.assists += Number(player.assists || 0);
+            current.tackles += Number(player.tackles || 0);
+            current.interceptions += Number(player.interceptions || 0);
+            current.saves += Number(player.saves || 0);
+            current.cleanSheets += Number(player.cleanSheets || 0);
+            current.passes += Number(player.passes || 0);
+            current.ratingTotal +=
+                Number(player.avgRating || 0) *
+                Number(player.appearances || 0);
+
+            combined.set(key, current);
+        }
+    }
+
+    return [...combined.values()].map(player => ({
+        ...player,
+        playerIds: [...player.playerIds],
+        avgRating:
+            player.appearances
+                ? player.ratingTotal / player.appearances
+                : 0
+    }));
 }
 
 async function recommendLineup(guild, session, formation) {
@@ -190,55 +277,21 @@ async function recommendLineup(guild, session, formation) {
         rows.flat()
             .sort((a, b) => Number(b.match.timestamp || 0) - Number(a.match.timestamp || 0));
     const recentMatches = matches.slice(0, 5);
-    const aggregate = matchRows => {
-        const combined = new Map();
-
-        for (const row of matchRows) {
-            for (const player of aggregateCompetitivePlayers([row.match], row.clubId)) {
-                const current = combined.get(String(player.playerId)) || [];
-                current.push({ match: row.match, clubId: row.clubId });
-                combined.set(String(player.playerId), current);
-            }
-        }
-
-        return [...combined.entries()].flatMap(([playerId, playerMatches]) => {
-            const byClub = new Map();
-            for (const row of playerMatches) {
-                const list = byClub.get(row.clubId) || [];
-                list.push(row.match);
-                byClub.set(row.clubId, list);
-            }
-            const stats =
-                [...byClub.entries()]
-                    .flatMap(([clubId, clubMatches]) => aggregateCompetitivePlayers(clubMatches, clubId))
-                    .filter(player => String(player.playerId) === playerId);
-            if (!stats.length) return [];
-            const base = stats[0];
-            const totalApps = stats.reduce((sum, player) => sum + player.appearances, 0);
-            return [{
-                ...base,
-                appearances: totalApps,
-                goals: stats.reduce((sum, player) => sum + player.goals, 0),
-                assists: stats.reduce((sum, player) => sum + player.assists, 0),
-                tackles: stats.reduce((sum, player) => sum + player.tackles, 0),
-                interceptions: stats.reduce((sum, player) => sum + player.interceptions, 0),
-                saves: stats.reduce((sum, player) => sum + player.saves, 0),
-                cleanSheets: stats.reduce((sum, player) => sum + player.cleanSheets, 0),
-                passes: stats.reduce((sum, player) => sum + player.passes, 0),
-                avgRating: totalApps
-                    ? stats.reduce((sum, player) => sum + player.avgRating * player.appearances, 0) / totalApps
-                    : 0
-            }];
-        });
-    };
-    const stats = mergeStats(aggregate(matches), aggregate(recentMatches));
+    const stats =
+        mergeStats(
+            aggregateMatchRows(matches),
+            aggregateMatchRows(recentMatches)
+        );
     const candidates = [];
 
     for (const userId of canPlay) {
         const member = await guild.members.fetch(userId).catch(() => null);
         const link = links.find(row => String(row.discord_id) === userId);
-        const stat = link ? linkedStatPlayer(link, stats) : null;
-        if (!member || !link || !stat) continue;
+        const stat =
+            link
+                ? linkedStatPlayer(link, stats) || emptyPlayerStats(link)
+                : null;
+        if (!member || !link) continue;
         candidates.push({
             userId,
             name: member.displayName || link.player_name,
@@ -285,17 +338,16 @@ for (const { slot, index } of slotsByPriority) {
 
     const choice =
         candidates
-            .filter(player => !used.has(player.userId))
+            .filter(player =>
+                !used.has(player.userId) &&
+                player.positions.includes(position)
+            )
             .map(player => {
-                const exactPosition =
-                    player.positions.includes(position);
-
                 return {
                     ...player,
                     score:
                         playerScore(player.stat.recent, position) * 0.7 +
-                        playerScore(player.stat.all, position) * 0.3 +
-                        (exactPosition ? 100 : 0)
+                        playerScore(player.stat.all, position) * 0.3
                 };
             })
             .sort((a, b) => b.score - a.score)[0] || null;
@@ -361,6 +413,8 @@ async function renderLineupPng(lineup, formation, title) {
 
 module.exports = {
     FORMATIONS,
+    aggregateMatchRows,
+    rolePositions,
     recommendLineup,
     renderLineupPng
 };
