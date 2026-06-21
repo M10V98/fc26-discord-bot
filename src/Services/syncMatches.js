@@ -260,9 +260,11 @@ async function syncGuild(guildId, channel, options = {}) {
 
         const row = await db.get(
             `
-            SELECT automode.*, clubs.club_id
+            SELECT automode.*, guild_clubs.club_id
             FROM automode
-            JOIN clubs ON clubs.guild_id = automode.guild_id
+            JOIN guild_clubs
+                ON guild_clubs.guild_id = automode.guild_id
+                AND guild_clubs.is_default = 1
             WHERE automode.guild_id = ?
             `,
             [guildId]
@@ -340,8 +342,15 @@ async function syncGuild(guildId, channel, options = {}) {
                 ? String(row.last_match_id)
                 : null;
 
+        const lastPostedClubId =
+            row.last_club_id
+                ? String(row.last_club_id)
+                : null;
+        const currentClubId = String(row.club_id);
+
         const shouldPost =
             options.forcePostLatest ||
+            currentClubId !== lastPostedClubId ||
             latestMatchId !== lastPostedMatchId;
 
         if (!shouldPost) {
@@ -384,6 +393,7 @@ async function syncGuild(guildId, channel, options = {}) {
             guildId,
             {
                 last_match_id: latestMatchId,
+                last_club_id: currentClubId,
                 last_activity_at: now
             }
         );

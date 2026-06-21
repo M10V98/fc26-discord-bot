@@ -127,6 +127,7 @@ const initStatements = [
         guild_id TEXT PRIMARY KEY,
         channel_id TEXT,
         last_match_id TEXT,
+        last_club_id TEXT,
         last_match_ids_json TEXT DEFAULT '{}',
         started_at INTEGER,
         last_activity_at INTEGER
@@ -416,6 +417,12 @@ async function init() {
     await ensureColumn(
         "automode",
         "last_match_id",
+        "TEXT"
+    );
+
+    await ensureColumn(
+        "automode",
+        "last_club_id",
         "TEXT"
     );
 
