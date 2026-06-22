@@ -214,6 +214,12 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
+                if (interaction.customId.startsWith("pb:")) {
+                    const command = client.commands.get("playerbuilder");
+                    await command?.handleComponent?.(interaction);
+                    return;
+                }
+
                 if (interaction.customId === "unlink_club") {
                     const command =
                         client.commands.get("unlink");
@@ -382,6 +388,12 @@ if (isAdminClaimMenu) {
             }
 
             if (interaction.isButton()) {
+                if (interaction.customId.startsWith("pb:")) {
+                    const command = client.commands.get("playerbuilder");
+                    await command?.handleComponent?.(interaction);
+                    return;
+                }
+
                 if (
                     interaction.customId.startsWith("poll_vote:")
                 ) {
@@ -605,6 +617,24 @@ if (isAdminClaimMenu) {
             }
 
             if (interaction.isModalSubmit()) {
+                if (interaction.customId.startsWith("pb:")) {
+                    const command = client.commands.get("playerbuilder");
+                    await command?.handleModal?.(interaction);
+                    return;
+                }
+
+                if (interaction.customId === "schedule_guided_submit") {
+                    const command = client.commands.get("schedule");
+                    await command?.handleGuidedModal?.(interaction);
+                    return;
+                }
+
+                if (interaction.customId === "poll_guided_submit") {
+                    const command = client.commands.get("poll");
+                    await command?.handleGuidedModal?.(interaction);
+                    return;
+                }
+
                 if (
                     interaction.customId.startsWith("session_edit_submit:")
                 ) {

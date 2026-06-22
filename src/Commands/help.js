@@ -110,7 +110,8 @@ module.exports = {
             description,
             "Community",
             [
-                "`/poll` creates a live vote with buttons.",
+                "`/playerbuilder` opens the interactive, self-contained FC 26 player builder.",
+                "`/poll create` creates a poll directly; `/poll guided` offers a phone-friendly form.",
                 "`/ask` asks the football assistant a question.",
                 "`/teach` teaches the assistant a fact or submits it for admin approval.",
                 isAdmin && "`/knowledge pending`, `/knowledge approve`, `/knowledge reject`, and `/knowledge remove` manage learned knowledge.",
@@ -124,6 +125,7 @@ module.exports = {
             "Sessions",
             [
                 isAdmin && "`/schedule session` creates a role-backed RSVP post with load-up and kick-off times. Players choose Can Play, Cannot Play, or Maybe.",
+                isAdmin && "`/schedule guided` opens the same setup as a phone-friendly form.",
                 isAdmin && "The session role is assigned to Can Play users and deleted after the event."
             ]
         );

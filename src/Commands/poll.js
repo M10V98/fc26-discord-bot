@@ -3,7 +3,11 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -93,6 +97,59 @@ async function renderPoll(pollId) {
     };
 }
 
+function guidedModal() {
+    return new ModalBuilder()
+        .setCustomId("poll_guided_submit")
+        .setTitle("Create a Poll")
+        .addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId("question")
+                    .setLabel("Question")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId("options")
+                    .setLabel("Options (one per line, 2-5)")
+                    .setPlaceholder("Yes\nNo\nMaybe")
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+            )
+        );
+}
+
+async function createPoll(interaction, question, options) {
+    const pollId = `${interaction.id}`;
+    await db.run(
+        `
+        INSERT INTO polls
+        (poll_id, guild_id, channel_id, message_id, creator_id, question, options_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            pollId,
+            interaction.guild.id,
+            interaction.channel.id,
+            null,
+            interaction.user.id,
+            question,
+            JSON.stringify(options),
+            Date.now()
+        ]
+    );
+    const rendered = await renderPoll(pollId);
+    const message = await interaction.editReply({
+        embeds: [rendered.embed],
+        components: rendered.components
+    });
+    await db.run(
+        `UPDATE polls SET message_id = ? WHERE poll_id = ?`,
+        [message.id, pollId]
+    );
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("poll")
@@ -134,51 +191,56 @@ module.exports = {
                         .setName("option5")
                         .setDescription("Fifth option")
                 )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("guided")
+                .setDescription("Mobile-friendly guided poll setup")
         ),
 
     async execute(interaction) {
+        if (interaction.options.getSubcommand() === "guided") {
+            return interaction.showModal(guidedModal());
+        }
         await interaction.deferReply();
 
         try {
             const options =
                 optionValues(interaction);
-            const pollId =
-                `${interaction.id}`;
-
-            await db.run(
-                `
-                INSERT INTO polls
-                (poll_id, guild_id, channel_id, message_id, creator_id, question, options_json, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `,
-                [
-                    pollId,
-                    interaction.guild.id,
-                    interaction.channel.id,
-                    null,
-                    interaction.user.id,
-                    interaction.options.getString("question"),
-                    JSON.stringify(options),
-                    Date.now()
-                ]
-            );
-
-            const rendered =
-                await renderPoll(pollId);
-
-            const message =
-                await interaction.editReply({
-                    embeds: [rendered.embed],
-                    components: rendered.components
-                });
-
-            await db.run(
-                `UPDATE polls SET message_id = ? WHERE poll_id = ?`,
-                [message.id, pollId]
+            await createPoll(
+                interaction,
+                interaction.options.getString("question"),
+                options
             );
         } catch (err) {
             console.error("poll error:", err);
             await interaction.editReply("Failed to create poll.");
+        }
+    },
+
+    async handleGuidedModal(interaction) {
+        const options = interaction.fields
+            .getTextInputValue("options")
+            .split(/\r?\n/)
+            .map(value => value.trim())
+            .filter(Boolean)
+            .slice(0, 5);
+        if (options.length < 2) {
+            return interaction.reply({
+                content: "Enter at least two options, one per line.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+        await interaction.deferReply();
+        try {
+            return await createPoll(
+                interaction,
+                interaction.fields.getTextInputValue("question").trim(),
+                options
+            );
+        } catch (err) {
+            console.error("guided poll error:", err);
+            return interaction.editReply("Failed to create poll.");
         }
     },
 
