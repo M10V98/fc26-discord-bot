@@ -74,6 +74,24 @@ function statRows(archetype, state, facilities, groupName) {
     });
 }
 
+function attributeSummaryFields(archetype, state, facilities) {
+    const body = builder.bodyModifiers(archetype, state);
+    const facility = builder.facilityModifiers(facilities, state);
+    const caps = builder.levelCaps(archetype, state.l);
+
+    return archetype.attributeGroups.map(group => ({
+        name: group.name,
+        value: group.attributes.map(attribute => {
+            const row = state.at.find(item =>
+                item.g === group.name && item.n === attribute.name
+            );
+            const value = builder.displayedValue(row, body, facility);
+            return `**${attribute.name}** ${value} / ${caps[attribute.name] ?? 99}`;
+        }).join("\n") || "No attributes",
+        inline: true
+    }));
+}
+
 function accelerationType(state, archetype, facilities) {
     const body = builder.bodyModifiers(archetype, state);
     const facility = builder.facilityModifiers(facilities, state);
@@ -122,7 +140,9 @@ function buildEmbed(state, ctx) {
         embed.addFields({
             name: "Attribute Groups",
             value: ratings.map(row => `**${row.name}** ${row.value}`).join(" · ").slice(0, 1024)
-        }, {
+        });
+        embed.addFields(...attributeSummaryFields(archetype, state, facilities));
+        embed.addFields({
             name: "Signature PlayStyles",
             value: signatureLines.join("\n").slice(0, 1024) || "None"
         });
@@ -181,7 +201,7 @@ function archetypeRow(sessionId, state, archetypes) {
 function navigationRow(sessionId, state) {
     return new ActionRowBuilder().addComponents(
         ...[
-            ["overview", "Overview", ButtonStyle.Primary],
+            ["overview", "Overview", ButtonStyle.Secondary],
             ["stats", "Stats", ButtonStyle.Secondary],
             ["playstyles", "PlayStyles", ButtonStyle.Secondary],
             ["facilities", "Facilities", ButtonStyle.Secondary]
@@ -215,9 +235,10 @@ function statsRows(sessionId, state, archetype) {
                 .addOptions(group.attributes.map(row => ({ label: row.name, value: row.name, default: row.name === state.attribute })))
         ),
         new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(id(sessionId, "minus5")).setLabel("−5").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId(id(sessionId, "minus")).setLabel("−1").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId(id(sessionId, "plus")).setLabel("+1").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(id(sessionId, "settings")).setLabel("Level & Physique").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(id(sessionId, "plus5")).setLabel("+5").setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId(id(sessionId, "reset")).setLabel("Reset Build").setStyle(ButtonStyle.Danger)
         )
     ];
@@ -433,8 +454,9 @@ async function handleComponent(interaction) {
         state.group = interaction.values[0];
         state.attribute = archetype.attributeGroups.find(row => row.name === state.group)?.attributes[0]?.name || "";
     } else if (action === "attribute") state.attribute = interaction.values[0];
-    else if (action === "minus" || action === "plus") {
-        const result = builder.adjustAttribute(archetype, state, action === "plus" ? 1 : -1);
+    else if (["minus5", "minus", "plus", "plus5"].includes(action)) {
+        const amounts = { minus5: -5, minus: -1, plus: 1, plus5: 5 };
+        const result = builder.adjustAttribute(archetype, state, amounts[action]);
         if (!result.ok) return interaction.reply({ content: result.reason, flags: MessageFlags.Ephemeral });
     } else if (action === "reset") {
         const replacement = builder.freshState(archetype, state.ownerId);
