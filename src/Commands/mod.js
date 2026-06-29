@@ -17,12 +17,45 @@ const {
 
 const DEFAULT_TIMEOUT_MINUTES = 60;
 const INFRACTIONS_PAGE_SIZE = 8;
+const ACADEMY_MANAGER_ROLE_NAME = "academy manager";
+const ACADEMY_MANAGER_MOD_SUBCOMMANDS =
+    new Set([
+        "warn",
+        "infractions",
+        "warnings",
+        "timeout"
+    ]);
 
 const ACTION_LABELS = {
     warn: "Warning",
     timeout: "Timeout",
     ban: "Ban"
 };
+
+function isAdministrator(interaction) {
+    return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+}
+
+function hasAcademyManagerRole(interaction) {
+    const roles =
+        interaction.member?.roles?.cache;
+
+    return Boolean(
+        roles?.some(role =>
+            role.name.toLowerCase() === ACADEMY_MANAGER_ROLE_NAME
+        )
+    );
+}
+
+function canUseModSubcommand(interaction, subcommand) {
+    return (
+        isAdministrator(interaction) ||
+        (
+            hasAcademyManagerRole(interaction) &&
+            ACADEMY_MANAGER_MOD_SUBCOMMANDS.has(subcommand)
+        )
+    );
+}
 
 async function warnCount(guildId, userId) {
     const row =
@@ -189,11 +222,9 @@ async function buildInfractionsPage(interaction, options = {}) {
 }
 
 async function handleInfractionsPageButton(interaction) {
-    if (
-        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
+    if (!canUseModSubcommand(interaction, "infractions")) {
         return interaction.reply({
-            content: "Only administrators can use moderation buttons.",
+            content: "Only administrators or Academy Managers can use moderation buttons.",
             ephemeral: true
         });
     }
@@ -375,7 +406,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("mod")
         .setDescription("Moderation tools")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
                 .setName("warn")
@@ -492,16 +522,17 @@ module.exports = {
         await interaction.deferReply();
 
         try {
-            if (
-                !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-            ) {
+            const subcommand =
+                interaction.options.getSubcommand();
+
+            if (!canUseModSubcommand(interaction, subcommand)) {
                 return interaction.editReply(
-                    "Only administrators can use moderation commands."
+                    ACADEMY_MANAGER_MOD_SUBCOMMANDS.has(subcommand)
+                        ? "Only administrators or Academy Managers can use this moderation command."
+                        : "Only administrators can use this moderation command."
                 );
             }
 
-            const subcommand =
-                interaction.options.getSubcommand();
             const user =
                 interaction.options.getUser("user");
             const reason =
