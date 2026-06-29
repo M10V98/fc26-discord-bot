@@ -33,6 +33,7 @@ const {
 const CLEANUP_CHECK_MS = 60 * 1000;
 const CLEANUP_GRACE_MS = 0;
 const SESSION_TIME_ZONE = "Europe/London";
+const SCHEDULE_MANAGER_ROLE_NAME = "academy manager";
 const MONTHS = {
     jan: 1,
     january: 1,
@@ -741,7 +742,7 @@ async function handleSessionButton(interaction) {
 async function getAdminSession(interaction, prefix) {
     if (!canManageSessions(interaction)) {
         await interaction.reply({
-            content: "Only server administrators can use this event control.",
+            content: "Only server administrators or Academy Managers can use this event control.",
             ephemeral: true
         });
         return null;
@@ -1315,7 +1316,18 @@ function startScheduleSessionCleanup(client) {
 }
 
 function canManageSessions(interaction) {
-    return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+    if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+        return true;
+    }
+
+    const roles =
+        interaction.member?.roles?.cache;
+
+    return Boolean(
+        roles?.some(role =>
+            role.name.toLowerCase() === SCHEDULE_MANAGER_ROLE_NAME
+        )
+    );
 }
 
 module.exports = {
