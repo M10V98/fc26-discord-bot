@@ -122,6 +122,8 @@ function playerScore(player, position) {
     const rating = Number(player.avgRating || 0) * 12;
     const goals = Number(player.goals || 0) / games;
     const assists = Number(player.assists || 0) / games;
+    const secondAssists = Number(player.secondAssists || 0) / games;
+    const dribbles = Number(player.dribbles || 0) / games;
     const tackles = Number(player.tackles || 0) / games;
     const interceptions = Number(player.interceptions || 0) / games;
     const saves = Number(player.saves || 0) / games;
@@ -133,12 +135,12 @@ function playerScore(player, position) {
         return rating + tackles * 3 + interceptions * 4 + cleanSheets * 12 + assists * 5;
     }
     if (["CDM", "CM"].includes(position)) {
-        return rating + tackles * 2.5 + interceptions * 3 + passes * 0.1 + assists * 8 + goals * 5;
+        return rating + tackles * 2.5 + interceptions * 3 + passes * 0.1 + assists * 8 + secondAssists * 5 + goals * 5;
     }
     if (["CAM", "LM", "RM", "LW", "RW"].includes(position)) {
-        return rating + goals * 14 + assists * 16 + passes * 0.06;
+        return rating + goals * 14 + assists * 16 + secondAssists * 8 + dribbles * 0.8 + passes * 0.06;
     }
-    return rating + goals * 22 + assists * 12;
+    return rating + goals * 22 + assists * 12 + secondAssists * 5 + dribbles * 0.4;
 }
 
 function mergeStats(all, recent) {
@@ -215,6 +217,8 @@ function aggregateMatchRows(matchRows) {
                     appearances: 0,
                     goals: 0,
                     assists: 0,
+                    secondAssists: 0,
+                    dribbles: 0,
                     tackles: 0,
                     interceptions: 0,
                     saves: 0,
@@ -227,6 +231,8 @@ function aggregateMatchRows(matchRows) {
             current.appearances += Number(player.appearances || 0);
             current.goals += Number(player.goals || 0);
             current.assists += Number(player.assists || 0);
+            current.secondAssists += Number(player.secondAssists || 0);
+            current.dribbles += Number(player.dribbles || 0);
             current.tackles += Number(player.tackles || 0);
             current.interceptions += Number(player.interceptions || 0);
             current.saves += Number(player.saves || 0);

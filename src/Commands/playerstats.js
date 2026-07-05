@@ -5,11 +5,9 @@ const {
 
 const eaApi = require("../Services/eaApi");
 const db = require("../Utils/db");
-
 const {
     getCrestUrl
 } = require("../Services/crests");
-
 const {
     FOOTER,
     underline,
@@ -41,7 +39,6 @@ async function getLinkedPlayer(guildId, discordId) {
 async function autocompleteLinkedPlayers(interaction) {
     const focused =
         interaction.options.getFocused().toLowerCase();
-
     const rows =
         await getLinkedRows(db, interaction.guild.id);
 
@@ -62,6 +59,10 @@ function goalRatio(player) {
     const games = n(player.gamesPlayed);
     if (!games) return "0.00";
     return (n(player.goals) / games).toFixed(2);
+}
+
+function perGame(total, games) {
+    return games ? (n(total) / games).toFixed(2) : "0.00";
 }
 
 module.exports = {
@@ -105,7 +106,6 @@ module.exports = {
                 interaction.options.getUser("user");
             const playerOption =
                 interaction.options.getString("player");
-
             let playerName = playerOption;
 
             if (!playerName) {
@@ -134,7 +134,6 @@ module.exports = {
                     getCrestUrl(club.club_id),
                     getLinkedRows(db, interaction.guild.id)
                 ]);
-
             const player =
                 (members?.members || [])
                     .find(member =>
@@ -149,6 +148,21 @@ module.exports = {
                 );
             }
 
+            const storedPlayer =
+                await db.get(
+                    `
+                    SELECT *
+                    FROM players
+                    WHERE guild_id = ?
+                    AND LOWER(player_name) = LOWER(?)
+                    ORDER BY matches DESC
+                    LIMIT 1
+                    `,
+                    [
+                        interaction.guild.id,
+                        player.name
+                    ]
+                );
             const clubName =
                 info?.[String(club.club_id)]?.name || "Club";
             const linkedMaps =
@@ -157,29 +171,33 @@ module.exports = {
                 displayName(player.name, linkedMaps);
             const proName =
                 player.proName ? ` - "${player.proName}"` : "";
-
+            const games =
+                n(player.gamesPlayed);
             const description = [
-                `👤 ${display}${proName}`,
+                `\u{1F464} ${display}${proName}`,
                 "",
-                `👕 Games Played: **${number(player.gamesPlayed)}**`,
-                `🏅 Man of the Match: **${number(player.manOfTheMatch)}**`,
-                `⭐ Average Rating: **${number(player.ratingAve, 2)}**`,
-                `🏆 Win Rate: **${number(memberWinRate(player))}%**`,
-                `🎯 Shot Conversion Rate: **${number(player.shotSuccessRate)}%**`,
+                `\u{1F455} Games Played: **${number(player.gamesPlayed)}**`,
+                `\u{1F3C5} Man of the Match: **${number(player.manOfTheMatch)}**`,
+                `\u2B50 Average Rating: **${number(player.ratingAve, 2)}**`,
+                `\u{1F3C6} Win Rate: **${number(memberWinRate(player))}%**`,
+                `\u{1F3AF} Shot Conversion Rate: **${number(player.shotSuccessRate)}%**`,
                 "",
-                `⚽ Goals: **${number(player.goals)}**`,
-                `▌ xG Per Game: **${goalRatio(player)}**`,
-                `🤝 Assists: **${number(player.assists)}**`,
-                `▌ xA Per Game: **${n(player.gamesPlayed) ? (n(player.assists) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
-                `👟 Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
-                `▌ xP Per Game: **${n(player.gamesPlayed) ? (n(player.passesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
-                `🛡️ Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
-                `▌ xT Per Game: **${n(player.gamesPlayed) ? (n(player.tacklesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+                `\u26BD Goals: **${number(player.goals)}**`,
+                `xG Per Game: **${goalRatio(player)}**`,
+                `\u{1F91D} Assists: **${number(player.assists)}**`,
+                `xA Per Game: **${perGame(player.assists, games)}**`,
+                `\u{1F517} Second Assists: **${number(storedPlayer?.second_assists)}**`,
+                `\u{1F45F} Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
+                `xP Per Game: **${perGame(player.passesMade, games)}**`,
+                `\u{1F4A8} Dribbles Completed: **${number(storedPlayer?.dribbles)}**`,
+                `\u{1F6E1}\uFE0F Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
+                `xT Per Game: **${perGame(player.tacklesMade, games)}**`,
+                `\u{1F9E0} Interceptions: **${number(storedPlayer?.interceptions)}**`,
                 "",
-                `🚫 Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
-                `🥅 Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
-                `🟥 Red Cards: **${number(player.redCards)}**`,
-                "",
+                `\u{1F6AB} Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
+                `\u{1F945} Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
+                `\u{1F7E5} Red Cards: **${number(player.redCards)}**`,
+                ""
             ].join("\n");
 
             const embed =

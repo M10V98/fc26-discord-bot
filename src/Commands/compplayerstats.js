@@ -101,7 +101,6 @@ module.exports = {
                 interaction.options.getUser("user");
             const playerOption =
                 interaction.options.getString("player");
-
             let selectedName = playerOption;
             let selectedId = null;
 
@@ -139,7 +138,6 @@ module.exports = {
 
             const players =
                 aggregateCompetitivePlayers(matches, club.club_id);
-
             const player =
                 players.find(row =>
                     selectedId && String(row.playerId) === String(selectedId)
@@ -156,49 +154,37 @@ module.exports = {
             const clubId = String(club.club_id);
             const clubName =
                 info?.[clubId]?.name || "Club";
-            const linkedMaps = buildLinkedMaps(linkedRows);
+            const linkedMaps =
+                buildLinkedMaps(linkedRows);
             const display =
                 displayName(player.name, linkedMaps, player.playerId);
-            const apps = n(player.appearances);
-
-            const EMOJIS = {
-    PLAYER: "\u{1F464}",        // 👤
-    GAMES: "\u26BD",            // ⚽
-    MOTM: "\u{1F3C5}",          // 🏅
-    RATING: "\u2B50",           // ⭐
-    GOALS: "\u{1F945}",         // 🥅
-    XG: "\u{1F4CA}",            // 📊
-    ASSISTS: "\u{1F45F}",       // 👟
-    XA: "\u{1F4C8}",            // 📈
-    PASSES: "\u{1F9E0}",        // 🧠
-    TACKLES: "\u{1F6E1}\uFE0F", // 🛡️
-    CLEAN: "\u{1F9FC}",         // 🧼
-    SAVES: "\u{1F9E4}",         // 🧤
-    RED: "\u{1F7E5}"            // 🟥
-};
-
-const description = [
-    `${EMOJIS.PLAYER} **${display}**`,
-    "",
-    `${EMOJIS.GAMES} Games Played: **${number(player.appearances)}**`,
-    `${EMOJIS.MOTM} Man of the Match: **${number(player.motm)}**`,
-    `${EMOJIS.RATING} Average Rating: **${number(player.avgRating, 2)}**`,
-    "",
-    `${EMOJIS.GOALS} Goals: **${number(player.goals)}**`,
-    `${EMOJIS.XG} xG Per Game: **${perGame(player.goals, apps)}**`,
-    `${EMOJIS.ASSISTS} Assists: **${number(player.assists)}**`,
-    `${EMOJIS.XA} xA Per Game: **${perGame(player.assists, apps)}**`,
-    `${EMOJIS.PASSES} Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
-    `${EMOJIS.XA} xP Per Game: **${perGame(player.passes, apps)}**`,
-    `${EMOJIS.TACKLES} Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
-    `${EMOJIS.TACKLES} xT Per Game: **${perGame(player.tackles, apps)}**`,
-    "",
-    `${EMOJIS.CLEAN} Clean Sheets: **${number(player.cleanSheets)}**`,
-    `${EMOJIS.SAVES} Saves: **${number(player.saves)}**`,
-    `${EMOJIS.RED} Red Cards: **${number(player.redCards)}**`,
-    "",
-    "> Competitive stats use stored Friendly Match data only."
-].join("\n");
+            const apps =
+                n(player.appearances);
+            const description = [
+                `\u{1F464} **${display}**`,
+                "",
+                `\u26BD Games Played: **${number(player.appearances)}**`,
+                `\u{1F3C5} Man of the Match: **${number(player.motm)}**`,
+                `\u2B50 Average Rating: **${number(player.avgRating, 2)}**`,
+                "",
+                `\u{1F945} Goals: **${number(player.goals)}**`,
+                `\u{1F4CA} xG Per Game: **${perGame(player.goals, apps)}**`,
+                `\u{1F45F} Assists: **${number(player.assists)}**`,
+                `\u{1F4C8} xA Per Game: **${perGame(player.assists, apps)}**`,
+                `\u{1F517} Second Assists: **${number(player.secondAssists)}**`,
+                `\u{1F9E0} Passes Made: **${number(player.passes)}** (${number(player.passPercent)}% success)`,
+                `\u{1F4C8} xP Per Game: **${perGame(player.passes, apps)}**`,
+                `\u{1F4A8} Dribbles Completed: **${number(player.dribbles)}**`,
+                `\u{1F6E1}\uFE0F Tackles Made: **${number(player.tackles)}** (${number(player.tacklePercent)}% success)`,
+                `\u{1F6E1}\uFE0F xT Per Game: **${perGame(player.tackles, apps)}**`,
+                `\u{1F9E0} Interceptions: **${number(player.interceptions)}**`,
+                "",
+                `\u{1F9FC} Clean Sheets: **${number(player.cleanSheets)}**`,
+                `\u{1F9E4} Saves: **${number(player.saves)}**`,
+                `\u{1F7E5} Red Cards: **${number(player.redCards)}**`,
+                "",
+                "> Competitive stats use stored Friendly Match data only."
+            ].join("\n");
 
             const embed =
                 new EmbedBuilder()

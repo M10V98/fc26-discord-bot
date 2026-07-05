@@ -3,6 +3,9 @@ const db = require("../Utils/db");
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
+const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
 
 function n(value) {
     return Number(value || 0);
@@ -170,7 +173,9 @@ async function refreshAndGetCompetitiveMatches(guildId, clubId, options = {}) {
     );
 }
 
-function addPlayer(aggregate, playerId, player) {
+function addPlayer(aggregate, playerId, rawPlayer) {
+    const player =
+        enrichPlayerStats(rawPlayer);
     const current =
         aggregate.get(String(playerId)) || {
             playerId: String(playerId),

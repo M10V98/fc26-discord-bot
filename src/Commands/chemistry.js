@@ -197,7 +197,9 @@ module.exports = {
                     value: [
                         `\u26BD Combined goals: **${number(summary.goals)}**`,
                         `\u{1F91D} Combined assists: **${number(summary.assists)}**`,
+                        `\u{1F517} Combined second assists: **${number(summary.secondAssists)}**`,
                         `\u{1F525} Combined G/A: **${number(summary.goalContrib)}**`,
+                        `\u2728 Creative output: **${number(summary.creativeContrib)}**`,
                         `\u{1F4C8} G/A per match: **${perMatch(summary.goalContrib, summary.matches)}**`,
                         `\u{1F945} MOTM between them: **${number(summary.motm)}**`
                     ].join("\n")
@@ -207,6 +209,8 @@ module.exports = {
                     value: [
                         `\u{1F7E2} Team goals: **${number(summary.goalsFor)}** (${number(summary.goalsForPerMatch, 2)} per match)`,
                         `\u{1F534} Goals conceded: **${number(summary.goalsAgainst)}** (${number(summary.goalsAgainstPerMatch, 2)} per match)`,
+                        `\u{1F4A8} Pair dribbles: **${number(summary.dribbles)}**`,
+                        `\u{1F9E0} Pair interceptions: **${number(summary.interceptions)}**`,
                         `\u{1F9E4} Clean sheets together: **${number(summary.cleanSheets)}**`,
                         `\u2705 Clean sheet rate: **${number(summary.cleanSheetRate, 1)}%**`
                     ].join("\n")

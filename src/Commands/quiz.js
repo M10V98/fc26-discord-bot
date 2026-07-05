@@ -19,6 +19,9 @@ const {
     getClubName
 } = require("../Utils/scoreboard");
 const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
+const {
     AWARDS,
     COMPETITIONS,
     LEAGUE_AWARDS,
@@ -789,11 +792,18 @@ function bestChemistryQuestion(matches, clubId, clubName = "the linked club") {
                 existing.wins += won ? 1 : 0;
                 existing.rating +=
                     (Number(a.rating || 0) + Number(b.rating || 0)) / 2;
+                const aStats =
+                    enrichPlayerStats(a);
+                const bStats =
+                    enrichPlayerStats(b);
+
                 existing.goalContrib +=
-                    Number(a.goals || 0) +
-                    Number(a.assists || 0) +
-                    Number(b.goals || 0) +
-                    Number(b.assists || 0);
+                    Number(aStats.goals || 0) +
+                    Number(aStats.assists || 0) +
+                    Number(aStats.secondassists || aStats.secondAssists || 0) +
+                    Number(bStats.goals || 0) +
+                    Number(bStats.assists || 0) +
+                    Number(bStats.secondassists || bStats.secondAssists || 0);
                 pairs.set(key, existing);
             }
         }
@@ -843,7 +853,9 @@ function rollingLeaderQuestions(matches, clubId, clubName = "the linked club") {
             const cleanSheet =
                 Number(opponentClub?.goals || 0) === 0;
 
-            for (const player of Object.values(match.players?.[ourId] || {})) {
+            for (const rawPlayer of Object.values(match.players?.[ourId] || {})) {
+                const player =
+                    enrichPlayerStats(rawPlayer);
                 const name =
                     playerLabel(playerName(player));
 
@@ -856,12 +868,18 @@ function rollingLeaderQuestions(matches, clubId, clubName = "the linked club") {
                         name,
                         goals: 0,
                         assists: 0,
+                        secondAssists: 0,
+                        dribbles: 0,
+                        interceptions: 0,
                         appearances: 0,
                         cleanSheets: 0
                     };
 
                 total.goals += Number(player.goals || 0);
                 total.assists += Number(player.assists || 0);
+                total.secondAssists += Number(player.secondassists || player.secondAssists || 0);
+                total.dribbles += Number(player.dribbles || 0);
+                total.interceptions += Number(player.interceptions || 0);
                 total.appearances += 1;
                 total.cleanSheets += cleanSheet && ourClub ? 1 : 0;
                 totals.set(name, total);
@@ -904,6 +922,18 @@ function rollingLeaderQuestions(matches, clubId, clubName = "the linked club") {
             `Who recorded the most assists across ${clubName}'s last ${windowSize} tracked games?`
         );
         addUniqueLeader(
+            "secondAssists",
+            `Who recorded the most second assists across ${clubName}'s last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
+            "dribbles",
+            `Who completed the most dribbles across ${clubName}'s last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
+            "interceptions",
+            `Who made the most interceptions across ${clubName}'s last ${windowSize} tracked games?`
+        );
+        addUniqueLeader(
             "appearances",
             `Who made the most appearances across ${clubName}'s last ${windowSize} tracked games?`
         );
@@ -930,7 +960,9 @@ function aggregateTrackedPlayers(matches, clubId) {
         const cleanSheet =
             Number(opponentClub?.goals || 0) === 0;
 
-        for (const player of Object.values(match.players?.[ourId] || {})) {
+        for (const rawPlayer of Object.values(match.players?.[ourId] || {})) {
+            const player =
+                enrichPlayerStats(rawPlayer);
             const name =
                 playerLabel(playerName(player));
 
@@ -946,6 +978,9 @@ function aggregateTrackedPlayers(matches, clubId) {
                     matches: 0,
                     goals: 0,
                     assists: 0,
+                    second_assists: 0,
+                    dribbles: 0,
+                    interceptions: 0,
                     total_rating: 0,
                     clean_sheets: 0,
                     motm: 0,
@@ -955,6 +990,9 @@ function aggregateTrackedPlayers(matches, clubId) {
             row.matches += 1;
             row.goals += Number(player.goals || 0);
             row.assists += Number(player.assists || 0);
+            row.second_assists += Number(player.secondassists || player.secondAssists || 0);
+            row.dribbles += Number(player.dribbles || 0);
+            row.interceptions += Number(player.interceptions || 0);
             row.total_rating += Number(player.rating || 0);
             row.clean_sheets += cleanSheet ? 1 : 0;
             row.motm += player.mom === "1" || player.mom === 1 ? 1 : 0;

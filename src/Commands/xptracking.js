@@ -112,6 +112,11 @@ module.exports = {
                         inline: true
                     },
                     {
+                        name: "Second Assists",
+                        value: `${number(player.second_assists)} x ${XP_WEIGHTS.secondAssist} = **${number(breakdown.secondAssists)}**`,
+                        inline: true
+                    },
+                    {
                         name: "Passes",
                         value: `${number(player.passes)} x ${XP_WEIGHTS.pass} = **${number(breakdown.passes)}**`,
                         inline: true
@@ -119,6 +124,16 @@ module.exports = {
                     {
                         name: "Tackles",
                         value: `${number(player.tackles)} x ${XP_WEIGHTS.tackle} = **${number(breakdown.tackles)}**`,
+                        inline: true
+                    },
+                    {
+                        name: "Interceptions",
+                        value: `${number(player.interceptions)} x ${XP_WEIGHTS.interception} = **${number(breakdown.interceptions)}**`,
+                        inline: true
+                    },
+                    {
+                        name: "Dribbles",
+                        value: `${number(player.dribbles)} x ${XP_WEIGHTS.dribble} = **${number(breakdown.dribbles)}**`,
                         inline: true
                     },
                     {

@@ -9,11 +9,14 @@ const XP_WEIGHTS = {
 
     goal: 35,
     assist: 30,
+    secondAssist: 15,
 
     tackle: 25,
+    interception: 15,
     save: 30,
 
     pass: 5,
+    dribble: 3,
 
     cleanSheet: 50,
     motm: 75,
@@ -38,9 +41,17 @@ function calculateXPBreakdown(stats) {
             (stats.assists || 0) *
             XP_WEIGHTS.assist,
 
+        secondAssists:
+            (stats.second_assists || stats.secondAssists || 0) *
+            XP_WEIGHTS.secondAssist,
+
         tackles:
             (stats.tackles || 0) *
             XP_WEIGHTS.tackle,
+
+        interceptions:
+            (stats.interceptions || 0) *
+            XP_WEIGHTS.interception,
 
         saves:
             (stats.saves || 0) *
@@ -49,6 +60,10 @@ function calculateXPBreakdown(stats) {
         passes:
             (stats.passes || 0) *
             XP_WEIGHTS.pass,
+
+        dribbles:
+            (stats.dribbles || 0) *
+            XP_WEIGHTS.dribble,
 
         cleanSheets:
             (stats.clean_sheets || 0) *
@@ -95,7 +110,7 @@ function calculateXP(stats) {
 
     xp +=
         (stats.secondAssists || 0) *
-        0;
+        XP_WEIGHTS.secondAssist;
 
     xp +=
         (stats.tackles || 0) *
@@ -103,7 +118,7 @@ function calculateXP(stats) {
 
     xp +=
         (stats.interceptions || 0) *
-        0;
+        XP_WEIGHTS.interception;
 
     xp +=
         (stats.saves || 0) *
@@ -115,7 +130,7 @@ function calculateXP(stats) {
 
     xp +=
         (stats.dribbles || 0) *
-        0;
+        XP_WEIGHTS.dribble;
 
     if (stats.cleanSheet) {
         xp += XP_WEIGHTS.cleanSheet;

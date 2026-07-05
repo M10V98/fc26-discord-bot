@@ -175,10 +175,13 @@ function formStatsLines(player) {
         `xG Per Game: **${goalRatio(player)}**`,
         `\u{1F91D} Assists: **${number(player.assists)}**`,
         `xA Per Game: **${n(player.gamesPlayed) ? (n(player.assists) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        `\u{1F517} Second Assists: **${number(player.secondAssists)}**`,
         `\u{1F45F} Passes Made: **${number(player.passesMade)}** (${number(player.passSuccessRate)}% success)`,
         `xP Per Game: **${n(player.gamesPlayed) ? (n(player.passesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        `\u{1F4A8} Dribbles Completed: **${number(player.dribbles)}**`,
         `\u{1F6E1}\uFE0F Tackles Made: **${number(player.tacklesMade)}** (${number(player.tackleSuccessRate)}% success)`,
         `xT Per Game: **${n(player.gamesPlayed) ? (n(player.tacklesMade) / n(player.gamesPlayed)).toFixed(2) : "0.00"}**`,
+        `\u{1F9E0} Interceptions: **${number(player.interceptions)}**`,
         "",
         `\u{1F6AB} Defender Clean Sheets: **${number(player.cleanSheetsDef)}**`,
         `\u{1F945} Goalkeeper Clean Sheets: **${number(player.cleanSheetsGK)}**`,
@@ -541,6 +544,7 @@ module.exports = {
                                     compareLine("\u{1F525} G/A", number(comparison.a.goalContributions), number(comparison.b.goalContributions)),
                                     compareLine("\u{1F4C8} Goals per match", perMatch(comparison.a.goals, comparison.a.matches), perMatch(comparison.b.goals, comparison.b.matches)),
                                     compareLine("\u{1F3AF} Shot conversion", `${number(shotRateA, 1)}%`, `${number(shotRateB, 1)}%`, { rawLeft: shotRateA, rawRight: shotRateB }),
+                                    compareLine("\u{1F4A8} Dribbles", number(comparison.a.dribbles), number(comparison.b.dribbles)),
                                     compareLine("\u{1F945} MOTM", number(comparison.a.motm), number(comparison.b.motm))
                                 ].join("\n")
                             },
@@ -558,7 +562,7 @@ module.exports = {
                                 value: [
                                     compareLine("\u{1F6E1}\uFE0F Tackles", number(comparison.a.tackles), number(comparison.b.tackles)),
                                     compareLine("\u2705 Tackle success", `${number(tackleRateA, 1)}%`, `${number(tackleRateB, 1)}%`, { rawLeft: tackleRateA, rawRight: tackleRateB }),
-                                    compareLine("\u{1F575}\uFE0F Interceptions", number(comparison.a.interceptions), number(comparison.b.interceptions)),
+                                    compareLine("\u{1F9E0} Interceptions", number(comparison.a.interceptions), number(comparison.b.interceptions)),
                                     compareLine("\u{1F9E4} Clean sheets", number(comparison.a.cleanSheets), number(comparison.b.cleanSheets)),
                                     compareLine("\u{1F94A} Saves", number(comparison.a.saves), number(comparison.b.saves)),
                                     compareLine("\u{1F7E5} Red cards", number(comparison.a.redCards), number(comparison.b.redCards), { higherIsBetter: false })

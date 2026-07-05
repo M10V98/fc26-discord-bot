@@ -23,6 +23,9 @@ const {
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
+const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
 
 const {
     processMatchXP
@@ -104,7 +107,10 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
 
     const playerLines =
         Object.entries(ourPlayers)
-            .map(([playerId, p]) => {
+            .map(([playerId, rawPlayer]) => {
+
+                const p =
+                    enrichPlayerStats(rawPlayer);
 
                 const archetype =
                     archetypes[p.archetypeid] ||
@@ -124,6 +130,7 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
                     `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists} | Saves ${saveCount(p)}\n` +
                     `${p.passesmade}/${p.passattempts} passes\n` +
                     `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
+                    `${p.dribbles || 0} dribbles | ${p.interceptions || 0} interceptions\n` +
                     `${cleanSheet ? "Clean Sheet" : "No CS"}`
                 );
             });

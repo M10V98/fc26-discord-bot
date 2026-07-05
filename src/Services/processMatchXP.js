@@ -13,6 +13,10 @@ const {
 const {
     isRealPlayerName
 } = require("../Utils/embedStyle");
+const {
+    enrichPlayerStats,
+    hiddenStats
+} = require("../Utils/matchEvents");
 
 const processingMatches = new Set();
 
@@ -288,7 +292,11 @@ async function processMatchXP(match, guildId, options = {}) {
             options
         );
 
-        for (const [playerId, p] of Object.entries(ourPlayers)) {
+        for (const [playerId, rawPlayer] of Object.entries(ourPlayers)) {
+            const p =
+                enrichPlayerStats(rawPlayer);
+            const extra =
+                hiddenStats(rawPlayer);
             const saves =
                 saveCount(p);
 
@@ -299,12 +307,12 @@ async function processMatchXP(match, guildId, options = {}) {
             const baseXp = calculateXP({
                 goals: Number(p.goals),
                 assists: Number(p.assists),
-                secondAssists: 0,
+                secondAssists: extra.secondAssists,
                 tackles: Number(p.tacklesmade),
-                interceptions: 0,
+                interceptions: extra.interceptions,
                 saves,
                 passes: Number(p.passesmade),
-                dribbles: 0,
+                dribbles: extra.dribbles,
                 cleanSheet,
                 motm: p.mom === "1",
                 rating: Number(p.rating),
@@ -414,7 +422,7 @@ async function processMatchXP(match, guildId, options = {}) {
                 Number(p.assists || 0),
 
                 existing?.second_assists,
-                0,
+                extra.secondAssists,
 
                 existing?.shots,
                 Number(p.shots || 0),
@@ -432,10 +440,10 @@ async function processMatchXP(match, guildId, options = {}) {
                 Number(p.tackleattempts || 0),
 
                 existing?.interceptions,
-                0,
+                extra.interceptions,
 
                 existing?.dribbles,
-                0,
+                extra.dribbles,
 
                 existing?.saves,
                 saves,

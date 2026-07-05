@@ -6,6 +6,9 @@ const {
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
+const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
 
 function n(value) {
     return Number(value || 0);
@@ -222,13 +225,16 @@ function summarizePlayerForm(matches, clubId, player, limit) {
                 const entry = playerEntry(match, clubId, player);
                 if (!entry) return null;
 
+                const stats =
+                    enrichPlayerStats(entry.stats);
+
                 return {
                     match,
                     playerId: entry.playerId,
-                    stats: entry.stats,
-                    rating: n(entry.stats.rating),
-                    goals: n(entry.stats.goals),
-                    assists: n(entry.stats.assists),
+                    stats,
+                    rating: n(stats.rating),
+                    goals: n(stats.goals),
+                    assists: n(stats.assists),
                     result: getResult(match, clubId),
                     goalsFor: n(getOurClub(match, clubId)?.goals),
                     goalsAgainst: n(getOpponentClub(match, clubId)?.goals)
@@ -281,11 +287,14 @@ function aggregateFormStats(rows) {
         draws: 0,
         goals: 0,
         assists: 0,
+        secondAssists: 0,
         shots: 0,
         passesMade: 0,
         passAttempts: 0,
         tacklesMade: 0,
         tackleAttempts: 0,
+        dribbles: 0,
+        interceptions: 0,
         saves: 0,
         cleanSheetsDef: 0,
         cleanSheetsGK: 0,
@@ -302,11 +311,14 @@ function aggregateFormStats(rows) {
         aggregate.draws += row.result === "D" ? 1 : 0;
         aggregate.goals += n(stats.goals);
         aggregate.assists += n(stats.assists);
+        aggregate.secondAssists += n(stats.secondassists || stats.secondAssists);
         aggregate.shots += n(stats.shots);
         aggregate.passesMade += n(stats.passesmade);
         aggregate.passAttempts += n(stats.passattempts);
         aggregate.tacklesMade += n(stats.tacklesmade);
         aggregate.tackleAttempts += n(stats.tackleattempts);
+        aggregate.dribbles += n(stats.dribbles);
+        aggregate.interceptions += n(stats.interceptions);
         aggregate.saves += saveCount(stats);
         aggregate.cleanSheetsDef += stats.cleansheetsdef === "1" ? 1 : 0;
         aggregate.cleanSheetsGK += stats.cleansheetsgk === "1" ? 1 : 0;
@@ -395,25 +407,42 @@ function chemistry(matches, clubId, playerA, playerB) {
 
                 const goalsFor = n(getOurClub(match, clubId)?.goals);
                 const goalsAgainst = n(getOpponentClub(match, clubId)?.goals);
+                const aStats =
+                    enrichPlayerStats(a.stats);
+                const bStats =
+                    enrichPlayerStats(b.stats);
                 const goals =
-                    n(a.stats.goals) +
-                    n(b.stats.goals);
+                    n(aStats.goals) +
+                    n(bStats.goals);
                 const assists =
-                    n(a.stats.assists) +
-                    n(b.stats.assists);
+                    n(aStats.assists) +
+                    n(bStats.assists);
+                const secondAssists =
+                    n(aStats.secondassists || aStats.secondAssists) +
+                    n(bStats.secondassists || bStats.secondAssists);
+                const dribbles =
+                    n(aStats.dribbles) +
+                    n(bStats.dribbles);
+                const interceptions =
+                    n(aStats.interceptions) +
+                    n(bStats.interceptions);
 
                 return {
                     result: getResult(match, clubId),
                     goalsFor,
                     goalsAgainst,
                     rating:
-                        (n(a.stats.rating) + n(b.stats.rating)) / 2,
+                        (n(aStats.rating) + n(bStats.rating)) / 2,
                     goals,
                     assists,
+                    secondAssists,
+                    dribbles,
+                    interceptions,
                     goalContrib: goals + assists,
+                    creativeContrib: goals + assists + secondAssists,
                     motm:
-                        a.stats.mom === "1" ||
-                        b.stats.mom === "1",
+                        aStats.mom === "1" ||
+                        bStats.mom === "1",
                     cleanSheet:
                         goalsAgainst === 0
                 };
@@ -430,8 +459,16 @@ function chemistry(matches, clubId, playerA, playerB) {
         together.reduce((sum, row) => sum + row.goals, 0);
     const assists =
         together.reduce((sum, row) => sum + row.assists, 0);
+    const secondAssists =
+        together.reduce((sum, row) => sum + row.secondAssists, 0);
+    const dribbles =
+        together.reduce((sum, row) => sum + row.dribbles, 0);
+    const interceptions =
+        together.reduce((sum, row) => sum + row.interceptions, 0);
     const goalContrib =
         goals + assists;
+    const creativeContrib =
+        goals + assists + secondAssists;
     const goalsFor =
         together.reduce((sum, row) => sum + row.goalsFor, 0);
     const goalsAgainst =
@@ -464,6 +501,13 @@ function chemistry(matches, clubId, playerA, playerB) {
         Math.max(0, avgRating - 6) * 9;
     const outputScore =
         Math.min(avgContrib, 3) * 7;
+    const hiddenStatScore =
+        Math.min(
+            10,
+            (secondAssists * 0.7) +
+            (dribbles * 0.08) +
+            (interceptions * 0.25)
+        );
     const defensiveScore =
         cleanSheetRate * 0.08;
     const resultScore =
@@ -482,6 +526,7 @@ function chemistry(matches, clubId, playerA, playerB) {
                     resultScore +
                     ratingScore +
                     outputScore +
+                    hiddenStatScore +
                     defensiveScore +
                     consistencyBonus
                 ) * sampleFactor
@@ -497,7 +542,11 @@ function chemistry(matches, clubId, playerA, playerB) {
         avgRating,
         goals,
         assists,
+        secondAssists,
+        dribbles,
+        interceptions,
         goalContrib,
+        creativeContrib,
         avgContrib,
         goalsFor,
         goalsAgainst,

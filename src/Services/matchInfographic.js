@@ -46,6 +46,9 @@ const {
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
+const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
 
 const TEMPLATE_PATH = path.join(
     __dirname,
@@ -215,7 +218,10 @@ function buildRows(players) {
             toNumber(b.rating) - toNumber(a.rating)
         )
         .slice(0, 11)
-        .map(([, player]) => {
+        .map(([, rawPlayer]) => {
+
+            const player =
+                enrichPlayerStats(rawPlayer);
 
             const passes =
                 `${player.passesmade || 0} / ${player.passattempts || 0} ` +
@@ -239,8 +245,11 @@ function buildRows(players) {
                 goals: player.goals || "0",
                 shots: player.shots || "0",
                 assists: player.assists || "0",
+                secondAssists: String(player.secondassists || player.secondAssists || 0),
                 passes,
                 tackles,
+                dribbles: String(player.dribbles || 0),
+                interceptions: String(player.interceptions || 0),
                 saves: String(saveCount(player))
             };
         });
@@ -310,14 +319,17 @@ function buildSvg(match, ourClubId, home, away) {
 
     const columns = [
         ["Player", 120, 300],
-        ["Position", 378, 260],
-        ["MR", 696, 70],
-        ["GLS", 802, 70],
-        ["SHT", 898, 70],
-        ["AST", 1006, 70],
-        ["PAS", 1140, 150],
-        ["TKL", 1340, 150],
-        ["SVS", 1540, 70]
+        ["Position", 360, 230],
+        ["MR", 650, 70],
+        ["GLS", 740, 70],
+        ["SHT", 820, 70],
+        ["AST", 910, 70],
+        ["2AST", 995, 70],
+        ["PAS", 1080, 150],
+        ["TKL", 1260, 150],
+        ["DRI", 1440, 70],
+        ["INT", 1520, 70],
+        ["SVS", 1600, 70]
     ];
 
     const header = [
@@ -353,14 +365,17 @@ function buildSvg(match, ourClubId, home, away) {
         return [
             bg,
             rowText(120, y, `${row.name} ${row.badges}`.trim(), 24, { size: 19, weight: 650 }),
-            rowText(378, y, row.position, 25, { size: 19 }),
-            text(716, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
-            text(822, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
-            text(918, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
-            text(1026, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
-            rowText(1140, y, row.passes, 14, { size: 19, weight: 650 }),
-            rowText(1340, y, row.tackles, 14, { size: 19, weight: 650 }),
-            text(1560, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
+            rowText(360, y, row.position, 22, { size: 19 }),
+            text(670, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
+            text(760, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
+            text(840, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
+            text(930, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
+            text(1015, y, row.secondAssists, { size: 19, weight: 650, anchor: "middle" }),
+            rowText(1080, y, row.passes, 14, { size: 19, weight: 650 }),
+            rowText(1260, y, row.tackles, 14, { size: 19, weight: 650 }),
+            text(1460, y, row.dribbles, { size: 19, weight: 650, anchor: "middle" }),
+            text(1540, y, row.interceptions, { size: 19, weight: 650, anchor: "middle" }),
+            text(1620, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
         ];
     });
 

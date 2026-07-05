@@ -60,6 +60,42 @@ function detectIntent(question) {
     ])) {
         return "top_assists";
     }
+
+    if (hasAny(q, [
+        "second assists",
+        "2nd assists",
+        "secondary assists",
+        "hockey assists",
+        "most second assists",
+        "top second assister",
+        "top second assists",
+        "who has most second assists"
+    ])) {
+        return "top_second_assists";
+    }
+
+    if (hasAny(q, [
+        "top dribbler",
+        "top dribblers",
+        "most dribbles",
+        "dribbles completed",
+        "completed dribbles",
+        "who dribbles the most",
+        "best dribbler"
+    ])) {
+        return "top_dribbles";
+    }
+
+    if (hasAny(q, [
+        "top interceptor",
+        "top interceptors",
+        "most interceptions",
+        "interceptions leader",
+        "who intercepts the most",
+        "best interceptor"
+    ])) {
+        return "top_interceptions";
+    }
  
     if (hasAny(q, [
         "highest rating",
@@ -818,6 +854,9 @@ function statIntent(question) {
         question.toLowerCase();
 
     if (/\b(who is|who was|who are|tell me about|what do you know about|profile|about)\b/.test(q)) return "identity";
+    if (/\b(second assists?|2nd assists?|secondary assists?|hockey assists?)\b/.test(q)) return "second_assists";
+    if (/\b(dribbles?|dribbled|dribbling)\b/.test(q)) return "dribbles";
+    if (/\b(interceptions?|intercepts?|intercepted)\b/.test(q)) return "interceptions";
     if (/\b(goals?|scored|score)\b/.test(q)) return "goals";
     if (/\b(assists?|created|setup|set up)\b/.test(q)) return "assists";
     if (/\b(g\/a|goal contributions?|goals and assists)\b/.test(q)) return "contributions";
@@ -944,8 +983,14 @@ async function answerNamedPlayerQuestion(guildId, question, linkedRows, shown) {
             return `${name} has ${player.goals || 0} tracked goals.`;
         case "assists":
             return `${name} has ${player.assists || 0} tracked assists.`;
+        case "second_assists":
+            return `${name} has ${player.second_assists || 0} tracked second assists.`;
+        case "dribbles":
+            return `${name} has ${player.dribbles || 0} tracked completed dribbles.`;
+        case "interceptions":
+            return `${name} has ${player.interceptions || 0} tracked interceptions.`;
         case "contributions":
-            return `${name} has ${Number(player.goals || 0) + Number(player.assists || 0)} tracked goal contributions (${player.goals || 0} goals, ${player.assists || 0} assists).`;
+            return `${name} has ${Number(player.goals || 0) + Number(player.assists || 0)} tracked goal contributions (${player.goals || 0} goals, ${player.assists || 0} assists), plus ${player.second_assists || 0} second assists.`;
         case "rating":
             return `${name} has a tracked average rating of ${averageRating(player)}.`;
         case "matches":
@@ -1044,6 +1089,51 @@ async function answerQuestion(guildId, question) {
             return `👟 ${shown(player)} leads the club with ${player.assists} assists.`;
         }
  
+        case "top_second_assists": {
+
+            const player = await db.get(`
+                SELECT player_id, player_name, second_assists
+                FROM players
+                WHERE guild_id = ?
+                ORDER BY second_assists DESC
+                LIMIT 1
+            `, [guildId]);
+
+            if (!player) return "No second-assist data available.";
+
+            return `${shown(player)} leads the club with ${player.second_assists || 0} second assists.`;
+        }
+
+        case "top_dribbles": {
+
+            const player = await db.get(`
+                SELECT player_id, player_name, dribbles
+                FROM players
+                WHERE guild_id = ?
+                ORDER BY dribbles DESC
+                LIMIT 1
+            `, [guildId]);
+
+            if (!player) return "No dribble data available.";
+
+            return `${shown(player)} leads the club with ${player.dribbles || 0} completed dribbles.`;
+        }
+
+        case "top_interceptions": {
+
+            const player = await db.get(`
+                SELECT player_id, player_name, interceptions
+                FROM players
+                WHERE guild_id = ?
+                ORDER BY interceptions DESC
+                LIMIT 1
+            `, [guildId]);
+
+            if (!player) return "No interception data available.";
+
+            return `${shown(player)} leads the club with ${player.interceptions || 0} interceptions.`;
+        }
+
         case "highest_rating": {
  
             const player = await db.get(`

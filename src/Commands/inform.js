@@ -8,11 +8,12 @@ const db = require("../Utils/db");
 const {
     getGuildSettings
 } = require("../Services/settingsService");
-
 const {
     getCrestUrl
 } = require("../Services/crests");
-
+const {
+    enrichPlayerStats
+} = require("../Utils/matchEvents");
 const {
     FOOTER,
     underline,
@@ -28,7 +29,39 @@ function n(value) {
     return Number(value || 0);
 }
 
-function addPlayer(aggregate, playerId, player) {
+async function getDivisionMatches(clubId, limit) {
+    const [league, playoff] =
+        await Promise.all([
+            eaApi.getMatches(
+                clubId,
+                "leagueMatch",
+                {
+                    forceRefresh: true,
+                    maxResultCount: Math.max(limit, 10)
+                }
+            ).catch(() => []),
+            eaApi.getMatches(
+                clubId,
+                "playoffMatch",
+                {
+                    forceRefresh: true,
+                    maxResultCount: Math.max(limit, 10)
+                }
+            ).catch(() => [])
+        ]);
+
+    return [
+        ...league,
+        ...playoff
+    ]
+        .filter(match => match?.matchId && match.timestamp != null)
+        .sort((a, b) => n(b.timestamp) - n(a.timestamp))
+        .slice(0, limit);
+}
+
+function addPlayer(aggregate, playerId, rawPlayer) {
+    const player =
+        enrichPlayerStats(rawPlayer);
     const current =
         aggregate.get(playerId) || {
             playerId,
@@ -36,22 +69,29 @@ function addPlayer(aggregate, playerId, player) {
             appearances: 0,
             goals: 0,
             assists: 0,
+            secondAssists: 0,
             ratingTotal: 0,
             passes: 0,
             passAttempts: 0,
             tackles: 0,
             tackleAttempts: 0,
+            dribbles: 0,
+            interceptions: 0,
             shots: 0
         };
 
+    current.name = player.playername || current.name;
     current.appearances += 1;
     current.goals += n(player.goals);
     current.assists += n(player.assists);
+    current.secondAssists += n(player.secondassists || player.secondAssists);
     current.ratingTotal += n(player.rating);
     current.passes += n(player.passesmade);
     current.passAttempts += n(player.passattempts);
     current.tackles += n(player.tacklesmade);
     current.tackleAttempts += n(player.tackleattempts);
+    current.dribbles += n(player.dribbles);
+    current.interceptions += n(player.interceptions);
     current.shots += n(player.shots);
 
     aggregate.set(playerId, current);
@@ -83,8 +123,20 @@ function valueFor(player, key) {
         return `${number(player.assists)} assists`;
     }
 
+    if (key === "secondAssists") {
+        return `${number(player.secondAssists)} second assists`;
+    }
+
     if (key === "passPercent") {
         return `${number(player.passes)} passes, ${number(player.passAttempts)} attempted, ${number(player.passPercent)}% success rate`;
+    }
+
+    if (key === "dribbles") {
+        return `${number(player.dribbles)} dribbles completed`;
+    }
+
+    if (key === "interceptions") {
+        return `${number(player.interceptions)} interceptions`;
     }
 
     if (key === "tacklePercent") {
@@ -147,13 +199,15 @@ module.exports = {
                 );
             }
 
+            const settings =
+                await getGuildSettings(interaction.guild.id);
             const limit =
                 interaction.options.getInteger("last") ||
-                (await getGuildSettings(interaction.guild.id)).inFormWindow;
+                settings.inFormWindow;
 
             const [matches, info, crestUrl, linkedRows] =
                 await Promise.all([
-                    eaApi.getRecentMatches(club.club_id, { limit }),
+                    getDivisionMatches(club.club_id, limit),
                     eaApi.getClubInfo(club.club_id),
                     getCrestUrl(club.club_id),
                     getLinkedRows(db, interaction.guild.id)
@@ -161,7 +215,7 @@ module.exports = {
 
             if (!matches.length) {
                 return interaction.editReply(
-                    "No recent matches found."
+                    "No recent league or playoff matches found."
                 );
             }
 
@@ -185,26 +239,35 @@ module.exports = {
 
             const clubName =
                 info?.[clubId]?.name || "Club";
-
             const linkedMaps =
                 buildLinkedMaps(linkedRows);
 
             const description = [
-                `These are the best performing players from your last ${matches.length} League/Playoff matches. Friendly matches are included when EA returns reliable data.`,
+                `These are the best performing players from your last ${matches.length} League/Playoff matches. Friendly matches are not counted, as comp stats use the friendly match API separately.`,
                 "",
                 infoBlock([
                     "**Top Average Rating**, sorted by average match rating",
                     "**Top Goalscorers**, sorted by # goals",
                     "**Top Assisters**, sorted by # assists",
+                    "**Top Second Assisters**, sorted by # second assists",
                     "**Best Passers**, sorted by pass success percentage",
+                    "**Top Dribblers**, sorted by # dribbles completed",
+                    "**Top Interceptors**, sorted by # interceptions",
                     "**Best Tacklers**, sorted by tackle success percentage"
                 ]),
                 "",
-                `⭐ **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
-`⚽ **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
-`🎯 **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-`🅿️ **Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
-`🛡️ **Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
+                infoBlock([
+                    "Use `/matches` or `/automode` regularly to keep Second Assists, Dribbles, and Interceptions updated."
+                ]),
+                "",
+                `\u2B50 **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
+                `\u26BD **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
+                `\u{1F91D} **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
+                `\u{1F517} **Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
+                `\u{1F45F} **Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
+                `\u{1F4A8} **Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
+                `\u{1F9E0} **Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
+                `\u{1F6E1}\uFE0F **Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
             ].join("\n\n");
 
             const embed =
