@@ -3,9 +3,6 @@ const db = require("../Utils/db");
 const {
     saves: saveCount
 } = require("../Utils/apiStats");
-const {
-    enrichPlayerStats
-} = require("../Utils/matchEvents");
 
 function n(value) {
     return Number(value || 0);
@@ -175,7 +172,7 @@ async function refreshAndGetCompetitiveMatches(guildId, clubId, options = {}) {
 
 function addPlayer(aggregate, playerId, rawPlayer) {
     const player =
-        enrichPlayerStats(rawPlayer);
+        rawPlayer || {};
     const current =
         aggregate.get(String(playerId)) || {
             playerId: String(playerId),
@@ -183,14 +180,11 @@ function addPlayer(aggregate, playerId, rawPlayer) {
             appearances: 0,
             goals: 0,
             assists: 0,
-            secondAssists: 0,
             ratingTotal: 0,
             passes: 0,
             passAttempts: 0,
             tackles: 0,
             tackleAttempts: 0,
-            dribbles: 0,
-            interceptions: 0,
             saves: 0,
             shots: 0,
             motm: 0,
@@ -202,14 +196,11 @@ function addPlayer(aggregate, playerId, rawPlayer) {
     current.appearances += 1;
     current.goals += n(player.goals);
     current.assists += n(player.assists);
-    current.secondAssists += n(player.secondassists || player.secondAssists);
     current.ratingTotal += n(player.rating);
     current.passes += n(player.passesmade);
     current.passAttempts += n(player.passattempts);
     current.tackles += n(player.tacklesmade);
     current.tackleAttempts += n(player.tackleattempts);
-    current.dribbles += n(player.dribbles);
-    current.interceptions += n(player.interceptions);
     current.saves += saveCount(player);
     current.shots += n(player.shots);
     current.motm += player.mom === "1" ? 1 : 0;

@@ -24,7 +24,8 @@ const {
     saves: saveCount
 } = require("../Utils/apiStats");
 const {
-    enrichPlayerStats
+    enrichPlayerStats,
+    hasAnyEventAggregateData
 } = require("../Utils/matchEvents");
 
 const {
@@ -100,6 +101,8 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
 
     const ourPlayers =
         match.players?.[ourId] || {};
+    const hiddenStatsAvailable =
+        hasAnyEventAggregateData(ourPlayers);
     const linkedMaps =
         buildLinkedMaps(
             await getLinkedRows(db, guildId)
@@ -124,13 +127,19 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
                     p.mom === "1"
                         ? "MOTM "
                         : "";
+                const hiddenLine =
+                    hiddenStatsAvailable
+                        ? `${p.secondassists || p.secondAssists || 0} second assists | ` +
+                            `${p.dribbles || 0} dribbles | ` +
+                            `${p.interceptions || 0} interceptions\n`
+                        : "";
 
                 return (
                     `${mom}${displayName(p.playername, linkedMaps, playerId)} (${archetype})\n` +
                     `Rating ${p.rating} | Goals ${p.goals} | Assists ${p.assists} | Saves ${saveCount(p)}\n` +
                     `${p.passesmade}/${p.passattempts} passes\n` +
                     `${p.tacklesmade}/${p.tackleattempts} tackles\n` +
-                    `${p.dribbles || 0} dribbles | ${p.interceptions || 0} interceptions\n` +
+                    hiddenLine +
                     `${cleanSheet ? "Clean Sheet" : "No CS"}`
                 );
             });

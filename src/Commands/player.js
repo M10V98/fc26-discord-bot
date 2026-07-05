@@ -554,7 +554,7 @@ module.exports = {
                                     compareLine("\u{1F45F} Passes", number(comparison.a.passes), number(comparison.b.passes)),
                                     compareLine("\u2705 Pass success", `${number(passRateA, 1)}%`, `${number(passRateB, 1)}%`, { rawLeft: passRateA, rawRight: passRateB }),
                                     compareLine("\u{1F4C8} Passes per match", perMatch(comparison.a.passes, comparison.a.matches), perMatch(comparison.b.passes, comparison.b.matches)),
-                                    compareLine("\u{1F9E0} Second assists", number(comparison.a.secondAssists), number(comparison.b.secondAssists))
+                                    compareLine("\u{1F517} Second assists", number(comparison.a.secondAssists), number(comparison.b.secondAssists))
                                 ].join("\n")
                             },
                             {

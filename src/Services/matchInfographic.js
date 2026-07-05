@@ -47,7 +47,8 @@ const {
     saves: saveCount
 } = require("../Utils/apiStats");
 const {
-    enrichPlayerStats
+    enrichPlayerStats,
+    hasAnyEventAggregateData
 } = require("../Utils/matchEvents");
 
 const TEMPLATE_PATH = path.join(
@@ -288,6 +289,8 @@ function buildSvg(match, ourClubId, home, away) {
     const players =
         match.players?.[ourClubId] || {};
 
+    const hiddenStatsAvailable =
+        hasAnyEventAggregateData(players);
     const rows = buildRows(players);
     const minutes = getMinutesPlayed(players);
     const trackedCount = Object.keys(players).length;
@@ -317,20 +320,33 @@ function buildSvg(match, ourClubId, home, away) {
     const playerNote =
         `${trackedName} had ${trackedCount} tracked player${trackedCount === 1 ? "" : "s"}`;
 
-    const columns = [
-        ["Player", 120, 300],
-        ["Position", 360, 230],
-        ["MR", 650, 70],
-        ["GLS", 740, 70],
-        ["SHT", 820, 70],
-        ["AST", 910, 70],
-        ["2AST", 995, 70],
-        ["PAS", 1080, 150],
-        ["TKL", 1260, 150],
-        ["DRI", 1440, 70],
-        ["INT", 1520, 70],
-        ["SVS", 1600, 70]
-    ];
+    const columns =
+        hiddenStatsAvailable
+            ? [
+                ["Player", 120, 300],
+                ["Position", 360, 230],
+                ["MR", 650, 70],
+                ["GLS", 740, 70],
+                ["SHT", 820, 70],
+                ["AST", 910, 70],
+                ["2AST", 995, 70],
+                ["PAS", 1080, 150],
+                ["TKL", 1260, 150],
+                ["DRI", 1440, 70],
+                ["INT", 1520, 70],
+                ["SVS", 1600, 70]
+            ]
+            : [
+                ["Player", 120, 300],
+                ["Position", 360, 230],
+                ["MR", 650, 70],
+                ["GLS", 760, 70],
+                ["SHT", 860, 70],
+                ["AST", 960, 70],
+                ["PAS", 1080, 150],
+                ["TKL", 1280, 150],
+                ["SVS", 1500, 70]
+            ];
 
     const header = [
         `<rect width="${WIDTH}" height="${HEIGHT}" fill="rgba(0,0,0,0.46)"/>`,
@@ -362,20 +378,35 @@ function buildSvg(match, ourClubId, home, away) {
                 ? `<rect x="92" y="${y - 34}" width="1736" height="46" fill="rgba(0,0,0,0.46)"/>`
                 : `<rect x="92" y="${y - 34}" width="1736" height="46" fill="rgba(0,0,0,0.34)"/>`;
 
+        const visibleStats =
+            hiddenStatsAvailable
+                ? [
+                    text(670, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
+                    text(760, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
+                    text(840, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
+                    text(930, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
+                    text(1015, y, row.secondAssists, { size: 19, weight: 650, anchor: "middle" }),
+                    rowText(1080, y, row.passes, 14, { size: 19, weight: 650 }),
+                    rowText(1260, y, row.tackles, 14, { size: 19, weight: 650 }),
+                    text(1460, y, row.dribbles, { size: 19, weight: 650, anchor: "middle" }),
+                    text(1540, y, row.interceptions, { size: 19, weight: 650, anchor: "middle" }),
+                    text(1620, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
+                ]
+                : [
+                    text(670, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
+                    text(780, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
+                    text(880, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
+                    text(980, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
+                    rowText(1080, y, row.passes, 14, { size: 19, weight: 650 }),
+                    rowText(1280, y, row.tackles, 14, { size: 19, weight: 650 }),
+                    text(1520, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
+                ];
+
         return [
             bg,
             rowText(120, y, `${row.name} ${row.badges}`.trim(), 24, { size: 19, weight: 650 }),
             rowText(360, y, row.position, 22, { size: 19 }),
-            text(670, y, row.rating, { size: 19, weight: 650, anchor: "middle" }),
-            text(760, y, row.goals, { size: 19, weight: 650, anchor: "middle" }),
-            text(840, y, row.shots, { size: 19, weight: 650, anchor: "middle" }),
-            text(930, y, row.assists, { size: 19, weight: 650, anchor: "middle" }),
-            text(1015, y, row.secondAssists, { size: 19, weight: 650, anchor: "middle" }),
-            rowText(1080, y, row.passes, 14, { size: 19, weight: 650 }),
-            rowText(1260, y, row.tackles, 14, { size: 19, weight: 650 }),
-            text(1460, y, row.dribbles, { size: 19, weight: 650, anchor: "middle" }),
-            text(1540, y, row.interceptions, { size: 19, weight: 650, anchor: "middle" }),
-            text(1620, y, row.saves, { size: 19, weight: 650, anchor: "middle" })
+            ...visibleStats
         ];
     });
 

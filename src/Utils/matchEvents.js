@@ -83,6 +83,20 @@ function aggregateEventCodes(player) {
     return merged;
 }
 
+function hasEventAggregateData(player) {
+    return Object.entries(player || {})
+        .some(([key, value]) =>
+            /^match_event_aggregate_\d+$/.test(key) &&
+            typeof value === "string" &&
+            value.trim().length > 0
+        );
+}
+
+function hasAnyEventAggregateData(players) {
+    return Object.values(players || {})
+        .some(player => hasEventAggregateData(player));
+}
+
 function sumCodes(events, codes) {
     return (codes || [])
         .reduce((total, code) => total + n(events[String(code)]), 0);
@@ -142,7 +156,9 @@ module.exports = {
     aggregateEventCodes,
     configuredEventCodes,
     enrichPlayerStats,
+    hasAnyEventAggregateData,
     hasConfiguredHiddenCodes,
+    hasEventAggregateData,
     hiddenStats,
     parseEventAggregate,
     statFromEvents

@@ -33,10 +33,7 @@ function valueFor(player, key) {
     if (key === "avgRating") return `${number(player.avgRating, 1)} average rating`;
     if (key === "goals") return `${number(player.goals)} goals, ${number(player.shots)} shots, ${number(player.shotPercent)}% conversion rate`;
     if (key === "assists") return `${number(player.assists)} assists`;
-    if (key === "secondAssists") return `${number(player.secondAssists)} second assists`;
     if (key === "passPercent") return `${number(player.passes)} passes, ${number(player.passAttempts)} attempted, ${number(player.passPercent)}% success rate`;
-    if (key === "dribbles") return `${number(player.dribbles)} dribbles completed`;
-    if (key === "interceptions") return `${number(player.interceptions)} interceptions`;
     if (key === "tacklePercent") return `${number(player.tackles)} tackles, ${number(player.tackleAttempts)} attempted, ${number(player.tacklePercent)}% success rate`;
     return number(player[key]);
 }
@@ -135,10 +132,7 @@ module.exports = {
                 `\u2B50 **Top Average Rating**\n${top(players, linkedMaps, "avgRating")}`,
                 `\u26BD **Top Goalscorers**\n${top(players, linkedMaps, "goals")}`,
                 `\u{1F3AF} **Top Assisters**\n${top(players, linkedMaps, "assists")}`,
-                `\u{1F517} **Top Second Assisters**\n${top(players, linkedMaps, "secondAssists")}`,
                 `\u{1F45F} **Best Passers**\n${top(players, linkedMaps, "passPercent")}`,
-                `\u{1F4A8} **Top Dribblers**\n${top(players, linkedMaps, "dribbles")}`,
-                `\u{1F9E0} **Top Interceptors**\n${top(players, linkedMaps, "interceptions")}`,
                 `\u{1F6E1}\uFE0F **Best Tacklers**\n${top(players, linkedMaps, "tacklePercent")}`
             ].join("\n\n");
             const embed =
