@@ -374,13 +374,15 @@ function input(customId, label, value, required = true) {
     );
 }
 
-function settingsModal(sessionId, state) {
+async function settingsModal(sessionId, state) {
+    const archetype = await builder.getArchetype(state.a);
+    const maxLevel = builder.maxPlayerLevel(archetype);
     return new ModalBuilder()
         .setCustomId(id(sessionId, "settings-submit"))
         .setTitle("Player Builder Settings")
         .addComponents(
             input("name", "Build name", state.name, false),
-            input("level", "Player level (1-95)", state.l),
+            input("level", `Player level (1-${maxLevel})`, state.l),
             input("height", "Height in cm", state.h),
             input("weight", "Weight in kg", state.w),
             input("club-level", "Club level (1-10)", state.cl)
@@ -431,7 +433,7 @@ async function handleComponent(interaction) {
     if (blocked) return blocked;
     let archetype = await builder.getArchetype(state.a);
 
-    if (action === "settings") return interaction.showModal(settingsModal(sessionId, state));
+    if (action === "settings") return interaction.showModal(await settingsModal(sessionId, state));
     if (action === "import") return interaction.showModal(importModal(sessionId));
     if (action === "export") {
         const code = builder.encodeState(state);
@@ -527,6 +529,7 @@ async function handleModal(interaction) {
 
     const archetype = await builder.getArchetype(state.a);
     const bounds = archetype.physiqueBounds;
+    const maxLevel = builder.maxPlayerLevel(archetype);
     const number = (key, min, max) => {
         const value = Number(interaction.fields.getTextInputValue(key));
         if (!Number.isInteger(value) || value < min || value > max) {
@@ -536,7 +539,7 @@ async function handleModal(interaction) {
     };
     const previous = { name: state.name, l: state.l, h: state.h, w: state.w, cl: state.cl };
     state.name = interaction.fields.getTextInputValue("name").trim().slice(0, 80);
-    state.l = number("level", 1, 95);
+    state.l = number("level", 1, maxLevel);
     state.h = number("height", bounds.heightMin, bounds.heightMax);
     state.w = number("weight", bounds.weightMin, bounds.weightMax);
     state.cl = number("club-level", 1, 10);

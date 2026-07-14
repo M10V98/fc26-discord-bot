@@ -13,6 +13,15 @@ const getArchetype = async name => {
     return archetype;
 };
 
+function maxPlayerLevel(archetype) {
+    return Math.max(
+        1,
+        Number(archetype?.level) || 0,
+        ...((archetype?.levelApTable || []).map(row => Number(row.level) || 0)),
+        ...((archetype?.levelStatCaps || []).map(row => Number(row.level) || 0))
+    );
+}
+
 function baseAttributes(archetype) {
     const attributes = archetype.attributeGroups.flatMap(group =>
         group.attributes.map(attribute => ({
@@ -95,7 +104,7 @@ function cleanPortableState(raw, archetype, ownerId) {
         baseAttributes(archetype).map(row => [`${row.g}:${row.n}`, row])
     );
 
-    state.l = Math.max(1, Math.min(95, Number(raw.l) || 1));
+    state.l = Math.max(1, Math.min(maxPlayerLevel(archetype), Number(raw.l) || 1));
     state.h = Math.max(bounds.heightMin, Math.min(bounds.heightMax, Number(raw.h) || state.h));
     state.w = Math.max(bounds.weightMin, Math.min(bounds.weightMax, Number(raw.w) || state.w));
     state.cl = Math.max(1, Math.min(10, Number(raw.cl) || 1));
@@ -392,6 +401,7 @@ module.exports = {
     groupRatings,
     levelBudget,
     levelCaps,
+    maxPlayerLevel,
     saveSession,
     reconcilePlaystyles,
     reconcileFacilities,
