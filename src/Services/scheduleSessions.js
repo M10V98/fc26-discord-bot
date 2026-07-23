@@ -396,6 +396,31 @@ function parseDateTime(input) {
     });
 }
 
+function parseDurationMinutes(input) {
+    const raw = String(input || "").trim().toLowerCase();
+
+    if (!raw) return null;
+
+    if (/^\d+(?:\.\d+)?$/.test(raw)) {
+        const hours = Number(raw);
+        return hours > 0 ? Math.round(hours * 60) : null;
+    }
+
+    const normalized = raw
+        .replace(/hours?|hrs?/g, "h")
+        .replace(/minutes?|mins?/g, "m")
+        .replace(/\s+/g, "");
+    const match = normalized.match(/^(?:(\d+(?:\.\d+)?)h)?(?:(\d+)m)?$/);
+
+    if (!match || (!match[1] && !match[2])) return null;
+
+    const minutes = Math.round(
+        Number(match[1] || 0) * 60 + Number(match[2] || 0)
+    );
+
+    return minutes > 0 ? minutes : null;
+}
+
 function formatDiscordTime(startsAt) {
     const unix = Math.floor(Number(startsAt) / 1000);
     return `<t:${unix}:F>`;
@@ -508,10 +533,10 @@ async function createSession(interaction, options) {
         options.loadUpTimeText
             ? parseDateTime(options.loadUpTimeText)
             : startsAt;
-    const endsAt =
-        options.endTimeText
-            ? parseDateTime(options.endTimeText)
-            : startsAt;
+    const durationMinutes = parseDurationMinutes(options.durationText);
+    const endsAt = startsAt && durationMinutes
+        ? startsAt + durationMinutes * 60 * 1000
+        : null;
 
     if (!startsAt) {
         throw new Error("I could not understand that time/date. Try `2026-06-01 20:00` or `01/06/2026 20:00`.");
@@ -521,16 +546,12 @@ async function createSession(interaction, options) {
         throw new Error("I could not understand the load-up time. Try `19:45`, `7.45pm`, or `1945`.");
     }
 
-    if (!endsAt) {
-        throw new Error("I could not understand the end time. Try `22:00`, `10pm`, or `2230`.");
+    if (!durationMinutes) {
+        throw new Error("I could not understand the event duration. Try `3 hours`, `2h 30m`, or `180 minutes`.");
     }
 
     if (loadUpAt >= startsAt) {
         throw new Error("Load-up time must be before kick-off time.");
-    }
-
-    if (endsAt <= startsAt) {
-        throw new Error("End time must be after kick-off time.");
     }
 
     if (startsAt <= Date.now()) {
@@ -539,10 +560,6 @@ async function createSession(interaction, options) {
 
     if (loadUpAt <= Date.now()) {
         throw new Error("That load-up time is in the past.");
-    }
-
-    if (endsAt <= Date.now()) {
-        throw new Error("That end time is in the past.");
     }
 
     const sessionId =
@@ -857,8 +874,8 @@ function buildEditSessionModal(session) {
             modalInput("date", "Date (DD/MM/YYYY)", date),
             modalInput(
                 "times",
-                "Load up | Kick-off | End",
-                `${time(session.load_up_at)} | ${time(session.starts_at)} | ${time(session.ends_at)}`
+                "Load up | Kick-off | Duration",
+                `${time(session.load_up_at)} | ${time(session.starts_at)} | ${Math.round((session.ends_at - session.starts_at) / 60000)} minutes`
             )
         );
 }
@@ -1026,26 +1043,29 @@ async function handleEditSessionModal(interaction) {
 
     if (times.length !== 3 || times.some(value => !value)) {
         return interaction.reply({
-            content: "Enter times as `Load up | Kick-off | End`, for example `19:30 | 20:00 | 22:00`.",
+            content: "Enter values as `Load up | Kick-off | Duration`, for example `22:30 | 23:00 | 3 hours`.",
             ephemeral: true
         });
     }
 
-    const [loadUpTime, kickoffTime, endTime] = times;
+    const [loadUpTime, kickoffTime, durationText] = times;
     const loadUpAt = parseDateTime(`${date} ${loadUpTime}`);
     const startsAt = parseDateTime(`${date} ${kickoffTime}`);
-    const endsAt = parseDateTime(`${date} ${endTime}`);
+    const durationMinutes = parseDurationMinutes(durationText);
+    const endsAt = startsAt && durationMinutes
+        ? startsAt + durationMinutes * 60 * 1000
+        : null;
 
     if (!loadUpAt || !startsAt || !endsAt) {
         return interaction.reply({
-            content: "I could not understand the edited date or times. Use `DD/MM/YYYY` and `HH:MM`.",
+            content: "I could not understand the edited date, times, or duration. Use `DD/MM/YYYY`, `HH:MM`, and a duration such as `3 hours`.",
             ephemeral: true
         });
     }
 
-    if (loadUpAt >= startsAt || endsAt <= startsAt) {
+    if (loadUpAt >= startsAt) {
         return interaction.reply({
-            content: "Load up must be before kick-off, and the end must be after kick-off.",
+            content: "Load up must be before kick-off.",
             ephemeral: true
         });
     }
@@ -1343,6 +1363,7 @@ module.exports = {
     handleRecommendedXiButton,
     handleSessionButton,
     parseDateTime,
+    parseDurationMinutes,
     refreshLiveSessionMessages,
     startScheduleSessionCleanup
 };

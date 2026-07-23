@@ -101,6 +101,12 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
 
     const ourPlayers =
         match.players?.[ourId] || {};
+    const opponentPlayerCount =
+        Object.keys(match.players?.[oppId] || {}).length;
+    const opponent =
+        String(home.clubId) === String(ourId)
+            ? away
+            : home;
     const hiddenStatsAvailable =
         hasAnyEventAggregateData(ourPlayers);
     const linkedMaps =
@@ -148,7 +154,9 @@ async function buildFallbackEmbed(match, ourClubId, guildId) {
         .setColor("#00ff99")
         .setTitle(getClubName(home) + " vs " + getClubName(away))
         .setDescription(
-            `${formatScoreboard(home, away)}\n\n${getResult(home, away)}`
+            `${formatScoreboard(home, away)}\n\n${getResult(home, away)}` +
+            `\n${getClubName(opponent)} had ${opponentPlayerCount} ` +
+            `player${opponentPlayerCount === 1 ? "" : "s"}`
         )
         .addFields({
             name: "Player Performances",

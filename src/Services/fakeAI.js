@@ -1210,7 +1210,7 @@ async function answerQuestion(guildId, question) {
             return "🧠 Use `/quiz start` to begin a server-wide quiz. Each question stays open for 30 seconds, then the bot advances automatically until someone presses Stop.";
 
         case "ball_knowledge_help":
-            return "Ball knowledge means reading the game properly: tactics, roles, decision-making, form, stats, and knowing the club lore. Use `/quiz start` if you want the room tested.";
+            return "Ball knowledge means reading the game properly: tactics, roles, decision-making, form, and stats. Use `/quiz start` if you want the room tested.";
 
         case "moderation_help":
             return "⚖️ Staff can use `/mod warn`, `/mod infractions`, `/mod timeout`, and `/mod ban`. Three warns triggers an escalation flag.";

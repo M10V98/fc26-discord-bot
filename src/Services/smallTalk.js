@@ -52,9 +52,9 @@ function answerSmallTalk(value) {
     if (/\b(what you been up to|what have you been up to|been doing|how's your day|hows your day)\b/.test(text)) {
         return pick([
             "Mostly watching stats, trying not to interrupt normal chat, and learning when to keep quiet.",
-            "Bit of club admin, bit of lore memory, bit of pretending I understand the dressing room.",
+            "Bit of club admin, bit of stat checking, bit of pretending I understand the dressing room.",
             "Keeping an eye on the numbers and trying to be less robotic. Slow progress, but progress.",
-            "Just sitting here ready for stats, fixtures, lore, and the occasional normal conversation."
+            "Just sitting here ready for stats, fixtures, and the occasional normal conversation."
         ]);
     }
 
@@ -71,7 +71,7 @@ function answerSmallTalk(value) {
         return pick([
             "I’m good bro. Watching the stats and trying not to waffle.",
             "All good. Keeping the club brain switched on.",
-            "I’m calm. Just here if the room needs stats, lore, or a sensible answer.",
+            "I’m calm. Just here if the room needs stats or a sensible answer.",
             "Good, mate. Trying to be useful without jumping into every message."
         ]);
     }

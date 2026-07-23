@@ -31,7 +31,7 @@ function guidedModal() {
             modalInput("date", "Date", "01/07/2026 or tomorrow"),
             modalInput("load", "Load-up time", "19:45"),
             modalInput("kickoff", "Kick-off time", "20:00"),
-            modalInput("end", "End time", "22:00"),
+            modalInput("duration", "Event duration", "3 hours or 2h 30m"),
             modalInput("league-title", "League | optional title", "VPG League | Match Night")
         );
 }
@@ -40,7 +40,7 @@ async function createFromValues(interaction, values) {
     const result = await createSession(interaction, {
         timeText: `${values.date} ${values.kickoff}`,
         loadUpTimeText: `${values.date} ${values.load}`,
-        endTimeText: `${values.date} ${values.end}`,
+        durationText: values.duration,
         league: values.league,
         title: values.title || null
     });
@@ -77,8 +77,8 @@ module.exports = {
                 )
                 .addStringOption(option =>
                     option
-                        .setName("end_time")
-                        .setDescription("When the event ends. Examples: 22:00, 10pm, 2230")
+                        .setName("duration")
+                        .setDescription("How long the event lasts. Examples: 3 hours, 2h 30m, 180 minutes")
                         .setRequired(true)
                 )
                 .addStringOption(option =>
@@ -125,7 +125,7 @@ module.exports = {
                 date: interaction.options.getString("date"),
                 load: interaction.options.getString("load_up_time"),
                 kickoff: interaction.options.getString("kickoff_time"),
-                end: interaction.options.getString("end_time"),
+                duration: interaction.options.getString("duration"),
                 league: interaction.options.getString("league"),
                 title: interaction.options.getString("title")
             });
@@ -152,7 +152,7 @@ module.exports = {
                 date: interaction.fields.getTextInputValue("date"),
                 load: interaction.fields.getTextInputValue("load"),
                 kickoff: interaction.fields.getTextInputValue("kickoff"),
-                end: interaction.fields.getTextInputValue("end"),
+                duration: interaction.fields.getTextInputValue("duration"),
                 league,
                 title: titleParts.join(" | ") || null
             });

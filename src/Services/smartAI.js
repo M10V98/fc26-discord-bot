@@ -190,9 +190,9 @@ function smallTalkResponse(guildId, channelId, text) {
     } else if (/\b(what you been up to|what have you been up to|been doing|how's your day|hows your day)\b/.test(lower)) {
         variants = [
             "Mostly watching stats, trying not to interrupt normal chat, and learning when to keep quiet.",
-            "Bit of club admin, bit of lore memory, bit of pretending I understand the dressing room.",
+            "Bit of club admin, bit of stat checking, bit of pretending I understand the dressing room.",
             "Keeping an eye on the numbers and trying to be less robotic. Slow progress, but progress.",
-            "Just sitting here ready for stats, fixtures, lore, and the occasional normal conversation."
+            "Just sitting here ready for stats, fixtures, and the occasional normal conversation."
         ];
     } else if (/\b(thanks|cheers|ty)\b/.test(lower)) {
         variants = [
@@ -220,7 +220,7 @@ function smallTalkResponse(guildId, channelId, text) {
         variants = [
             "I’m good bro. Watching the stats and trying not to waffle.",
             "All good. Keeping the club brain switched on.",
-            "I’m calm. Just here if the room needs stats, lore, or a sensible answer.",
+            "I’m calm. Just here if the room needs stats or a sensible answer.",
             "Good, mate. Trying to be useful without jumping into every message."
         ];
     } else {
@@ -449,7 +449,7 @@ function hasRequestCue(text) {
 }
 
 function hasStrongShortCue(text) {
-    return /\b(who is [a-z0-9_]{2,}|who was [a-z0-9_]{2,}|[a-z0-9_ ]+ incident|best player|top scorer|top goalscorer|most goals|most assists|highest rated|highest rating|ball knowledge|who knows ball|club history|bella lore|what is xg|what is xa|what is xt|expected goals|expected assists|expected threat)\b/i
+    return /\b(who is [a-z0-9_]{2,}|who was [a-z0-9_]{2,}|[a-z0-9_ ]+ incident|best player|top scorer|top goalscorer|most goals|most assists|highest rated|highest rating|ball knowledge|who knows ball|what is xg|what is xa|what is xt|expected goals|expected assists|expected threat)\b/i
         .test(text);
 }
 
@@ -792,7 +792,7 @@ function classifyRuleBased(message, memory = []) {
             mode: "helpful",
             intent: "club_lore",
             confidence: 0.9,
-            reason: "Direct club lore question.",
+            reason: "Direct club knowledge question.",
             situation
         };
     }
@@ -1213,7 +1213,7 @@ async function answerSmartMessage(message) {
     }
 
     if (decision.intent === "ball_knowledge_help") {
-        return "Ball knowledge is reading the game properly: tactics, roles, decision-making, form, stats, and club lore. If you want the room tested, run `/quiz start`.";
+        return "Ball knowledge is reading the game properly: tactics, roles, decision-making, form, and stats. If you want the room tested, run `/quiz start`.";
     }
 
     const trustedClubKnowledge =

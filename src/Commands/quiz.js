@@ -30,9 +30,6 @@ const {
     POSITION_FACTS
 } = require("../Services/footballHistoryData");
 const {
-    CLUB_LORE_QUIZ_QUESTIONS
-} = require("../Services/clubKnowledge");
-const {
     SUPPLIED_FOOTBALL_TRIVIA
 } = require("../Services/suppliedFootballTrivia");
 const {
@@ -87,7 +84,6 @@ function deduplicateQuestions(questions) {
 }
 
 const STATIC_QUESTIONS = deduplicateQuestions([
-    ...CLUB_LORE_QUIZ_QUESTIONS,
     ...SUPPLIED_FOOTBALL_TRIVIA,
     ...GENERATED_FOOTBALL_QUIZ_QUESTIONS,
     ["In Clubs data, what does pass success rate tell you better than raw completed passes?", ["How efficiently a player keeps possession when attempting distribution", "How many shots a player should have taken", "Whether a player was offside", "How many saves the goalkeeper made"], 0],
@@ -255,24 +251,8 @@ const STATIC_QUESTIONS = deduplicateQuestions([
     ["Which club won the Champions League in 2011 at Wembley?", ["Barcelona", "Manchester United", "Chelsea", "Bayern Munich"], 0]
 ]);
 
-const CLUB_LORE_QUESTION_KEYS =
-    new Set(
-        CLUB_LORE_QUIZ_QUESTIONS.map(question =>
-            String(question?.[0] || "")
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, " ")
-                .trim()
-        )
-    );
-const NON_LORE_STATIC_QUESTIONS =
-    STATIC_QUESTIONS.filter(question =>
-        !CLUB_LORE_QUESTION_KEYS.has(
-            String(question?.[0] || "")
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, " ")
-                .trim()
-        )
-    );
+const STATIC_QUESTION_POOL =
+    STATIC_QUESTIONS;
 
 function shuffleAnswers(question, answers, correctIndex, factKey = null) {
     const correctAnswer =
@@ -341,7 +321,7 @@ function staticQuestion() {
         if (supplied) return supplied;
     }
 
-    return fromPool(NON_LORE_STATIC_QUESTIONS);
+    return fromPool(STATIC_QUESTION_POOL);
 }
 
 function historyQuestion() {
@@ -1212,29 +1192,6 @@ function questionFromPool(pool) {
 async function nextQuestion(guildId, mode = "full") {
     let fallback = null;
 
-    if (
-        mode === "lore" ||
-        Math.random() < 0.25
-    ) {
-        for (let attempt = 0; attempt < 40; attempt++) {
-            const candidate =
-                questionFromPool(CLUB_LORE_QUIZ_QUESTIONS);
-
-            if (!candidate) continue;
-            fallback = fallback || candidate;
-
-            if (!await wasRecentlyAsked(guildId, candidate)) {
-                await rememberQuestion(guildId, candidate);
-                return candidate;
-            }
-        }
-
-        if (fallback || mode === "lore") {
-            await rememberQuestion(guildId, fallback);
-            return fallback;
-        }
-    }
-
     if (Math.random() < 0.2) {
         const dynamic =
             await Promise.race([
@@ -1277,7 +1234,7 @@ async function nextQuestion(guildId, mode = "full") {
 
     const safeFallback =
         fallback ||
-        NON_LORE_STATIC_QUESTIONS
+        STATIC_QUESTION_POOL
             .map(row => shuffleAnswers(row[0], row[1], row[2]))
             .find(Boolean);
 
@@ -2045,10 +2002,6 @@ module.exports = {
                             {
                                 name: "Full Quiz",
                                 value: "full"
-                            },
-                            {
-                                name: "Bella Ciao Lore",
-                                value: "lore"
                             }
                         )
                 )

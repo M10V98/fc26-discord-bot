@@ -288,12 +288,19 @@ function buildSvg(match, ourClubId, home, away) {
 
     const players =
         match.players?.[ourClubId] || {};
+    const opponentId =
+        String(home.clubId) === String(ourClubId)
+            ? String(away.clubId)
+            : String(home.clubId);
+    const opponentPlayers =
+        match.players?.[opponentId] || {};
 
     const hiddenStatsAvailable =
         hasAnyEventAggregateData(players);
     const rows = buildRows(players);
     const minutes = getMinutesPlayed(players);
     const trackedCount = Object.keys(players).length;
+    const opponentCount = Object.keys(opponentPlayers).length;
 
     const homeName = home.details?.name || "Home";
     const awayName = away.details?.name || "Away";
@@ -305,6 +312,12 @@ function buildSvg(match, ourClubId, home, away) {
 
     const trackedName =
         trackedClub.details?.name || "Club";
+    const opponentClub =
+        String(home.clubId) === String(ourClubId)
+            ? away
+            : home;
+    const opponentName =
+        opponentClub.details?.name || "Opponent";
 
     const matchType =
         match.clubs?.[ourClubId]?.matchType ||
@@ -318,7 +331,8 @@ function buildSvg(match, ourClubId, home, away) {
     ].filter(Boolean).join(" \u2022 ");
 
     const playerNote =
-        `${trackedName} had ${trackedCount} tracked player${trackedCount === 1 ? "" : "s"}`;
+        `${trackedName} had ${trackedCount} tracked player${trackedCount === 1 ? "" : "s"}` +
+        ` \u2022 ${opponentName} had ${opponentCount} player${opponentCount === 1 ? "" : "s"}`;
 
     const columns =
         hiddenStatsAvailable
