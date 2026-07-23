@@ -13,6 +13,9 @@ const {
 
 const db = require("./Utils/db");
 const eaApi = require("./Services/eaApi");
+const {
+    repairStoredClubIds
+} = require("./Services/clubLinks");
 
 const discordToken =
     process.env.TOKEN ||
@@ -101,6 +104,7 @@ client.once(
         console.log(`Logged in as ${readyClient.user.tag}`);
 
         await db.init();
+        await repairStoredClubIds();
 
         try {
             const linkedClubs =

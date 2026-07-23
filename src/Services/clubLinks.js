@@ -310,11 +310,150 @@ async function removeLinkedClub(guildId, clubId) {
     };
 }
 
+async function repairStoredClubIds() {
+    const linkedClubs =
+        await db.all(
+            `SELECT * FROM guild_clubs`
+        );
+    const guildIds =
+        new Set(
+            linkedClubs.map(row =>
+                String(row.guild_id)
+            )
+        );
+    let normalized = 0;
+    let invalidLegacyRemoved = 0;
+
+    for (const row of linkedClubs) {
+        const clubId =
+            normalizeClubId(row.club_id);
+
+        if (!clubId || clubId === String(row.club_id)) {
+            continue;
+        }
+
+        const existing =
+            await db.get(
+                `
+                SELECT *
+                FROM guild_clubs
+                WHERE guild_id = ?
+                AND club_id = ?
+                `,
+                [
+                    row.guild_id,
+                    clubId
+                ]
+            );
+
+        await db.run(
+            `
+            INSERT OR REPLACE INTO guild_clubs
+            (guild_id, club_id, club_name, is_default, stats_started_at, linked_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            [
+                row.guild_id,
+                clubId,
+                existing?.club_name || row.club_name,
+                Math.max(
+                    Number(existing?.is_default || 0),
+                    Number(row.is_default || 0)
+                ),
+                existing?.stats_started_at || row.stats_started_at || now(),
+                existing?.linked_at || row.linked_at || now()
+            ]
+        );
+        await db.run(
+            `
+            DELETE FROM guild_clubs
+            WHERE guild_id = ?
+            AND club_id = ?
+            `,
+            [
+                row.guild_id,
+                row.club_id
+            ]
+        );
+        normalized += 1;
+    }
+
+    const legacyClubs =
+        await db.all(
+            `SELECT * FROM clubs`
+        );
+
+    for (const legacy of legacyClubs) {
+        guildIds.add(String(legacy.guild_id));
+    }
+
+    for (const guildId of guildIds) {
+        const validLinked =
+            (await getLinkedClubs(guildId))
+                .filter(row =>
+                    isValidClubId(row.club_id)
+                );
+
+        if (validLinked.length) {
+            const preferred =
+                validLinked.find(row =>
+                    Number(row.is_default)
+                ) ||
+                validLinked[0];
+
+            await setDefaultClub(
+                guildId,
+                preferred.club_id
+            );
+            continue;
+        }
+
+        const legacy =
+            legacyClubs.find(row =>
+                String(row.guild_id) === guildId
+            );
+        const legacyClubId =
+            normalizeClubId(legacy?.club_id);
+
+        if (legacyClubId) {
+            await addLinkedClub(
+                guildId,
+                legacyClubId,
+                {
+                    makeDefault: true,
+                    statsStartedAt: legacy.stats_started_at
+                }
+            );
+            continue;
+        }
+
+        if (legacy?.club_id) {
+            await db.run(
+                `DELETE FROM clubs WHERE guild_id = ?`,
+                [guildId]
+            );
+            invalidLegacyRemoved += 1;
+        }
+    }
+
+    if (normalized || invalidLegacyRemoved) {
+        console.log(
+            `Repaired stored club IDs: normalized ${normalized}, removed ${invalidLegacyRemoved} invalid legacy default(s).`
+        );
+    }
+
+    return {
+        normalized,
+        invalidLegacyRemoved
+    };
+}
+
 module.exports = {
     addLinkedClub,
     findLinkedClub,
     getDefaultClub,
     getLinkedClubs,
+    repairStoredClubIds,
     removeLinkedClub,
     setDefaultClub
 };
