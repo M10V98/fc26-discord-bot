@@ -1,5 +1,8 @@
 const eaApi = require("./eaApi");
 const db = require("../Utils/db");
+const {
+    normalizeClubId
+} = require("../Utils/clubId");
 
 const {
     processMatchXP
@@ -24,6 +27,22 @@ let interval = null;
 let isSyncing = false;
 
 async function syncGuildStats(guildId, clubId, options = {}) {
+    const validClubId =
+        normalizeClubId(clubId);
+
+    if (!validClubId) {
+        console.warn(
+            `Skipping stats sync for guild ${guildId}: invalid saved club ID "${clubId}". Relink it using a numeric EA ClubID.`
+        );
+
+        return {
+            checked: 0,
+            processed: 0,
+            skipped: true
+        };
+    }
+
+    clubId = validClubId;
 
     const limit =
         options.limit ||

@@ -74,7 +74,9 @@ module.exports = {
             console.error("linkclub error:", err);
 
             await interaction.editReply(
-                "Failed to link club."
+                err.message === "invalid_club_id"
+                    ? "That is not a valid EA ClubID. Enter the numeric ClubID or paste an EA Clubs URL containing `clubId=`."
+                    : "Failed to link club."
             );
         }
     }

@@ -1,5 +1,9 @@
 const db = require("../Utils/db");
 const eaApi = require("./eaApi");
+const {
+    isValidClubId,
+    normalizeClubId
+} = require("../Utils/clubId");
 
 function now() {
     return Date.now();
@@ -35,19 +39,26 @@ async function getLinkedClubs(guildId) {
 }
 
 async function getDefaultClub(guildId) {
-    const club =
-        await db.get(
+    const linkedClubs =
+        await db.all(
             `
             SELECT *
             FROM guild_clubs
             WHERE guild_id = ?
-            AND is_default = 1
-            LIMIT 1
+            ORDER BY is_default DESC, linked_at ASC
             `,
             [guildId]
         );
+    const club =
+        linkedClubs.find(row =>
+            isValidClubId(row.club_id)
+        );
 
     if (club) {
+        if (!Number(club.is_default)) {
+            return setDefaultClub(guildId, club.club_id);
+        }
+
         return club;
     }
 
@@ -61,13 +72,13 @@ async function getDefaultClub(guildId) {
             [guildId]
         );
 
-    if (!legacy?.club_id) {
+    if (!legacy?.club_id || !normalizeClubId(legacy.club_id)) {
         return null;
     }
 
     await addLinkedClub(
         guildId,
-        legacy.club_id,
+        normalizeClubId(legacy.club_id),
         {
             makeDefault: true,
             statsStartedAt: legacy.stats_started_at
@@ -128,10 +139,10 @@ async function findLinkedClub(guildId, query) {
 
 async function addLinkedClub(guildId, clubId, options = {}) {
     const value =
-        String(clubId || "").trim();
+        normalizeClubId(clubId);
 
     if (!value) {
-        throw new Error("club_id_required");
+        throw new Error("invalid_club_id");
     }
 
     const existing =
@@ -202,7 +213,7 @@ async function setDefaultClub(guildId, clubId) {
     const club =
         resolved;
 
-    if (!club) {
+    if (!club || !isValidClubId(club.club_id)) {
         return null;
     }
 

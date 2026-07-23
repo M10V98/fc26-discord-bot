@@ -192,7 +192,9 @@ module.exports = {
             console.error("club command error:", err);
 
             return interaction.editReply(
-                "Failed to manage server clubs. Check bot logs for details."
+                err.message === "invalid_club_id"
+                    ? "That is not a valid EA ClubID. Enter the numeric ClubID or paste an EA Clubs URL containing `clubId=`."
+                    : "Failed to manage server clubs. Check bot logs for details."
             );
         }
     }
