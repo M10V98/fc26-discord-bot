@@ -39,6 +39,7 @@ const {
     handleMoreOptionsButton,
     handleRecommendedXiButton,
     handleSessionButton,
+    removeMemberFromScheduledSessions,
     startScheduleSessionCleanup
 } = require("./Services/scheduleSessions");
 const {
@@ -48,6 +49,7 @@ const {
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
@@ -169,6 +171,27 @@ client.once(
     }
 );
        
+client.on(
+    Events.GuildMemberRemove,
+    async member => {
+        try {
+            const updatedCount =
+                await removeMemberFromScheduledSessions(member);
+
+            if (updatedCount) {
+                console.log(
+                    `Removed departed member ${member.id} from ${updatedCount} scheduled session(s) in ${member.guild.name}.`
+                );
+            }
+        } catch (err) {
+            console.error(
+                `Failed to remove departed member ${member.id} from scheduled sessions:`,
+                err
+            );
+        }
+    }
+);
+
 client.on(
     Events.InteractionCreate,
     async interaction => {

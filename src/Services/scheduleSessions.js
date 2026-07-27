@@ -1312,6 +1312,88 @@ async function refreshLiveSessionMessages(client = clientRef) {
     }
 }
 
+async function removeMemberFromScheduledSessions(member) {
+    const guild = member?.guild;
+    const userId = member?.id;
+
+    if (!guild?.id || !userId) return 0;
+
+    const sessions =
+        await db.all(
+            `
+            SELECT *
+            FROM scheduled_sessions
+            WHERE guild_id = ?
+            AND COALESCE(ends_at, starts_at) > ?
+            `,
+            [
+                guild.id,
+                Date.now()
+            ]
+        );
+
+    let updatedCount = 0;
+
+    for (const session of sessions) {
+        const originalCanPlay = readList(session.can_play);
+        const originalCannotPlay = readList(session.cannot_play);
+        const originalMaybePlay = readList(session.maybe_play);
+        const canPlay =
+            originalCanPlay.filter(id => id !== userId);
+        const cannotPlay =
+            originalCannotPlay.filter(id => id !== userId);
+        const maybePlay =
+            originalMaybePlay.filter(id => id !== userId);
+        const wasRemoved =
+            canPlay.length !== originalCanPlay.length ||
+            cannotPlay.length !== originalCannotPlay.length ||
+            maybePlay.length !== originalMaybePlay.length;
+
+        if (!wasRemoved) continue;
+
+        const updated = {
+            ...session,
+            can_play: writeList(canPlay),
+            cannot_play: writeList(cannotPlay),
+            maybe_play: writeList(maybePlay)
+        };
+
+        await db.run(
+            `
+            UPDATE scheduled_sessions
+            SET can_play = ?,
+                cannot_play = ?,
+                maybe_play = ?
+            WHERE session_id = ?
+            `,
+            [
+                updated.can_play,
+                updated.cannot_play,
+                updated.maybe_play,
+                session.session_id
+            ]
+        );
+
+        const channel =
+            await guild.channels.fetch(session.channel_id).catch(() => null);
+        const message =
+            channel && session.message_id
+                ? await channel.messages.fetch(session.message_id).catch(() => null)
+                : null;
+
+        await message?.edit({
+            embeds: [
+                buildSessionEmbed(updated, guild)
+            ],
+            components: buildSessionButtons(session.session_id)
+        }).catch(() => null);
+
+        updatedCount += 1;
+    }
+
+    return updatedCount;
+}
+
 function startScheduleSessionCleanup(client) {
     clientRef = client;
 
@@ -1365,5 +1447,6 @@ module.exports = {
     parseDateTime,
     parseDurationMinutes,
     refreshLiveSessionMessages,
+    removeMemberFromScheduledSessions,
     startScheduleSessionCleanup
 };
