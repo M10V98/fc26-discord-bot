@@ -322,6 +322,8 @@ async function repairStoredClubIds() {
             )
         );
     let normalized = 0;
+    let invalidLinkedRemoved = 0;
+    let recovered = 0;
     let invalidLegacyRemoved = 0;
 
     for (const row of linkedClubs) {
@@ -388,11 +390,26 @@ async function repairStoredClubIds() {
     }
 
     for (const guildId of guildIds) {
-        const validLinked =
-            (await getLinkedClubs(guildId))
-                .filter(row =>
-                    isValidClubId(row.club_id)
-                );
+        const storedLinked = await getLinkedClubs(guildId);
+        const invalidLinked = storedLinked.filter(row =>
+            !isValidClubId(row.club_id)
+        );
+
+        for (const invalid of invalidLinked) {
+            await db.run(
+                `
+                DELETE FROM guild_clubs
+                WHERE guild_id = ?
+                AND club_id = ?
+                `,
+                [guildId, invalid.club_id]
+            );
+            invalidLinkedRemoved += 1;
+        }
+
+        const validLinked = storedLinked.filter(row =>
+            isValidClubId(row.club_id)
+        );
 
         if (validLinked.length) {
             const preferred =
@@ -414,16 +431,43 @@ async function repairStoredClubIds() {
             );
         const legacyClubId =
             normalizeClubId(legacy?.club_id);
+        const historicalIds =
+            await db.all(
+                `
+                SELECT club_id, 1 AS priority, created_at AS used_at
+                FROM comp_matches
+                WHERE guild_id = ?
+                UNION ALL
+                SELECT club_id, 2 AS priority, updated_at AS used_at
+                FROM xp_seasons
+                WHERE guild_id = ?
+                UNION ALL
+                SELECT last_club_id AS club_id, 3 AS priority, last_activity_at AS used_at
+                FROM automode
+                WHERE guild_id = ?
+                ORDER BY priority ASC, used_at DESC
+                `,
+                [guildId, guildId, guildId]
+            );
+        const recoveredClubId =
+            legacyClubId ||
+            historicalIds
+                .map(row => normalizeClubId(row.club_id))
+                .find(Boolean);
 
-        if (legacyClubId) {
+        if (recoveredClubId) {
             await addLinkedClub(
                 guildId,
-                legacyClubId,
+                recoveredClubId,
                 {
                     makeDefault: true,
-                    statsStartedAt: legacy.stats_started_at
+                    statsStartedAt:
+                        legacy?.stats_started_at ||
+                        invalidLinked[0]?.stats_started_at,
+                    clubName: invalidLinked[0]?.club_name || null
                 }
             );
+            recovered += 1;
             continue;
         }
 
@@ -436,14 +480,16 @@ async function repairStoredClubIds() {
         }
     }
 
-    if (normalized || invalidLegacyRemoved) {
+    if (normalized || invalidLinkedRemoved || recovered || invalidLegacyRemoved) {
         console.log(
-            `Repaired stored club IDs: normalized ${normalized}, removed ${invalidLegacyRemoved} invalid legacy default(s).`
+            `Repaired stored club IDs: normalized ${normalized}, recovered ${recovered}, removed ${invalidLinkedRemoved} invalid linked club(s) and ${invalidLegacyRemoved} invalid legacy default(s).`
         );
     }
 
     return {
         normalized,
+        invalidLinkedRemoved,
+        recovered,
         invalidLegacyRemoved
     };
 }
