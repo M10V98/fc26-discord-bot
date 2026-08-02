@@ -1,7 +1,6 @@
 const {
     SlashCommandBuilder,
-    MessageFlags,
-    PermissionFlagsBits
+    MessageFlags
 } = require("discord.js");
 
 const eaApi = require("../Services/eaApi");
@@ -15,6 +14,7 @@ const {
 const {
     syncCompetitiveMatches
 } = require("../Services/compStats");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 const MATCH_TYPES = [
     "leagueMatch",
@@ -26,7 +26,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("syncstats")
         .setDescription("Backfill player stats from recent club matches")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // ✅ Admin-only visibility
         .addIntegerOption(option =>
             option
                 .setName("matches")
@@ -41,10 +40,9 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        // ✅ Admin check (runtime protection)
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "You must be an admin to use this command.",
+                content: "You must be an administrator or Manager to use this command.",
                 flags: MessageFlags.Ephemeral
             });
         }

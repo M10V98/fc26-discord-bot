@@ -1,13 +1,13 @@
 const {
-    PermissionFlagsBits,
     SlashCommandBuilder
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 function adminOnly() {
     return {
-        content: "Only administrators can manage learned knowledge.",
+        content: "Only administrators or Managers can manage learned knowledge.",
         ephemeral: true
     };
 }
@@ -16,7 +16,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("knowledge")
         .setDescription("Review and manage learned bot knowledge")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(command =>
             command
                 .setName("pending")
@@ -57,11 +56,7 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (
-            !interaction.memberPermissions?.has(
-                PermissionFlagsBits.Administrator
-            )
-        ) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply(adminOnly());
         }
 

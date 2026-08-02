@@ -7,11 +7,11 @@ const {
     Client,
     Collection,
     GatewayIntentBits,
-    PermissionFlagsBits,
     Events
 } = require("discord.js");
 
 const db = require("./Utils/db");
+const { canUseAdminCommands } = require("./Utils/permissions");
 const eaApi = require("./Services/eaApi");
 const {
     repairStoredClubIds
@@ -306,13 +306,9 @@ let targetDiscordId =
 
 if (isAdminClaimMenu) {
 
-    if (
-        !interaction.memberPermissions?.has(
-            PermissionFlagsBits.Administrator
-        )
-    ) {
+    if (!canUseAdminCommands(interaction)) {
         return interaction.editReply(
-            "Only administrators can manually link players."
+            "Only administrators or Managers can manually link players."
         );
     }
 
@@ -620,15 +616,12 @@ if (isAdminClaimMenu) {
                 const isStarter =
                     automode?.started_by &&
                     String(automode.started_by) === String(interaction.user.id);
-                const isAdmin =
-                    interaction.member.permissions.has(
-                        PermissionFlagsBits.Administrator
-                    );
+                const isAdmin = canUseAdminCommands(interaction);
 
                 if (!isStarter && !isAdmin) {
                     return interaction.reply({
                         content:
-                            "Only the person who started AutoMode or an administrator can stop it.",
+                            "Only the person who started AutoMode, an administrator, or a Manager can stop it.",
                         ephemeral: true
                     });
                 }

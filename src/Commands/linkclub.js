@@ -1,7 +1,6 @@
 const {
     SlashCommandBuilder,
-    MessageFlags,
-    PermissionFlagsBits
+    MessageFlags
 } = require("discord.js");
 
 const {
@@ -10,6 +9,7 @@ const {
 const {
     addLinkedClub
 } = require("../Services/clubLinks");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 async function linkById(interaction, clubId) {
     console.log({
@@ -44,7 +44,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("linkclub")
         .setDescription("Link your EA club. Find your ClubID on the EA Clubs Ranking website.")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // ✅ Admin-only visibility
         .addStringOption(option =>
             option
                 .setName("clubid")
@@ -53,10 +52,9 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        // ✅ Admin check (runtime protection)
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "You must be an admin to use this command.",
+                content: "You must be an administrator or Manager to use this command.",
                 flags: MessageFlags.Ephemeral
             });
         }

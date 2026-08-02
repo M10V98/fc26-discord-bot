@@ -3,8 +3,7 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle,
-    PermissionFlagsBits
+    ButtonStyle
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -15,6 +14,7 @@ const {
     number,
     escapeMarkdown
 } = require("../Utils/embedStyle");
+const { canUseAdminCommands } = require("../Utils/permissions");
 const {
     getClubName
 } = require("../Utils/scoreboard");
@@ -2235,13 +2235,11 @@ module.exports = {
 
         const canStop =
             String(session.creator_id) === String(interaction.user.id) ||
-            interaction.memberPermissions?.has(
-                PermissionFlagsBits.Administrator
-            );
+            canUseAdminCommands(interaction);
 
         if (!canStop) {
             return interaction.reply({
-                content: "Only the person who started the quiz or a server administrator can stop it.",
+                content: "Only the person who started the quiz, an administrator, or a Manager can stop it.",
                 ephemeral: true
             });
         }
@@ -2284,13 +2282,11 @@ module.exports = {
 
         const canStop =
             String(session.creator_id) === String(interaction.user.id) ||
-            interaction.memberPermissions?.has(
-                PermissionFlagsBits.Administrator
-            );
+            canUseAdminCommands(interaction);
 
         if (!canStop) {
             return interaction.update({
-                content: "Only the person who started the quiz or a server administrator can stop it.",
+                content: "Only the person who started the quiz, an administrator, or a Manager can stop it.",
                 components: []
             });
         }

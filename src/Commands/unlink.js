@@ -1,6 +1,5 @@
 const {
     ActionRowBuilder,
-    PermissionFlagsBits,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
     MessageFlags
@@ -13,16 +12,12 @@ const {
 const {
     clearCrestMemo
 } = require("../Services/crests");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 function clubLabel(club) {
     return club.club_name
         ? `${club.club_name} (${club.club_id})`
         : String(club.club_id);
-}
-
-function ensureAdmin(interaction) {
-    return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
-        interaction.member?.permissions?.has(PermissionFlagsBits.Administrator);
 }
 
 async function unlinkClub(interaction, clubId) {
@@ -61,13 +56,12 @@ async function unlinkClub(interaction, clubId) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("unlink")
-        .setDescription("Choose one EA club to unlink from this server")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDescription("Choose one EA club to unlink from this server"),
 
     async execute(interaction) {
-        if (!ensureAdmin(interaction)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "Only administrators can unlink a club.",
+                content: "Only administrators or Managers can unlink a club.",
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -121,9 +115,9 @@ module.exports = {
     },
 
     async handleSelect(interaction) {
-        if (!ensureAdmin(interaction)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "Only administrators can unlink a club.",
+                content: "Only administrators or Managers can unlink a club.",
                 flags: MessageFlags.Ephemeral
             });
         }

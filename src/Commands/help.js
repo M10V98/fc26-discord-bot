@@ -8,6 +8,7 @@ const {
     FOOTER,
     infoBlock
 } = require("../Utils/embedStyle");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 function hasPermission(interaction, permission) {
     return Boolean(
@@ -32,12 +33,9 @@ module.exports = {
         .setDescription("Show how to use the bot"),
 
     async execute(interaction) {
-        const isAdmin =
-            hasPermission(
-                interaction,
-                PermissionFlagsBits.Administrator
-            );
+        const isAdmin = canUseAdminCommands(interaction);
         const canModerate =
+            isAdmin ||
             hasPermission(
                 interaction,
                 PermissionFlagsBits.ModerateMembers

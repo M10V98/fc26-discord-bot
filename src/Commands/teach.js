@@ -1,9 +1,9 @@
 const {
-    PermissionFlagsBits,
     SlashCommandBuilder
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -45,10 +45,7 @@ module.exports = {
                 .map(value => value.trim())
                 .filter(Boolean)
                 .slice(0, 20);
-        const isAdmin =
-            interaction.memberPermissions?.has(
-                PermissionFlagsBits.Administrator
-            );
+        const isAdmin = canUseAdminCommands(interaction);
         const status =
             isAdmin
                 ? "approved"

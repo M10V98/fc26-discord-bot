@@ -4,8 +4,7 @@ const {
     ButtonStyle,
     SlashCommandBuilder,
     EmbedBuilder,
-    MessageFlags,
-    PermissionFlagsBits
+    MessageFlags
 } = require("discord.js");
 
 const db = require("../Utils/db");
@@ -14,47 +13,18 @@ const {
     escapeMarkdown,
     number
 } = require("../Utils/embedStyle");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 const DEFAULT_TIMEOUT_MINUTES = 60;
 const INFRACTIONS_PAGE_SIZE = 8;
-const ACADEMY_MANAGER_ROLE_NAME = "academy manager";
-const ACADEMY_MANAGER_MOD_SUBCOMMANDS =
-    new Set([
-        "warn",
-        "infractions",
-        "warnings",
-        "timeout"
-    ]);
-
 const ACTION_LABELS = {
     warn: "Warning",
     timeout: "Timeout",
     ban: "Ban"
 };
 
-function isAdministrator(interaction) {
-    return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-}
-
-function hasAcademyManagerRole(interaction) {
-    const roles =
-        interaction.member?.roles?.cache;
-
-    return Boolean(
-        roles?.some(role =>
-            role.name.toLowerCase() === ACADEMY_MANAGER_ROLE_NAME
-        )
-    );
-}
-
-function canUseModSubcommand(interaction, subcommand) {
-    return (
-        isAdministrator(interaction) ||
-        (
-            hasAcademyManagerRole(interaction) &&
-            ACADEMY_MANAGER_MOD_SUBCOMMANDS.has(subcommand)
-        )
-    );
+function canUseModSubcommand(interaction) {
+    return canUseAdminCommands(interaction);
 }
 
 async function warnCount(guildId, userId) {
@@ -224,7 +194,7 @@ async function buildInfractionsPage(interaction, options = {}) {
 async function handleInfractionsPageButton(interaction) {
     if (!canUseModSubcommand(interaction, "infractions")) {
         return interaction.reply({
-            content: "Only administrators or Academy Managers can use moderation buttons.",
+            content: "Only administrators or Managers can use moderation buttons.",
             ephemeral: true
         });
     }
@@ -527,9 +497,7 @@ module.exports = {
 
             if (!canUseModSubcommand(interaction, subcommand)) {
                 return interaction.editReply(
-                    ACADEMY_MANAGER_MOD_SUBCOMMANDS.has(subcommand)
-                        ? "Only administrators or Academy Managers can use this moderation command."
-                        : "Only administrators can use this moderation command."
+                    "Only administrators or Managers can use this moderation command."
                 );
             }
 

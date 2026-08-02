@@ -1,5 +1,4 @@
 const {
-    PermissionFlagsBits,
     SlashCommandBuilder,
     EmbedBuilder,
     MessageFlags
@@ -13,6 +12,7 @@ const {
     getGuildSettings,
     setSetting
 } = require("../Services/settingsService");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 function settingsEmbed(settings) {
     return new EmbedBuilder()
@@ -37,7 +37,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("settings")
         .setDescription("View or update server bot settings")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
                 .setName("view")
@@ -86,11 +85,9 @@ module.exports = {
             flags: MessageFlags.Ephemeral
         });
 
-        if (
-            !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-        ) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.editReply(
-                "Only administrators can change server settings."
+                "Only administrators or Managers can change server settings."
             );
         }
 

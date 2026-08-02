@@ -1,10 +1,10 @@
 const {
     SlashCommandBuilder,
-    EmbedBuilder,
-    PermissionFlagsBits
+    EmbedBuilder
 } = require("discord.js");
 
 const db = require("../Utils/db");
+const { canUseAdminCommands } = require("../Utils/permissions");
 const eaApi = require("../Services/eaApi");
 const {
     aggregateEventCodes,
@@ -99,7 +99,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("eventcodes")
         .setDescription("Debug EA match event aggregate codes")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>
             option
                 .setName("mode")
@@ -126,9 +125,9 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "Only server admins can use /eventcodes.",
+                content: "Only server administrators or Managers can use /eventcodes.",
                 ephemeral: true
             });
         }

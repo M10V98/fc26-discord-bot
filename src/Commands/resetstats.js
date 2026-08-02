@@ -1,6 +1,5 @@
 const {
     SlashCommandBuilder,
-    PermissionFlagsBits,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -9,12 +8,7 @@ const {
 
 const db = require("../Utils/db");
 const cache = require("../Utils/cache");
-
-function hasAdminPermission(interaction) {
-    return interaction.member.permissions.has(
-        PermissionFlagsBits.Administrator
-    );
-}
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 async function resetXpOnly(guildId) {
     await db.run(
@@ -96,13 +90,12 @@ async function resetAllStats(guildId) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("resetstats")
-        .setDescription("Reset XP only or reset all tracked stats")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDescription("Reset XP only or reset all tracked stats"),
 
     async execute(interaction) {
-        if (!hasAdminPermission(interaction)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "You must be an administrator to use this command.",
+                content: "You must be an administrator or Manager to use this command.",
                 ephemeral: true
             });
         }
@@ -162,9 +155,9 @@ module.exports = {
             });
         }
 
-        if (!hasAdminPermission(interaction)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "Only administrators can use this button.",
+                content: "Only administrators or Managers can use this button.",
                 ephemeral: true
             });
         }

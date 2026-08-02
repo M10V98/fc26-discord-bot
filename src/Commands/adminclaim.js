@@ -2,19 +2,18 @@ const {
     SlashCommandBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
-    MessageFlags,
-    PermissionFlagsBits
+    MessageFlags
 } = require("discord.js");
 
 const eaApi = require("../Services/eaApi");
 const db = require("../Utils/db");
 const { isRealPlayerName } = require("../Utils/embedStyle");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("adminclaim")
         .setDescription("Manually link an EA player to a Discord user")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addUserOption(option =>
             option
                 .setName("user")
@@ -36,9 +35,9 @@ module.exports = {
             flags: MessageFlags.Ephemeral
         });
 
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.editReply(
-                "Only administrators can manually link players."
+                "Only administrators or Managers can manually link players."
             );
         }
 

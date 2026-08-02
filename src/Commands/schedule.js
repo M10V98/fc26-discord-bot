@@ -103,7 +103,7 @@ module.exports = {
         if (interaction.options.getSubcommand() === "guided") {
             if (!canManageSessions(interaction)) {
                 return interaction.reply({
-                    content: "Only server administrators or Academy Managers can schedule sessions.",
+                    content: "Only server administrators or Managers can schedule sessions.",
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -116,7 +116,7 @@ module.exports = {
 
         if (!canManageSessions(interaction)) {
             return interaction.editReply(
-                "Only server administrators or Academy Managers can schedule sessions."
+                "Only server administrators or Managers can schedule sessions."
             );
         }
 
@@ -138,7 +138,7 @@ module.exports = {
     async handleGuidedModal(interaction) {
         if (!canManageSessions(interaction)) {
             return interaction.reply({
-                content: "Only server administrators or Academy Managers can schedule sessions.",
+                content: "Only server administrators or Managers can schedule sessions.",
                 flags: MessageFlags.Ephemeral
             });
         }

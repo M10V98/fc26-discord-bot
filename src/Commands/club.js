@@ -1,5 +1,4 @@
 const {
-    PermissionFlagsBits,
     SlashCommandBuilder,
     MessageFlags
 } = require("discord.js");
@@ -13,6 +12,7 @@ const {
     removeLinkedClub,
     setDefaultClub
 } = require("../Services/clubLinks");
+const { canUseAdminCommands } = require("../Utils/permissions");
 
 function clubLabel(row) {
     return row.club_name
@@ -20,16 +20,10 @@ function clubLabel(row) {
         : String(row.club_id);
 }
 
-function ensureAdmin(interaction) {
-    return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
-        interaction.member?.permissions?.has(PermissionFlagsBits.Administrator);
-}
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("club")
         .setDescription("Manage this server's linked EA clubs")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommandGroup(group =>
             group
                 .setName("server")
@@ -80,9 +74,9 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!ensureAdmin(interaction)) {
+        if (!canUseAdminCommands(interaction)) {
             return interaction.reply({
-                content: "Only administrators can manage server clubs.",
+                content: "Only administrators or Managers can manage server clubs.",
                 flags: MessageFlags.Ephemeral
             });
         }
