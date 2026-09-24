@@ -44,7 +44,10 @@ async function deployCommands() {
 
     const commandFiles =
         fs.readdirSync(commandsPath)
-            .filter(file => file.endsWith(".js"));
+            .filter(file =>
+                file.endsWith(".js") &&
+                file !== "playerbuilder.js"
+            );
 
     console.log(
         `Found ${commandFiles.length} command files.`

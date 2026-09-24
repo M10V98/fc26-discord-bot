@@ -7,6 +7,7 @@
 
 const cache = require("../Utils/cache");
 
+const EA_GAME = "FC 27";
 const PLATFORM = "common-gen5";
 const BASE = "https://proclubs.ea.com/api/fc";
 const REQUEST_TIMEOUT_MS = 15000;
@@ -150,7 +151,7 @@ async function cached(key, ttl, loader, options = {}) {
 async function getClubInfo(clubId, options = {}) {
 
     return cached(
-        `info:${clubId}`,
+        `fc27:info:${clubId}`,
         TTL.info,
         async () => {
 
@@ -166,7 +167,7 @@ async function getClubInfo(clubId, options = {}) {
 async function getOverallStats(clubId, options = {}) {
 
     return cached(
-        `overall:${clubId}`,
+        `fc27:overall:${clubId}`,
         TTL.overallStats,
         async () => {
 
@@ -182,7 +183,7 @@ async function getOverallStats(clubId, options = {}) {
 async function getMembersStats(clubId, options = {}) {
 
     return cached(
-        `members:${clubId}`,
+        `fc27:members:${clubId}`,
         TTL.members,
         async () => {
 
@@ -198,7 +199,7 @@ async function getMembersStats(clubId, options = {}) {
 async function getMembersCareer(clubId, options = {}) {
 
     return cached(
-        `career:${clubId}`,
+        `fc27:career:${clubId}`,
         TTL.career,
         async () => {
 
@@ -217,7 +218,7 @@ async function getMatches(clubId, matchType, options = {}) {
         options.maxResultCount || 100;
 
     return cached(
-        `matches:${clubId}:${matchType}:${max}`,
+        `fc27:matches:${clubId}:${matchType}:${max}`,
         TTL.matches,
         async () => {
 
@@ -292,6 +293,7 @@ async function getRecentMatches(clubId, options = {}) {
 }
 
 module.exports = {
+    EA_GAME,
     getClubInfo,
     getOverallStats,
     getMembersStats,

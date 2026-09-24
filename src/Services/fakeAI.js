@@ -552,13 +552,13 @@ function detectIntent(question) {
     }
  
     if (hasAny(q, [
-        "fc26 clubs",
-        "fc 26 clubs",
+        "fc27 clubs",
+        "fc 27 clubs",
         "pro clubs",
         "clubs mode",
         "what is clubs"
     ])) {
-        return "fc26_clubs";
+        return "fc27_clubs";
     }
  
     if (hasAny(q, [
@@ -574,7 +574,7 @@ function detectIntent(question) {
         "playstyles",
         "play styles",
         "what are playstyles",
-        "fc26 playstyles",
+        "fc27 playstyles",
         "playstyle+"
     ])) {
         return "playstyles";
@@ -1299,14 +1299,14 @@ async function answerQuestion(guildId, question) {
         case "euros":
             return "🏆 The UEFA European Championship (Euros) is held every four years and decides the best national team in Europe.";
  
-        case "fc26_clubs":
-            return "🎮 FC26 Clubs (Pro Clubs) lets you create a Virtual Pro and play with friends in an online club. Progress your player and climb the divisions.";
+        case "fc27_clubs":
+            return "🎮 FC27 Clubs (Pro Clubs) lets you create a Virtual Pro and play with friends in an online club. Progress your player and climb the divisions.";
  
         case "ultimate_team":
             return "🃏 Ultimate Team (FUT) is a mode where you build a squad from player cards earned through packs, matches and the transfer market.";
  
         case "playstyles":
-            return "⭐ FC26 PlayStyles give players unique strengths such as Finesse Shot+, Pinged Pass+ and Anticipate+. Plus versions are the elite tier.";
+            return "⭐ FC27 PlayStyles give players unique strengths such as Finesse Shot+, Pinged Pass+ and Anticipate+. Plus versions are the elite tier.";
  
         case "chemistry":
             return "🧪 Chemistry improves player performance in Ultimate Team through links between players of the same club, league or nationality.";
@@ -1321,7 +1321,7 @@ async function answerQuestion(guildId, question) {
             return "💰 The Transfer Market lets you buy and sell player cards using coins. Prices fluctuate based on supply, demand and promotions.";
  
         case "who_are_you":
-            return "🤖 I'm your club assistant. Ask me about player stats, football tactics or anything FC26.";
+            return "🤖 I'm your club assistant. Ask me about player stats, football tactics or anything FC27.";
  
         case "hello":
             return "👋 Hello! Ask me about player stats, football tactics or club records.";
@@ -1333,7 +1333,7 @@ async function answerQuestion(guildId, question) {
                 "⚽ Ask me about goals, assists or ratings.",
                 "📊 Try asking who the top scorer is.",
                 "🏆 I can help with club statistics.",
-                "🎮 Ask me about FC26.",
+                "🎮 Ask me about FC27.",
                 "📋 Ask me about football tactics.",
                 "🧠 Ask me about formations.",
                 "⚽ Ask me about xG or xA.",

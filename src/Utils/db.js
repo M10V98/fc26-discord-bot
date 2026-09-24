@@ -158,6 +158,39 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS legacy_player_stats (
+        guild_id TEXT,
+        player_id TEXT,
+        player_name TEXT,
+        matches INTEGER DEFAULT 0,
+        goals INTEGER DEFAULT 0,
+        assists INTEGER DEFAULT 0,
+        second_assists INTEGER DEFAULT 0,
+        shots INTEGER DEFAULT 0,
+        saves INTEGER DEFAULT 0,
+        passes INTEGER DEFAULT 0,
+        tackles INTEGER DEFAULT 0,
+        interceptions INTEGER DEFAULT 0,
+        dribbles INTEGER DEFAULT 0,
+        clean_sheets INTEGER DEFAULT 0,
+        motm INTEGER DEFAULT 0,
+        total_rating REAL DEFAULT 0,
+        all_time_xp INTEGER DEFAULT 0,
+        PRIMARY KEY (guild_id, player_id)
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS legacy_club_stats (
+        guild_id TEXT PRIMARY KEY,
+        games INTEGER DEFAULT 0,
+        wins INTEGER DEFAULT 0,
+        losses INTEGER DEFAULT 0,
+        draws INTEGER DEFAULT 0,
+        goals_for INTEGER DEFAULT 0,
+        goals_against INTEGER DEFAULT 0
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id TEXT,
         key TEXT,

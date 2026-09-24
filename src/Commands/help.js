@@ -73,6 +73,7 @@ module.exports = {
                 "`/playerstats` shows a player profile.",
                 "`/career` shows career stats for a claimed player.",
                 "`/ratings`, `/top`, `/leaderboard`, `/in-form` show leaderboards and form.",
+                "`/legacy` shows combined FC 26 + FC 27 player records and friendly-only club results.",
                 "`/player achievements` shows your milestones, or add `user` for someone else.",
                 "`/player form` shows recent form plus stats from the selected 5/10-match window.",
                 "`/player compare` compares goals, assists, average rating, and win rate.",
@@ -108,7 +109,6 @@ module.exports = {
             description,
             "Community",
             [
-                "`/playerbuilder` opens the interactive, self-contained FC 26 player builder.",
                 "`/poll create` creates a poll directly; `/poll guided` offers a phone-friendly form.",
                 "`/ask` asks the football assistant a question.",
                 "`/teach` teaches the assistant a fact or submits it for admin approval.",

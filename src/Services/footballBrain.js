@@ -657,7 +657,7 @@ const footballTriggers = {
     serieA:         ["serie a", "italian league", "calcio", "italy league", "italian football"],
     ligue1:         ["ligue 1", "ligue1", "french league", "france league", "french football"],
     ultimateTeam:   ["ultimate team", "fut", "weekend league", "division rivals", "squad building"],
-    clubs:          ["pro clubs", "clubs mode", "virtual pro", "fc26 clubs", "drop-in"],
+    clubs:          ["pro clubs", "clubs mode", "virtual pro", "fc27 clubs", "drop-in"],
     chemistry:      ["chemistry", "squad chemistry", "chem links", "nationality link", "league link"],
     playstyles:     ["playstyles", "play styles", "finesse shot+", "pinged pass+", "anticipate+", "playstyle"],
     evolutions:     ["evolutions", "evolve", "player evolution", "evo objectives"],

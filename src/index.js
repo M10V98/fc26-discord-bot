@@ -11,6 +11,7 @@ const {
 } = require("discord.js");
 
 const db = require("./Utils/db");
+const { startFc27Season } = require("./Services/fc27Cutover");
 const { canUseAdminCommands } = require("./Utils/permissions");
 const eaApi = require("./Services/eaApi");
 const {
@@ -74,7 +75,10 @@ const commandsPath =
 
 const commandFiles =
     fs.readdirSync(commandsPath)
-        .filter(file => file.endsWith(".js"));
+        .filter(file =>
+            file.endsWith(".js") &&
+            file !== "playerbuilder.js"
+        );
 
 for (const file of commandFiles) {
     try {
@@ -106,6 +110,7 @@ client.once(
         console.log(`Logged in as ${readyClient.user.tag}`);
 
         await db.init();
+        await startFc27Season();
         await repairStoredClubIds();
 
         try {

@@ -552,9 +552,12 @@ async function handleModal(interaction) {
 }
 
 module.exports = {
+    // FC 26's static build rules must not be exposed in FC 27. The command
+    // is omitted from Discord registration until verified FC 27 data exists.
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("playerbuilder")
-        .setDescription("Build and share an FC 26 Pro Clubs player")
+        .setDescription("Build and share a Pro Clubs player")
         .addStringOption(option =>
             option.setName("archetype").setDescription("Starting archetype").addChoices(
                 ...ARCHETYPES.map(name => ({ name, value: name }))
