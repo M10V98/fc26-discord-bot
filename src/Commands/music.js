@@ -10,8 +10,6 @@ const spotify = require("../Services/spotify");
 async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) {
     // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // CRITICAL CONVERSION FIX: Convert incoming variable objects explicitly down into a plain text string.
-        // This removes array syntax dimensions so the YouTube search node handles words naturally!
         const songMetadata = Array.isArray(query) ? query.flat().join(' ') : String(query); 
 
         // Pull channel directly out of verified parameter context first
@@ -27,35 +25,28 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // Enforce standard watch video object properties exclusively to prevent playlist crashes
-            const youtubeSearchResults = await play.search(songMetadata, { 
+            // 1. SOUNDCLOUD LOOKUP BYPASS: Search SoundCloud to completely ignore YouTube data center bans
+            const soundcloudResults = await play.search(songMetadata, { 
                 limit: 1,
-                source: { youtube: "video" }
+                source: { soundcloud: "tracks" }
             });
             
-            if (!youtubeSearchResults || youtubeSearchResults.length === 0) {
-                return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
+            if (!soundcloudResults || soundcloudResults.length === 0) {
+                return interaction.editReply(`❌ Could not find a matching track on SoundCloud for: *${songMetadata}*`);
             }
 
-            // Correctly grab the first index video url parameters out of the search payload array
-            const targetVideoUrl = youtubeSearchResults[0].url;
-            const targetVideoTitle = youtubeSearchResults[0].title;
+            const targetTrackUrl = soundcloudResults[0].url;
+            const targetTrackTitle = soundcloudResults[0].name;
 
-            // Stream audio smoothly with safe resource allocations for Railway costs
-              const streamInstance = await play.stream(targetVideoUrl, { 
-                quality: 1,
-                seek: 0,
-                htmldl: true,
-                proxy: false
-            });
-            
+            // 2. Stream audio smoothly using native SoundCloud stream packets
+            const streamInstance = await play.stream(targetTrackUrl, { quality: 1 });
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
             const audioPlayer = createAudioPlayer();
 
             audioPlayer.play(audioResource);
             connection.subscribe(audioPlayer);
 
-            await interaction.editReply({ content: `🎶 Now streaming: **${targetVideoTitle}**`, components: [] });
+            await interaction.editReply({ content: `🎶 Now streaming from SoundCloud: **${targetTrackTitle}**`, components: [] });
 
             // Clear active server allocations on song completion to minimize Railway RAM footprint
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
@@ -69,7 +60,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
 
         } catch (error) {
             console.error("Critical Playback System Failure:", error);
-            await interaction.editReply("❌ Failed to stream audio. Connection timed out or YouTube blocked the request.");
+            await interaction.editReply("❌ Failed to stream audio from SoundCloud. Connection timed out.");
         }
         return;
     }
@@ -89,9 +80,9 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
             
             let artistName = 'Unknown Artist';
             if (track.artists) {
-                typeof track.artists === 'string' ? artistName = track.artists : 
-                track.artists.name ? artistName = track.artists.name : 
-                Array.isArray(track.artists) ? artistName = track.artists.map(a => a.name || a).join(', ') : artistName = 'Unknown Artist';
+                if (typeof track.artists === 'string') artistName = track.artists;
+                else if (track.artists.name) artistName = track.artists.name;
+                else if (Array.isArray(track.artists)) artistName = track.artists.map(a => a.name || a).join(', ');
             }
             
             const descriptionText = `by ${artistName}`.slice(0, 95);
