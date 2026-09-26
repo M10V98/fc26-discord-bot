@@ -270,16 +270,22 @@ client.on(
                 return;
             }
         if (interaction.isStringSelectMenu()) {
-           if (interaction.customId === "music_track_menu_selection") {
+            if (interaction.customId === "music_track_menu_selection") {
                     await interaction.deferReply({ ephemeral: true });
                 
+                    // Check the voice channel directly where it is 100% accurate
+                    const voiceChannel = interaction.member.voice?.channel;
+                    if (!voiceChannel) {
+                        return interaction.editReply("❌ You must join a voice channel before selecting a track!");
+                    }
+                
                     const rawSelectionValue = interaction.values[0];
-                    const cleanedTrackQuery = [rawSelectionValue.split("||_idx_")[0]];
+                    const cleanedTrackQuery = rawSelectionValue.split("||_idx_")[0];
 
                     try {
                         const musicCommand = require("./Commands/music"); 
-                       
-                        await musicCommand.replyWithSearch(interaction, cleanedTrackQuery);
+                        // Route the clean query and the verified voice channel forward
+                        await musicCommand.replyWithSearch(interaction, cleanedTrackQuery, voiceChannel);
                     } catch (err) {
                         console.error("Playback execution failure:", err);
                         await interaction.editReply("❌ Could not connect to audio streaming engine.");
