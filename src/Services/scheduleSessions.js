@@ -819,8 +819,8 @@ function buildRecurringModal(session) {
         .setTitle("Recurring Event Settings")
         .addComponents(
             modalInput("repeat_days", "Repeat every (days)", session.recurrence_days || "7"),
-            modalInput("post_before", "Post next event before it (minutes)", session.recurrence_post_minutes || "1440"),
-            modalInput("delete_after", "Delete event after it ends (minutes)", session.recurrence_delete_minutes || "60")
+            modalInput("post_before", "Post next event before (hours/days)", formatRecurringDelay(session.recurrence_post_minutes, "1 day")),
+            modalInput("delete_after", "Delete event after it ends (hours/days)", formatRecurringDelay(session.recurrence_delete_minutes, "1 hour"))
         );
 }
 
@@ -985,14 +985,48 @@ function readWholeNumber(interaction, field, minimum, maximum) {
     return value;
 }
 
+function formatRecurringDelay(minutes, fallback) {
+    if (minutes === null || minutes === undefined || minutes === "") {
+        return fallback;
+    }
+    const value = Number(minutes);
+    if (!Number.isFinite(value) || value < 0) return fallback;
+    if (value > 0 && value % 1440 === 0) {
+        return `${value / 1440} day${value === 1440 ? "" : "s"}`;
+    }
+    if (value % 60 === 0) {
+        return `${value / 60} hour${value === 60 ? "" : "s"}`;
+    }
+    return `${value} minutes`;
+}
+
+function readRecurringDelay(interaction, field, minimumMinutes) {
+    const raw = interaction.fields.getTextInputValue(field).trim().toLowerCase();
+    const match = raw.match(/^(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|days?|d)?$/);
+
+    if (!match) {
+        throw new Error(`${field.replaceAll("_", " ")} must be a number of hours or days, for example \`12 hours\` or \`1 day\`.`);
+    }
+
+    const amount = Number(match[1]);
+    const unit = match[2] || "hours";
+    const minutes = Math.round(amount * (/^d/.test(unit) ? 1440 : 60));
+
+    if (!Number.isFinite(minutes) || minutes < minimumMinutes || minutes > 10080) {
+        throw new Error(`${field.replaceAll("_", " ")} must be between ${minimumMinutes ? "1 hour" : "0 hours"} and 7 days.`);
+    }
+
+    return minutes;
+}
+
 async function handleRecurringSessionModal(interaction) {
     const session = await getAdminSession(interaction, "session_recurring_submit:");
     if (!session) return;
 
     try {
         const repeatDays = readWholeNumber(interaction, "repeat_days", 1, 365);
-        const postBefore = readWholeNumber(interaction, "post_before", 1, 10080);
-        const deleteAfter = readWholeNumber(interaction, "delete_after", 0, 10080);
+        const postBefore = readRecurringDelay(interaction, "post_before", 60);
+        const deleteAfter = readRecurringDelay(interaction, "delete_after", 0);
         const nextAt = Number(session.starts_at) + repeatDays * 24 * 60 * 60 * 1000;
 
         await db.run(
@@ -1003,7 +1037,7 @@ async function handleRecurringSessionModal(interaction) {
             [repeatDays, postBefore, deleteAfter, nextAt, session.session_id]
         );
         return interaction.reply({
-            content: `This event will repeat every ${repeatDays} day(s). The next event will post ${postBefore} minute(s) before kick-off and each event will be removed ${deleteAfter} minute(s) after it ends.`,
+            content: `This event will repeat every ${repeatDays} day(s). The next event will post ${formatRecurringDelay(postBefore)} before kick-off and each event will be removed ${formatRecurringDelay(deleteAfter)} after it ends.`,
             ephemeral: true
         });
     } catch (err) {
