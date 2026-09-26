@@ -25,7 +25,7 @@ function matchContextIntent(question) {
     const latestCue =
         /\b(last|latest|recent|previous|just played|newest)\b/.test(text);
     const clubCue =
-        /\b(our|us|we|bella ciao|bella ciao fc|the club|club|the team|team)\b/.test(text);
+        /\b(our|us|we|the club|club|the team|team)\b/.test(text);
     const matchCue =
         /\b(match|game|fixture|result|score|scoreline|scored|scorer|assist|assisted|played|how did|performance|performer|player|ratings?|motm|man of the match)\b/.test(text);
     const contextualCue =
@@ -41,11 +41,11 @@ function matchContextIntent(question) {
     }
 
     if (/\b(result|score|scoreline|won|lost|draw|drew|how did we do|how did we get on)\b/.test(text) ||
-        /\bhow did\b.*\b(we|us|our|the team|team|the club|club|bella ciao|bella ciao fc)\b/.test(text)) {
+        /\bhow did\b.*\b(we|us|our|the team|team|the club|club)\b/.test(text)) {
         return "latest_result";
     }
 
-    if (/\b(best player|who was best|best for us|best for the team|best for the club|best for bella ciao|man of the match|motm|top rated|highest rated|best performer|standout)\b/.test(text)) {
+    if (/\b(best player|who was best|best for us|best for the team|best for the club|man of the match|motm|top rated|highest rated|best performer|standout)\b/.test(text)) {
         return "best_player";
     }
 

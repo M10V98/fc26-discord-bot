@@ -799,10 +799,26 @@ function buildMoreOptionsMenu(sessionId) {
                 description: "Edit the title, league, date, and times"
             },
             {
+                label: "Make Recurring",
+                value: "recurring",
+                description: "Set repeat, posting, and cleanup timings"
+            },
+            {
                 label: "Delete Event",
                 value: "delete",
                 description: "Delete the event and Match Squad role"
             }
+        );
+}
+
+function buildRecurringModal(session) {
+    return new ModalBuilder()
+        .setCustomId(`session_recurring_submit:${session.session_id}`)
+        .setTitle("Recurring Event Settings")
+        .addComponents(
+            modalInput("repeat_days", "Repeat every (days)", session.recurrence_days || "7"),
+            modalInput("post_before", "Post next event before it (minutes)", session.recurrence_post_minutes || "1440"),
+            modalInput("delete_after", "Delete event after it ends (minutes)", session.recurrence_delete_minutes || "60")
         );
 }
 
@@ -936,6 +952,10 @@ async function handleMoreOptionsAction(interaction) {
         return deleteSessionFromInteraction(interaction, session);
     }
 
+    if (action === "recurring") {
+        return interaction.showModal(buildRecurringModal(session));
+    }
+
     const select =
         new StringSelectMenuBuilder()
             .setCustomId(`session_lineup_formation:${session.session_id}`)
@@ -953,6 +973,79 @@ async function handleMoreOptionsAction(interaction) {
             new ActionRowBuilder().addComponents(select)
         ]
     });
+}
+
+function readWholeNumber(interaction, field, minimum, maximum) {
+    const value = Number(interaction.fields.getTextInputValue(field).trim());
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+        throw new Error(`${field.replace("_", " ")} must be a whole number from ${minimum} to ${maximum}.`);
+    }
+    return value;
+}
+
+async function handleRecurringSessionModal(interaction) {
+    const session = await getAdminSession(interaction, "session_recurring_submit:");
+    if (!session) return;
+
+    try {
+        const repeatDays = readWholeNumber(interaction, "repeat_days", 1, 365);
+        const postBefore = readWholeNumber(interaction, "post_before", 1, 10080);
+        const deleteAfter = readWholeNumber(interaction, "delete_after", 0, 10080);
+        const nextAt = Number(session.starts_at) + repeatDays * 24 * 60 * 60 * 1000;
+
+        await db.run(
+            `UPDATE scheduled_sessions
+             SET recurrence_days = ?, recurrence_post_minutes = ?,
+                 recurrence_delete_minutes = ?, next_recurrence_at = ?
+             WHERE session_id = ?`,
+            [repeatDays, postBefore, deleteAfter, nextAt, session.session_id]
+        );
+        return interaction.reply({
+            content: `This event will repeat every ${repeatDays} day(s). The next event will post ${postBefore} minute(s) before kick-off and each event will be removed ${deleteAfter} minute(s) after it ends.`,
+            ephemeral: true
+        });
+    } catch (err) {
+        return interaction.reply({ content: err.message, ephemeral: true });
+    }
+}
+
+async function createRecurringSession(client, source) {
+    const guild = await client.guilds.fetch(source.guild_id).catch(() => null);
+    const channel = guild && await guild.channels.fetch(source.channel_id).catch(() => null);
+    if (!guild || !channel) return;
+    const intervalMs = Number(source.recurrence_days) * 24 * 60 * 60 * 1000;
+    const startsAt = Number(source.next_recurrence_at);
+    const sessionId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const role = await guild.roles.create({
+        name: `${source.league || "League"} Match Squad`.slice(0, 100),
+        mentionable: true,
+        reason: `Recurring scheduled session ${sessionId}`
+    });
+    const session = {
+        ...source,
+        session_id: sessionId,
+        role_id: role.id,
+        message_id: null,
+        starts_at: startsAt,
+        load_up_at: startsAt - (Number(source.starts_at) - Number(source.load_up_at)),
+        ends_at: startsAt + (Number(source.ends_at) - Number(source.starts_at)),
+        next_recurrence_at: startsAt + intervalMs,
+        pre_tag_sent_at: null,
+        can_play: "[]",
+        cannot_play: "[]",
+        maybe_play: "[]",
+        created_at: Date.now()
+    };
+    const message = await channel.send({
+        embeds: [buildSessionEmbed(session, guild)],
+        components: buildSessionButtons(sessionId)
+    });
+    session.message_id = message.id;
+    await db.run(`INSERT INTO scheduled_sessions
+        (session_id,guild_id,channel_id,message_id,role_id,creator_id,title,time_text,load_up_text,league,crest_url,load_up_at,ends_at,pre_tag_minutes,pre_tag_sent_at,starts_at,can_play,cannot_play,maybe_play,recurrence_days,recurrence_post_minutes,recurrence_delete_minutes,next_recurrence_at,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [session.session_id,session.guild_id,session.channel_id,session.message_id,session.role_id,session.creator_id,session.title,session.time_text,session.load_up_text,session.league,session.crest_url,session.load_up_at,session.ends_at,session.pre_tag_minutes,null,session.starts_at,"[]","[]","[]",session.recurrence_days,session.recurrence_post_minutes,session.recurrence_delete_minutes,session.next_recurrence_at,session.created_at]);
+    await db.run(`UPDATE scheduled_sessions SET recurrence_days = NULL, recurrence_post_minutes = NULL, recurrence_delete_minutes = NULL, next_recurrence_at = NULL WHERE session_id = ?`, [source.session_id]);
 }
 
 async function handleRecommendedXiButton(interaction) {
@@ -1192,6 +1285,11 @@ async function cleanupExpiredSessions(client = clientRef) {
 
     await sendDuePreTags(client);
 
+    const recurring = await db.all(`SELECT * FROM scheduled_sessions WHERE recurrence_days IS NOT NULL AND next_recurrence_at - recurrence_post_minutes * 60000 <= ?`, [Date.now()]);
+    for (const session of recurring) {
+        await createRecurringSession(client, session).catch(err => console.error("recurring session error:", err));
+    }
+
     const rows =
         await db.all(
             `
@@ -1203,7 +1301,9 @@ async function cleanupExpiredSessions(client = clientRef) {
         );
 
     for (const row of rows) {
-        await cleanupSession(client, row);
+        if (Date.now() >= Number(row.ends_at || row.starts_at) + Number(row.recurrence_delete_minutes || 0) * 60000) {
+            await cleanupSession(client, row);
+        }
     }
 }
 
@@ -1430,6 +1530,7 @@ module.exports = {
     handleLineupFormationSelect,
     handleMoreOptionsAction,
     handleMoreOptionsButton,
+    handleRecurringSessionModal,
     handleRecommendedXiButton,
     handleSessionButton,
     parseDateTime,

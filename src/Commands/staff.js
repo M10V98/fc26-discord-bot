@@ -3,18 +3,16 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const bellaApi =
-    require("../Services/bellaApi");
-
-const {
-    getCrestUrl
-} = require("../Services/crests");
-
 const {
     FOOTER
 } = require("../Utils/embedStyle");
 
-const BELLA_CLUB_ID = 525542;
+const STAFF = [
+    ["Founder", "👑", "Pigeon | Founder | 27\nM10 | Founder | 10\nCobra | Founder | 33"],
+    ["Manager", "🟩", "Samim | Manager | GOAT\nM10 | Main Manager"],
+    ["Assistant Manager", "🔷", "Peaty | Assistant Manager | 17"],
+    ["Recruitment Team", "🟧", "Lucas | Recruitment | 41"]
+];
 
 module.exports = {
 
@@ -22,7 +20,7 @@ module.exports = {
         new SlashCommandBuilder()
             .setName("staff")
             .setDescription(
-                "View Bella Ciao FC staff"
+                "View NXT eSports staff"
             ),
 
     async execute(interaction) {
@@ -31,56 +29,19 @@ module.exports = {
 
         try {
 
-            const staff =
-                await bellaApi.getStaff();
-
-            const crestUrl =
-                await getCrestUrl(
-                    BELLA_CLUB_ID
-                );
-
             const embed =
                 new EmbedBuilder()
                     .setColor("#ffffff")
                     .setTitle(
-                        "🏢 Bella Ciao FC Staff"
-                    )
-                    .setThumbnail(
-                        crestUrl
+                        "🏢 NXT eSports Staff"
                     )
                     .setFooter({
                         text: FOOTER.text,
                         iconURL: FOOTER.iconURL
                     });
 
-            if (!staff?.length) {
-
-                embed.setDescription(
-                    "No staff information available."
-                );
-
-            } else {
-
-                const roleEmojis = {
-                    "Owner": "👑",
-                    "Club Director": "🏛️",
-                    "Manager": "👔",
-                    "Recruitment": "🔎"
-                };
-
-                for (const member of staff) {
-
-                    const emoji =
-                        roleEmojis[member.role] || "📋";
-
-                    embed.addFields({
-                        name:
-                            `${emoji} ${member.role || "Staff"}`,
-                        value:
-                            member.name || "Unknown",
-                        inline: true
-                    });
-                }
+            for (const [role, emoji, members] of STAFF) {
+                embed.addFields({ name: `${emoji} ${role}`, value: members, inline: true });
             }
 
             await interaction.editReply({

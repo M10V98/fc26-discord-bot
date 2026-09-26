@@ -336,6 +336,10 @@ const initStatements = [
         can_play TEXT DEFAULT '[]',
         cannot_play TEXT DEFAULT '[]',
         maybe_play TEXT DEFAULT '[]',
+        recurrence_days INTEGER,
+        recurrence_post_minutes INTEGER,
+        recurrence_delete_minutes INTEGER,
+        next_recurrence_at INTEGER,
         created_at INTEGER
     )
     `,
@@ -548,6 +552,11 @@ async function init() {
         "maybe_play",
         "TEXT DEFAULT '[]'"
     );
+
+    await ensureColumn("scheduled_sessions", "recurrence_days", "INTEGER");
+    await ensureColumn("scheduled_sessions", "recurrence_post_minutes", "INTEGER");
+    await ensureColumn("scheduled_sessions", "recurrence_delete_minutes", "INTEGER");
+    await ensureColumn("scheduled_sessions", "next_recurrence_at", "INTEGER");
 
     await ensureColumn(
         "players",

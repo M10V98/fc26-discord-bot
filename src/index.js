@@ -77,7 +77,9 @@ const commandFiles =
     fs.readdirSync(commandsPath)
         .filter(file =>
             file.endsWith(".js") &&
-            file !== "playerbuilder.js"
+            file !== "playerbuilder.js" &&
+            file !== "worldcup.js" &&
+            file !== "legacy.js"
         );
 
 for (const file of commandFiles) {
@@ -258,22 +260,6 @@ client.on(
 
                     if (command?.handleSelect) {
                         await command.handleSelect(interaction);
-                    }
-
-                    return;
-                }
-
-                if (
-                    interaction.customId ===
-                    "worldcup_mynation_link"
-                ) {
-                    const command =
-                        client.commands.get("worldcup");
-
-                    if (command?.handleMyNationSelect) {
-                        await command.handleMyNationSelect(
-                            interaction
-                        );
                     }
 
                     return;
@@ -501,19 +487,6 @@ if (isAdminClaimMenu) {
                 }
 
                 if (
-                    interaction.customId.startsWith("worldcup_page:")
-                ) {
-                    const command =
-                        client.commands.get("worldcup");
-
-                    if (command?.handleWorldCupPageButton) {
-                        await command.handleWorldCupPageButton(interaction);
-                    }
-
-                    return;
-                }
-
-                if (
                     interaction.customId.startsWith("mod_infractions_page:")
                 ) {
                     const command =
@@ -664,6 +637,14 @@ if (isAdminClaimMenu) {
                     interaction.customId.startsWith("session_edit_submit:")
                 ) {
                     await handleEditSessionModal(interaction);
+                    return;
+                }
+
+                if (
+                    interaction.customId.startsWith("session_recurring_submit:")
+                ) {
+                    const { handleRecurringSessionModal } = require("./Services/scheduleSessions");
+                    await handleRecurringSessionModal(interaction);
                 }
             }
         } catch (err) {

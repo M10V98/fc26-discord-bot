@@ -73,7 +73,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor("#ffffff")
                         .setTitle(
-                            "📋 Bella Ciao FC Fixtures"
+                            "📋 Club Fixtures"
                         )
                         .setThumbnail(
                             crestUrl

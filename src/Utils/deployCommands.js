@@ -6,7 +6,16 @@ require("dotenv").config({
     path: path.resolve(__dirname, "../../.env")
 });
 
-const { REST, Routes } = require("discord.js");
+const {
+    REST,
+    Routes,
+    PermissionFlagsBits
+} = require("discord.js");
+
+const ADMIN_COMMANDS = new Set([
+    "adminclaim", "club", "eventcodes", "knowledge", "linkclub",
+    "mod", "resetstats", "schedule", "settings", "syncstats", "unlink"
+]);
 
 async function deployCommands() {
 
@@ -46,7 +55,9 @@ async function deployCommands() {
         fs.readdirSync(commandsPath)
             .filter(file =>
                 file.endsWith(".js") &&
-                file !== "playerbuilder.js"
+                file !== "playerbuilder.js" &&
+                file !== "worldcup.js" &&
+                file !== "legacy.js"
             );
 
     console.log(
@@ -76,9 +87,17 @@ async function deployCommands() {
                 continue;
             }
 
-            commands.push(
-                command.data.toJSON()
-            );
+            const definition = command.data.toJSON();
+
+            // Discord hides these controls from regular members. Managers who
+            // should use them must have the Discord Administrator permission,
+            // matching their admin-equivalent bot access.
+            if (ADMIN_COMMANDS.has(definition.name)) {
+                definition.default_member_permissions =
+                    String(PermissionFlagsBits.Administrator);
+            }
+
+            commands.push(definition);
 
             console.log(
                 `Loaded command: ${command.data.name}`
@@ -187,4 +206,3 @@ if (require.main === module) {
 module.exports = {
     deployCommands
 };
-

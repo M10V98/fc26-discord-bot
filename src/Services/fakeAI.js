@@ -978,7 +978,7 @@ async function answerNamedPlayerQuestion(guildId, question, linkedRows, shown) {
 
     switch (stat) {
         case "identity":
-            return `${name} is a stored Bella Ciao player. Tracked profile: ${player.matches || 0} matches, ${player.goals || 0} goals, ${player.assists || 0} assists, ${averageRating(player)} average rating, level ${player.level || 1}. Latest stored position: ${player.position || "Unknown"}.`;
+            return `${name} is a stored club player. Tracked profile: ${player.matches || 0} matches, ${player.goals || 0} goals, ${player.assists || 0} assists, ${averageRating(player)} average rating, level ${player.level || 1}. Latest stored position: ${player.position || "Unknown"}.`;
         case "goals":
             return `${name} has ${player.goals || 0} tracked goals.`;
         case "assists":

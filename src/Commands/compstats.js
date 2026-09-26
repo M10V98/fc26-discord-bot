@@ -23,7 +23,7 @@ module.exports = {
         new SlashCommandBuilder()
             .setName("compstats")
             .setDescription(
-                "View Bella Ciao FC competition statistics"
+                "View club competition statistics"
             ),
 
     async execute(interaction) {
@@ -44,7 +44,7 @@ module.exports = {
                 new EmbedBuilder()
                     .setColor("#ffffff")
                     .setTitle(
-                        "📊 Bella Ciao FC Competition Statistics"
+                        "📊 Club Competition Statistics"
                     )
                     .setThumbnail(
                         crestUrl
