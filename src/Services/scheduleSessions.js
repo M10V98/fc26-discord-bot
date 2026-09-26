@@ -623,6 +623,7 @@ async function createSession(interaction, options) {
             ],
             components: buildSessionButtons(sessionId)
         });
+    session.message_id = message.id;
 
     await db.run(
         `
@@ -675,11 +676,57 @@ async function createSession(interaction, options) {
         ]
     );
 
+    // Invitations run in the background so a large server never leaves the
+    // creator waiting on Discord while individual DMs are delivered.
+    notifySessionMembers(interaction.guild, session, [
+        ...interaction.guild.members.cache.values()
+    ]).catch(err => console.error("scheduled session invite error:", err));
+
     return {
         sessionId,
         role,
         message
     };
+}
+
+function sessionUrl(session) {
+    return `https://discord.com/channels/${session.guild_id}/${session.channel_id}/${session.message_id}`;
+}
+
+async function sendSessionInvite(member, session) {
+    if (!member || member.user?.bot || !session.message_id) return false;
+    const inserted = await db.run(
+        `INSERT OR IGNORE INTO scheduled_session_notices
+         (session_id, user_id, notice_type, sent_at) VALUES (?, ?, 'invite', ?)`,
+        [session.session_id, member.id, Date.now()]
+    );
+    if (!inserted.changes) return false;
+
+    await member.send(
+        `Hi! **${session.title || session.league || "A club session"}** has been scheduled. ` +
+        `Please set your availability here: ${sessionUrl(session)}`
+    ).catch(() => null);
+    return true;
+}
+
+async function notifySessionMembers(guild, session, members) {
+    await Promise.allSettled(
+        members.map(member => sendSessionInvite(member, session))
+    );
+}
+
+async function notifyMemberOfActiveSessions(member) {
+    if (!member?.guild || member.user?.bot) return 0;
+    const sessions = await db.all(
+        `SELECT * FROM scheduled_sessions
+         WHERE guild_id = ? AND COALESCE(ends_at, starts_at) > ?`,
+        [member.guild.id, Date.now()]
+    );
+    let sent = 0;
+    for (const session of sessions) {
+        if (await sendSessionInvite(member, session)) sent += 1;
+    }
+    return sent;
 }
 
 async function handleSessionButton(interaction) {
@@ -922,6 +969,10 @@ async function deleteSessionFromInteraction(interaction, session) {
         `DELETE FROM scheduled_sessions WHERE session_id = ?`,
         [session.session_id]
     );
+    await db.run(
+        `DELETE FROM scheduled_session_notices WHERE session_id = ?`,
+        [session.session_id]
+    );
 
     const channel =
         await interaction.guild.channels.fetch(session.channel_id).catch(() => null);
@@ -1082,6 +1133,9 @@ async function createRecurringSession(client, source) {
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [session.session_id,session.guild_id,session.channel_id,session.message_id,session.role_id,session.creator_id,session.title,session.time_text,session.load_up_text,session.league,session.crest_url,session.load_up_at,session.ends_at,session.pre_tag_minutes,null,session.starts_at,"[]","[]","[]",session.recurrence_days,session.recurrence_post_minutes,session.recurrence_delete_minutes,session.next_recurrence_at,session.created_at]);
     await db.run(`UPDATE scheduled_sessions SET recurrence_days = NULL, recurrence_post_minutes = NULL, recurrence_delete_minutes = NULL, next_recurrence_at = NULL WHERE session_id = ?`, [source.session_id]);
+    guild.members.fetch()
+        .then(members => notifySessionMembers(guild, session, [...members.values()]))
+        .catch(err => console.error("recurring session invite error:", err));
 }
 
 async function handleRecommendedXiButton(interaction) {
@@ -1320,6 +1374,7 @@ async function cleanupExpiredSessions(client = clientRef) {
     if (!client) return;
 
     await sendDuePreTags(client);
+    await sendAvailabilityReminders(client);
 
     const recurring = await db.all(`SELECT * FROM scheduled_sessions WHERE recurrence_days IS NOT NULL AND next_recurrence_at - recurrence_post_minutes * 60000 <= ?`, [Date.now()]);
     for (const session of recurring) {
@@ -1339,6 +1394,71 @@ async function cleanupExpiredSessions(client = clientRef) {
     for (const row of rows) {
         if (Date.now() >= Number(row.ends_at || row.starts_at) + Number(row.recurrence_delete_minutes || 0) * 60000) {
             await cleanupSession(client, row);
+        }
+    }
+}
+
+async function sendAvailabilityReminders(client) {
+    const now = Date.now();
+    const sessions = await db.all(
+        `SELECT * FROM scheduled_sessions
+         WHERE starts_at > ? AND starts_at <= ?`,
+        [now, now + (8 * 60 * 60 * 1000)]
+    );
+
+    for (const session of sessions) {
+        const channel = await client.channels.fetch(session.channel_id).catch(() => null);
+        if (!channel?.send) continue;
+
+        if (!session.response_reminder_sent_at) {
+            const responded = new Set([
+                ...readList(session.can_play),
+                ...readList(session.cannot_play),
+                ...readList(session.maybe_play)
+            ]);
+            const members = await channel.guild.members.fetch().catch(() => null);
+            const unanswered = members
+                ? [...members.values()]
+                    .filter(member => !member.user.bot && !responded.has(member.id))
+                    .map(member => `<@${member.id}>`)
+                : [];
+
+            if (unanswered.length) {
+                const chunks = [];
+                for (let index = 0; index < unanswered.length; index += 80) {
+                    chunks.push(unanswered.slice(index, index + 80));
+                }
+                await Promise.all(chunks.map(chunk =>
+                    channel.send(
+                        `${chunk.join(" ")} please check your availability for **${escapeMarkdown(session.title || session.league || "the upcoming session")}**: ${sessionUrl(session)}`
+                    ).catch(() => null)
+                ));
+            }
+
+            await db.run(
+                `UPDATE scheduled_sessions SET response_reminder_sent_at = ? WHERE session_id = ?`,
+                [now, session.session_id]
+            );
+        }
+
+        if (
+            !session.maybe_reminder_sent_at &&
+            Number(session.starts_at) <= now + (4 * 60 * 60 * 1000)
+        ) {
+            const maybeIds = readList(session.maybe_play);
+            const guild = channel.guild;
+            await Promise.allSettled(maybeIds.map(async userId => {
+                const member = await guild.members.fetch(userId).catch(() => null);
+                await member?.send(
+                    `Hi! You are currently marked **Maybe** for **${session.title || session.league || "the upcoming session"}**. ` +
+                    `Could you please share an update if you can? The line-up should be out in the next two hours. ` +
+                    `${sessionUrl(session)}`
+                ).catch(() => null);
+            }));
+            await db.run(
+                `UPDATE scheduled_sessions SET maybe_reminder_sent_at = ? WHERE session_id = ?`,
+                [now, session.session_id]
+            );
         }
     }
 }
@@ -1572,6 +1692,7 @@ module.exports = {
     parseDateTime,
     parseDurationMinutes,
     refreshLiveSessionMessages,
+    notifyMemberOfActiveSessions,
     removeMemberFromScheduledSessions,
     startScheduleSessionCleanup
 };

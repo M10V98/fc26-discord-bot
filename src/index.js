@@ -40,6 +40,7 @@ const {
     handleMoreOptionsButton,
     handleRecommendedXiButton,
     handleSessionButton,
+    notifyMemberOfActiveSessions,
     removeMemberFromScheduledSessions,
     startScheduleSessionCleanup
 } = require("./Services/scheduleSessions");
@@ -197,6 +198,27 @@ client.on(
         }
     }
 );
+
+client.on(Events.GuildMemberAdd, async member => {
+    try {
+        const sent = await notifyMemberOfActiveSessions(member);
+        if (sent) console.log(`Sent ${sent} active-event reminder(s) to new member ${member.id}.`);
+    } catch (err) {
+        console.error("Failed to notify new member about active sessions:", err);
+    }
+});
+
+client.on(Events.GuildMemberUpdate, async (previous, member) => {
+    try {
+        const hadTrialRole = previous.roles.cache.some(role => /trial/i.test(role.name));
+        const hasTrialRole = member.roles.cache.some(role => /trial/i.test(role.name));
+        if (!hadTrialRole && hasTrialRole) {
+            await notifyMemberOfActiveSessions(member);
+        }
+    } catch (err) {
+        console.error("Failed to notify Trialist about active sessions:", err);
+    }
+});
 
 client.on(
     Events.InteractionCreate,

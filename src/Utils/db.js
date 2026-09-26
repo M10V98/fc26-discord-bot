@@ -340,7 +340,18 @@ const initStatements = [
         recurrence_post_minutes INTEGER,
         recurrence_delete_minutes INTEGER,
         next_recurrence_at INTEGER,
+        response_reminder_sent_at INTEGER,
+        maybe_reminder_sent_at INTEGER,
         created_at INTEGER
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS scheduled_session_notices (
+        session_id TEXT,
+        user_id TEXT,
+        notice_type TEXT,
+        sent_at INTEGER,
+        PRIMARY KEY (session_id, user_id, notice_type)
     )
     `,
     `
@@ -557,6 +568,8 @@ async function init() {
     await ensureColumn("scheduled_sessions", "recurrence_post_minutes", "INTEGER");
     await ensureColumn("scheduled_sessions", "recurrence_delete_minutes", "INTEGER");
     await ensureColumn("scheduled_sessions", "next_recurrence_at", "INTEGER");
+    await ensureColumn("scheduled_sessions", "response_reminder_sent_at", "INTEGER");
+    await ensureColumn("scheduled_sessions", "maybe_reminder_sent_at", "INTEGER");
 
     await ensureColumn(
         "players",
