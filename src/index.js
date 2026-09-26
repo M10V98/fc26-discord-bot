@@ -486,3 +486,49 @@ client.on(
                 });
                 return;
             }
+ if (interaction.isModalSubmit()) {
+                if (interaction.customId.startsWith("pb:")) {
+                    const command = client.commands.get("playerbuilds");
+                    await command?.handleModal?.(interaction);
+                    return;
+                }
+                if (interaction.customId === "schedule_guided_submit") {
+                    const command = client.commands.get("schedule");
+                    await command?.handleGuidedModal?.(interaction);
+                    return;
+                }
+                if (interaction.customId === "poll_guided_submit") {
+                    const command = client.commands.get("poll");
+                    await command?.handleGuidedModal?.(interaction);
+                    return;
+                }
+                if (interaction.customId.startsWith("session_edit_submit:")) {
+                    await handleEditSessionModal(interaction);
+                    return;
+                }
+                if (interaction.customId.startsWith("session_recurring_submit:")) {
+                    const { handleRecurringSessionModal } = require("./Services/scheduleSessions");
+                    await handleRecurringSessionModal(interaction);
+                }
+            }
+        } catch (err) {
+            console.error("Interaction error:", err);
+            try {
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.editReply({
+                        content: "Something went wrong."
+                    });
+                } else {
+                    await interaction.reply({
+                        content: "Something went wrong.",
+                        ephemeral: true
+                    });
+                }
+            } catch (replyErr) {
+                console.error("Reply fail:", replyErr);
+            }
+        }
+    }
+);
+
+client.login(discordToken);
