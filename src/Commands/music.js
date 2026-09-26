@@ -40,7 +40,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 return interaction.editReply(`❌ Could not find a matching track on SoundCloud for: *${songMetadata}*`);
             }
 
-            const targetTrackUrl = soundcloudResults[0].url;
+            const targetTrackUrl = soundcloudResults[0].permalink;
             const targetTrackTitle = soundcloudResults[0].name;
 
             // 2. Stream audio smoothly using native SoundCloud stream packets
