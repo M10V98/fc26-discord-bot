@@ -9,7 +9,8 @@ const {
 
 const STAFF = [
     ["Founder", "👑", "Pigeon | Founder | 27\nM10 | Founder | 10\nCobra | Founder | 33"],
-    ["Manager", "🟩", "Samim | Manager | GOAT\nM10 | Main Manager"],
+    ["Manager", "🟩", "M10 | Manager | 10\nSamim | Manager | GOAT"],
+    ["Captain", "🟦", "‎"],
     ["Assistant Manager", "🔷", "Peaty | Assistant Manager | 17"],
     ["Recruitment Team", "🟧", "Lucas | Recruitment | 41"]
 ];
