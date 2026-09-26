@@ -8,12 +8,30 @@ const archetypes = require("../Utils/archetypes");
 const esc = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[char]));
 const number = value => Number(value || 0);
 
+function footballerSearchName(value) {
+    const normalized = String(value || "")
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[øö]/g, "o")
+        .replace(/ß/g, "ss")
+        .replace(/æ/g, "ae")
+        .replace(/[^a-z0-9 ]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const aliases = {
+        gyokores: "Viktor Gyökeres",
+        gyokeres: "Viktor Gyökeres"
+    };
+    return aliases[normalized] || String(value || "").trim();
+}
+
 async function footballerPhoto(name) {
     if (!name) return null;
     // Search the footballer's encyclopedia page, rather than Commons files.
     // Commons file search can return unrelated club and stadium photographs.
     const url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
-        encodeURIComponent(name) +
+        encodeURIComponent(footballerSearchName(name)) +
         "&gsrnamespace=0&gsrlimit=1&prop=pageimages&pithumbsize=900&format=json";
     const response = await fetch(url, {
         headers: { "User-Agent": "NXT-eSports-Bot/1.0 (player cards)" },
