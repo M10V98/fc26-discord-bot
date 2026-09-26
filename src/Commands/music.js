@@ -27,7 +27,10 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
             });
 
             // 1. Meticulously pull search stream items using play.search for reliability
-            const youtubeSearchResults = await play.search(songMetadata, { limit: 1 });
+            const youtubeSearchResults = await play.search(songMetadata, { 
+                limit: 1, 
+                source: { youtube: "video" } 
+            });
             if (!youtubeSearchResults || youtubeSearchResults.length === 0) {
                 return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
             }
