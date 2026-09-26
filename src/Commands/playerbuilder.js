@@ -552,6 +552,8 @@ async function handleModal(interaction) {
 }
 
 module.exports = {
+    // FC26 AP costs and caps do not carry over to FC27.
+    hidden: true,
     data: new SlashCommandBuilder()
         .setName("playerbuilds")
         .setDescription("Build and share a Clubs player")
