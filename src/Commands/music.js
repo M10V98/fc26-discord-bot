@@ -10,7 +10,8 @@ const spotify = require("../Services/spotify");
 async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) {
     // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // Flatten the query array elements safely down to a clean search text string parameter
+        // CRITICAL CONVERSION FIX: Convert incoming variable objects explicitly down into a plain text string.
+        // This removes array syntax dimensions so the YouTube search node handles words naturally!
         const songMetadata = Array.isArray(query) ? query.flat().join(' ') : String(query); 
 
         // Pull channel directly out of verified parameter context first
@@ -26,7 +27,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // 1. Enforce strict type constraints to only return playable watch objects
+            // Enforce standard watch video object properties exclusively to prevent playlist crashes
             const youtubeSearchResults = await play.search(songMetadata, { 
                 limit: 1,
                 source: { youtube: "video" }
@@ -36,7 +37,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
             }
 
-            // 2. Extract video details from the target results object properties
+            // Correctly grab the first index video url parameters out of the search payload array
             const targetVideoUrl = youtubeSearchResults[0].url;
             const targetVideoTitle = youtubeSearchResults[0].title;
 
@@ -86,9 +87,9 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
             
             let artistName = 'Unknown Artist';
             if (track.artists) {
-                if (typeof track.artists === 'string') artistName = track.artists;
-                else if (track.artists.name) artistName = track.artists.name;
-                else if (Array.isArray(track.artists)) artistName = track.artists.map(a => a.name || a).join(', ');
+                typeof track.artists === 'string' ? artistName = track.artists : 
+                track.artists.name ? artistName = track.artists.name : 
+                Array.isArray(track.artists) ? artistName = track.artists.map(a => a.name || a).join(', ') : artistName = 'Unknown Artist';
             }
             
             const descriptionText = `by ${artistName}`.slice(0, 95);
