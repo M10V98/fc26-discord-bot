@@ -189,3 +189,21 @@ module.exports = {
             return interaction.editReply({ content: "Choose up to 25 playlists. Saving a new choice replaces your previous selection.", components: [new ActionRowBuilder().addComponents(menu)] });
         } catch (err) {
             console.error("Spotify playlists failed:", err.response?.data || err.message);
+            return interaction.editReply(err.message.includes("Link your Spotify") ? err.message : "Spotify playlists are unavailable right now. Please try again shortly.");
+        }
+    },
+
+    async handlePlaylistSelect(interaction) {
+        await interaction.deferUpdate();
+        try {
+            const playlists = await spotify.getPlaylists(interaction.user.id);
+            const chosen = playlists.filter(playlist => interaction.values.includes(playlist.id));
+            await spotify.selectPlaylists(interaction.user.id, chosen);
+            await interaction.editReply({ content: `Saved ${chosen.length} Spotify playlist${chosen.length === 1 ? "" : "s"}.`, embeds: [playlistsEmbed(await spotify.selectedPlaylists(interaction.user.id))], components: [] });
+        } catch (err) {
+            console.error("Spotify playlist selection failed:", err.response?.data || err.message);
+            await interaction.editReply({ content: "Spotify could not save that selection. Link your account again and try once more.", components: [] });
+        }
+    },
+    replyWithSearch
+};
