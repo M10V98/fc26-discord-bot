@@ -13,7 +13,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
         // Flatten incoming queries safely down to a clean search string text parameter
         const songMetadata = Array.isArray(query) ? query.flat().join(' ') : query; 
 
-        // CRITICAL FIX: Pull channel directly out of verified parameter context first
+        // Pull channel directly out of verified parameter context first
         const voiceChannel = verifiedVoiceChannel || interaction.member?.voice?.channel;
         if (!voiceChannel) {
             return interaction.editReply("❌ You must join a voice channel before selecting a track!");
@@ -26,24 +26,22 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // Extract audio stream from YouTube behind the scenes
-            const youtubeSearchResults = await play.search(songMetadata, { limit: 1 });
-            if (!youtubeSearchResults || youtubeSearchResults.length === 0) {
-                return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
-            }
+            // CRITICAL SYSTEM FIX: Direct bypass stream search execution to prevent Railway unauthenticated stall hangs.
+            // By passing a direct yt_search lookup into play.stream(), we skip the blocked play.search() command entirely!
+            const streamInstance = await play.stream(`yt_search:${songMetadata}`, { 
+                quality: 1,
+                seek: 0
+            });
 
-            const targetVideoUrl = youtubeSearchResults[0].url;
-            const targetVideoTitle = youtubeSearchResults[0].title;
-
-            // Stream audio smoothly with safe resource allocations for Railway costs
-            const streamInstance = await play.stream(targetVideoUrl, { quality: 1 });
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
             const audioPlayer = createAudioPlayer();
 
             audioPlayer.play(audioResource);
             connection.subscribe(audioPlayer);
 
-            await interaction.editReply({ content: `🎶 Now streaming: **${targetVideoTitle}**`, components: [] });
+            // Fetch a clean audio display title text 
+            const displayTitle = songMetadata.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            await interaction.editReply({ content: `🎶 Now streaming: **${displayTitle}**`, components: [] });
 
             // Clear active server allocations on song completion to minimize Railway RAM footprint
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
@@ -57,7 +55,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
 
         } catch (error) {
             console.error("Critical Playback System Failure:", error);
-            await interaction.editReply("❌ Failed to stream audio. Connection timed out.");
+            await interaction.editReply("❌ Failed to stream audio. Connection timed out or YouTube blocked the request.");
         }
         return;
     }
