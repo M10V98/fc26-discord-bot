@@ -44,7 +44,15 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
             const targetTrackTitle = soundcloudResults[0].name;
 
             // 2. Stream audio smoothly using native SoundCloud stream packets
-            const streamInstance = await play.stream(targetTrackUrl, { quality: 1 });
+            // CRITICAL BYPASS: Enforcing htmldl emulation tells SoundCloud this is a real user browser 
+            // instead of a bot script, bypassing data center IP blocks instantly.
+            const streamInstance = await play.stream(targetTrackUrl, { 
+                quality: 1,
+                seek: 0,
+                htmldl: true,
+                proxy: false
+            });
+            
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
             const audioPlayer = createAudioPlayer();
 
