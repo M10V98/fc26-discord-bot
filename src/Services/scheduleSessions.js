@@ -11,10 +11,6 @@ const {
 } = require("discord.js");
 
 const db = require("../Utils/db");
-const eaApi = require("./eaApi");
-const {
-    getCrestUrl
-} = require("./crests");
 const {
     FOOTER,
     escapeMarkdown,
@@ -568,15 +564,21 @@ async function createSession(interaction, options) {
             `SELECT * FROM clubs WHERE guild_id = ?`,
             [interaction.guild.id]
         );
-    const [info, crestUrl] =
-        await Promise.all([
-            club ? eaApi.getClubInfo(club.club_id).catch(() => null) : null,
-            club ? getCrestUrl(club.club_id).catch(() => null) : null
-        ]);
+    const savedClub =
+        club
+            ? await db.get(
+                `SELECT club_name FROM guild_clubs
+                 WHERE guild_id = ? AND club_id = ?`,
+                [interaction.guild.id, club.club_id]
+            )
+            : null;
     const clubName =
-        club && info?.[String(club.club_id)]?.name
-            ? info[String(club.club_id)].name
+        savedClub?.club_name
+            ? savedClub.club_name
             : interaction.guild.name;
+    // Do not make session creation wait for EA. The API can take tens of
+    // seconds to respond or retry, which leaves Discord showing “thinking”.
+    const crestUrl = null;
     const roleName =
         `${String(options.league || "League").trim()} Match Squad`.slice(0, 100);
     const settings =
