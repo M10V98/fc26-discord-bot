@@ -269,19 +269,20 @@ client.on(
                 await command.execute(interaction);
                 return;
             }
-
-             if (interaction.isStringSelectMenu()) {
-                if (interaction.customId === "music_playlist_select") {
-                    const command = client.commands.get("music");
-                    await command?.handlePlaylistSelect?.(interaction);
-                    return;
-                }
-
-                if (interaction.customId === "music_track_menu_selection") {
+          if (interaction.isStringSelectMenu()) {
+             if (interaction.customId === "music_track_menu_selection") {
                     await interaction.deferReply({ ephemeral: true });
+                    
+                  
+                    const rawSelectionValue = interaction.values[0];
+                    
+                   
+                    const cleanedTrackQuery = [rawSelectionValue.split("||_idx_")[0]];
+
                     try {
                         const musicCommand = require("./Commands/music"); 
-                        await musicCommand.replyWithSearch(interaction, interaction.values);
+                        // We pass down the perfectly cleaned track text query to your audio player
+                        await musicCommand.replyWithSearch(interaction, cleanedTrackQuery);
                     } catch (err) {
                         console.error("Playback execution failure:", err);
                         await interaction.editReply("❌ Could not connect to audio streaming engine.");
