@@ -166,7 +166,11 @@ module.exports = {
         if (style === "fut") {
             const layers = [{
                 input: await sharp(FUT_BASE_PATH)
-                    .resize(790, 1095, { fit: "contain" })
+                    // The supplied artwork has transparent canvas padding.
+                    // Crop to the real card first so every overlay uses the
+                    // visible card edges rather than the padded file bounds.
+                    .extract({ left: 42, top: 72, width: 389, height: 536 })
+                    .resize(790, 1095, { fit: "fill" })
                     .png()
                     .toBuffer(),
                 left: 30,
