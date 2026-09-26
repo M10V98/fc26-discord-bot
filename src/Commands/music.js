@@ -19,13 +19,18 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
         }
 
         try {
+            // CRITICAL SOUNDCLOUD INITIALIZATION FIX: 
+            // Forces play-dl to secure a valid Client ID token on Railway's container, 
+            // preventing the engine from timing out during playback.
+            await play.getFreeClientID();
+
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: interaction.guild.id,
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // 1. SOUNDCLOUD LOOKUP BYPASS: Search SoundCloud to completely ignore YouTube data center bans
+            // 1. Search SoundCloud to completely ignore YouTube data center bans
             const soundcloudResults = await play.search(songMetadata, { 
                 limit: 1,
                 source: { soundcloud: "tracks" }
