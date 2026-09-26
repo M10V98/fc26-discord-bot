@@ -10,10 +10,9 @@ const spotify = require("../Services/spotify");
 async function replyWithSearch(interaction, query) {
     // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // CRITICAL FIX: Safely flatten the incoming nested array layers down to a clean single string
-        const songMetadata = Array.isArray(query) ? query.flat()[0] : query; 
+        // Safely extract the raw search terms text out of the array configuration layout
+        const songMetadata = Array.isArray(query) ? query.flat().join(' ') : query; 
 
-        // Read channel state directly from the interaction context where it is perfectly cached
         const voiceChannel = interaction.member.voice?.channel;
         if (!voiceChannel) {
             return interaction.editReply("❌ You must join a voice channel before selecting a track!");
@@ -26,7 +25,6 @@ async function replyWithSearch(interaction, query) {
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // Extract audio stream from YouTube behind the scenes using the clean text string
             const youtubeSearchResults = await play.search(songMetadata, { limit: 1 });
             if (!youtubeSearchResults || youtubeSearchResults.length === 0) {
                 return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
@@ -35,7 +33,6 @@ async function replyWithSearch(interaction, query) {
             const targetVideoUrl = youtubeSearchResults[0].url;
             const targetVideoTitle = youtubeSearchResults[0].title;
 
-            // Stream audio smoothly with safe resource allocations for Railway costs
             const streamInstance = await play.stream(targetVideoUrl, { quality: 1 });
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
             const audioPlayer = createAudioPlayer();
@@ -45,7 +42,6 @@ async function replyWithSearch(interaction, query) {
 
             await interaction.editReply({ content: `🎶 Now streaming: **${targetVideoTitle}**`, components: [] });
 
-            // Clear active server allocations on song completion to minimize Railway RAM footprint
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
             });
@@ -62,7 +58,6 @@ async function replyWithSearch(interaction, query) {
         return;
     }
 
-    // Default Behavior: Treat as slash command text input search query
     await interaction.deferReply({ ephemeral: true });
     try {
         const tracks = await spotify.searchTracks(query, 3);
