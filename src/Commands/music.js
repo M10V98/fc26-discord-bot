@@ -42,9 +42,11 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
             const targetVideoTitle = youtubeSearchResults[0].title;
 
             // Stream audio smoothly with safe resource allocations for Railway costs
-            const streamInstance = await play.stream(targetVideoUrl, { 
+              const streamInstance = await play.stream(targetVideoUrl, { 
                 quality: 1,
-                seek: 0
+                seek: 0,
+                htmldl: true,
+                proxy: false
             });
             
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
