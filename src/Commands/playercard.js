@@ -1,9 +1,11 @@
 const { AttachmentBuilder, SlashCommandBuilder } = require("discord.js");
 const sharp = require("sharp");
+const path = require("path");
 
 const db = require("../Utils/db");
 const eaApi = require("../Services/eaApi");
 const archetypes = require("../Utils/archetypes");
+const FUT_BASE_PATH = path.join(__dirname, "../assets/playercards/fut-gold-base-transparent.png");
 
 const esc = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[char]));
 const number = value => Number(value || 0);
@@ -119,26 +121,11 @@ function futSvg(player, stats) {
             `<text x="${x + 12}" y="${y}" font-family="Arial" font-size="28" font-weight="800" fill="#3e2a0d">${stat.label}</text>`;
     }).join("");
     return `<svg width="850" height="1100" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9b0"/><stop offset=".22" stop-color="#e9c65d"/><stop offset=".58" stop-color="#b9821e"/><stop offset="1" stop-color="#70430a"/></linearGradient>
-        <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f4d76e" stop-opacity=".9"/><stop offset="1" stop-color="#d8ad42" stop-opacity=".96"/></linearGradient>
-        <pattern id="shine" width="42" height="42" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)"><rect width="9" height="42" fill="#fff8bb" opacity=".19"/></pattern>
-        <clipPath id="card"><path d="M425 25 L720 125 Q760 140 770 185 L795 700 Q798 735 778 770 L635 1035 Q620 1060 585 1068 L265 1068 Q230 1060 215 1035 L72 770 Q52 735 55 700 L80 185 Q90 140 130 125 Z"/></clipPath>
-      </defs>
-      <rect width="850" height="1100" fill="#111"/>
-      <path d="M425 25 L720 125 Q760 140 770 185 L795 700 Q798 735 778 770 L635 1035 Q620 1060 585 1068 L265 1068 Q230 1060 215 1035 L72 770 Q52 735 55 700 L80 185 Q90 140 130 125 Z" fill="url(#gold)" stroke="#fff0a0" stroke-width="8"/>
-      <g clip-path="url(#card)">
-        <rect x="55" y="25" width="740" height="1045" fill="url(#shine)"/>
-        <path d="M90 430 Q425 270 770 420 L770 710 Q425 620 70 730 Z" fill="#5d3909" opacity=".25"/>
-        <rect x="175" y="175" width="500" height="555" rx="12" fill="#38230a" opacity=".23"/>
-        <path d="M100 745 Q425 705 750 745 L690 1045 L160 1045 Z" fill="url(#panel)"/>
-        <path d="M120 760 Q425 720 730 760" fill="none" stroke="#6e470f" stroke-opacity=".42" stroke-width="3"/>
-      </g>
-      <text x="132" y="188" font-family="Arial" font-size="90" font-weight="900" fill="#251b0d">${overall}</text>
-      <text x="145" y="238" font-family="Arial" font-size="33" font-weight="900" fill="#251b0d">${position}</text>
-      <text x="425" y="790" text-anchor="middle" font-family="Arial" font-size="42" font-weight="900" fill="#24190b">${esc(name).slice(0, 20)}</text>
-      <text x="425" y="829" text-anchor="middle" font-family="Arial" font-size="22" font-weight="900" fill="#5f3c0a">${esc(archetype).toUpperCase()}</text>
-      <line x1="185" y1="850" x2="665" y2="850" stroke="#8b611c" stroke-width="2"/>
+      <text x="174" y="184" font-family="Arial" font-size="86" font-weight="900" fill="#251b0d">${overall}</text>
+      <text x="184" y="233" font-family="Arial" font-size="31" font-weight="900" fill="#251b0d">${position}</text>
+      <text x="425" y="746" text-anchor="middle" font-family="Arial" font-size="39" font-weight="900" fill="#24190b">${esc(name).slice(0, 20)}</text>
+      <text x="425" y="782" text-anchor="middle" font-family="Arial" font-size="20" font-weight="900" fill="#5f3c0a">${esc(archetype).toUpperCase()}</text>
+      <line x1="190" y1="801" x2="660" y2="801" stroke="#8b611c" stroke-width="2"/>
       ${statRows}
       <text x="425" y="1024" text-anchor="middle" font-family="Arial" font-size="15" font-weight="800" fill="#68450d">FC27 · ESTIMATED FROM OVERALL &amp; ARCHETYPE</text>
     </svg>`;
@@ -175,16 +162,47 @@ module.exports = {
         const svg = style === "fut"
             ? futSvg(player || { name: requested }, stats)
             : cardSvg(player || { name: requested }, stats);
-        let output = sharp(Buffer.from(svg));
-        if (image) {
-            output = output.composite([{
-                input: await sharp(image)
-                    .resize(style === "fut" ? 500 : 370, style === "fut" ? 555 : 550, { fit: "cover" })
+        let output;
+        if (style === "fut") {
+            const layers = [{
+                input: await sharp(FUT_BASE_PATH)
+                    .resize(790, 1095, { fit: "contain" })
                     .png()
                     .toBuffer(),
-                left: style === "fut" ? 175 : 540,
-                top: style === "fut" ? 175 : 130
-            }]);
+                left: 30,
+                top: 3
+            }];
+            if (image) {
+                layers.push({
+                    input: await sharp(image)
+                        .resize(430, 500, { fit: "cover", position: "top" })
+                        .png()
+                        .toBuffer(),
+                    left: 210,
+                    top: 225
+                });
+            }
+            layers.push({ input: Buffer.from(svg), left: 0, top: 0 });
+            output = sharp({
+                create: {
+                    width: 850,
+                    height: 1100,
+                    channels: 4,
+                    background: "#111111"
+                }
+            }).composite(layers);
+        } else {
+            output = sharp(Buffer.from(svg));
+            if (image) {
+                output = output.composite([{
+                    input: await sharp(image)
+                        .resize(370, 550, { fit: "cover" })
+                        .png()
+                        .toBuffer(),
+                    left: 540,
+                    top: 130
+                }]);
+            }
         }
         const png = await output.png().toBuffer();
         return interaction.editReply({ files: [new AttachmentBuilder(png, { name: "fc27-player-card.png" })] });
