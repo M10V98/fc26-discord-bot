@@ -10,8 +10,8 @@ const spotify = require("../Services/spotify");
 async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) {
     // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // Flatten incoming queries safely down to a clean search string text parameter
-        const songMetadata = Array.isArray(query) ? query.flat().join(' ') : query; 
+        // Flatten the query array elements safely down to a clean search text string parameter
+        const songMetadata = Array.isArray(query) ? query.flat().join(' ') : String(query); 
 
         // Pull channel directly out of verified parameter context first
         const voiceChannel = verifiedVoiceChannel || interaction.member?.voice?.channel;
@@ -26,22 +26,25 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // CRITICAL SYSTEM FIX: Direct bypass stream search execution to prevent Railway unauthenticated stall hangs.
-            // By passing a direct yt_search lookup into play.stream(), we skip the blocked play.search() command entirely!
-            const streamInstance = await play.stream(`yt_search:${songMetadata}`, { 
-                quality: 1,
-                seek: 0
-            });
+            // 1. Meticulously pull search stream items using play.search for reliability
+            const youtubeSearchResults = await play.search(songMetadata, { limit: 1 });
+            if (!youtubeSearchResults || youtubeSearchResults.length === 0) {
+                return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
+            }
 
+            // 2. TARGET FIRST ELEMENT EXPLICITLY: Extract video links out of the results array payload
+            const targetVideoUrl = youtubeSearchResults[0].url;
+            const targetVideoTitle = youtubeSearchResults[0].title;
+
+            // Stream audio smoothly with safe resource allocations for Railway costs
+            const streamInstance = await play.stream(targetVideoUrl, { quality: 1 });
             const audioResource = createAudioResource(streamInstance.stream, { inputType: streamInstance.type });
             const audioPlayer = createAudioPlayer();
 
             audioPlayer.play(audioResource);
             connection.subscribe(audioPlayer);
 
-            // Fetch a clean audio display title text 
-            const displayTitle = songMetadata.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-            await interaction.editReply({ content: `🎶 Now streaming: **${displayTitle}**`, components: [] });
+            await interaction.editReply({ content: `🎶 Now streaming: **${targetVideoTitle}**`, components: [] });
 
             // Clear active server allocations on song completion to minimize Railway RAM footprint
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
