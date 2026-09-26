@@ -76,11 +76,11 @@ function cardSvg(player, stats) {
     return `<svg width="1000" height="850" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#03162b"/><stop offset=".5" stop-color="#092b51"/><stop offset="1" stop-color="#05070f"/></linearGradient><linearGradient id="line" x2="1"><stop stop-color="#63f7d6"/><stop offset="1" stop-color="#527fff"/></linearGradient></defs>
       <rect width="1000" height="850" fill="url(#bg)"/><rect x="24" y="24" width="952" height="802" rx="28" fill="none" stroke="url(#line)" stroke-width="4"/>
-      <rect x="400" y="50" width="560" height="760" fill="#071525"/>
+      <rect x="540" y="130" width="370" height="550" rx="18" fill="#071525"/>
       <text x="70" y="120" fill="#63f7d6" font-family="Arial" font-size="30" font-weight="800">NXT ESPORTS</text>
       <text x="70" y="235" fill="white" font-family="Arial" font-size="130" font-weight="900">${overall}</text>
       <text x="80" y="290" fill="#9fb9d8" font-family="Arial" font-size="34" font-weight="700">${esc(String(position).toUpperCase())}</text>
-      <text x="70" y="370" fill="white" font-family="Arial" font-size="53" font-weight="900">${esc(name).slice(0, 24)}</text>
+      <text x="70" y="370" fill="white" font-family="Arial" font-size="48" font-weight="900">${esc(name).slice(0, 16)}</text>
       <text x="70" y="422" fill="#63f7d6" font-family="Arial" font-size="30" font-weight="800">${esc(archetype)}</text>
       <line x1="70" y1="470" x2="350" y2="470" stroke="#63f7d6" stroke-width="3"/>
       <text x="70" y="530" fill="#dce9ff" font-family="Arial" font-size="28">GAMES  <tspan fill="white" font-weight="800">${number(player?.gamesPlayed)}</tspan></text>
@@ -114,7 +114,7 @@ function futSvg(player, stats) {
       <defs><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#fff4a5"/><stop offset=".45" stop-color="#c9912a"/><stop offset="1" stop-color="#6a3d0a"/></linearGradient></defs>
       <rect width="850" height="1100" fill="#111"/><path d="M425 22 L745 165 L790 720 L650 1040 L200 1040 L60 720 L105 165 Z" fill="url(#gold)" stroke="#fff2a0" stroke-width="8"/>
       <text x="145" y="205" font-family="Arial" font-size="96" font-weight="900" fill="#1d1710">${overall}</text><text x="155" y="270" font-family="Arial" font-size="38" font-weight="800" fill="#1d1710">${position}</text>
-      <rect x="170" y="315" width="510" height="420" rx="18" fill="#2c1d0d" opacity=".45"/>
+      <rect x="235" y="335" width="380" height="360" rx="18" fill="#2c1d0d" opacity=".45"/>
       <text x="425" y="785" text-anchor="middle" font-family="Arial" font-size="46" font-weight="900" fill="#1d1710">${esc(name).slice(0, 22)}</text>
       <text x="425" y="827" text-anchor="middle" font-family="Arial" font-size="25" font-weight="800" fill="#3c2911">${esc(archetype).toUpperCase()}</text>
       ${values.map((stat, i) => `<text x="${i % 2 ? 470 : 245}" y="${885 + Math.floor(i / 2) * 48}" font-family="Arial" font-size="31" font-weight="800" fill="#1d1710">${stat.value} ${stat.label}</text>`).join("")}
@@ -157,11 +157,11 @@ module.exports = {
         if (image) {
             output = output.composite([{
                 input: await sharp(image)
-                    .resize(style === "fut" ? 510 : 530, style === "fut" ? 420 : 700, { fit: "cover" })
+                    .resize(style === "fut" ? 380 : 370, style === "fut" ? 360 : 550, { fit: "cover" })
                     .png()
                     .toBuffer(),
-                left: style === "fut" ? 170 : 420,
-                top: style === "fut" ? 315 : 80
+                left: style === "fut" ? 235 : 540,
+                top: style === "fut" ? 335 : 130
             }]);
         }
         const png = await output.png().toBuffer();
