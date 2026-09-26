@@ -272,16 +272,14 @@ client.on(
           if (interaction.isStringSelectMenu()) {
              if (interaction.customId === "music_track_menu_selection") {
                     await interaction.deferReply({ ephemeral: true });
-                    
-                  
+                
                     const rawSelectionValue = interaction.values[0];
-                    
-                   
-                    const cleanedTrackQuery = [rawSelectionValue.split("||_idx_")[0]];
+              
+                    const cleanedTrackQuery = rawSelectionValue.split("||_idx_")[0];
 
                     try {
                         const musicCommand = require("./Commands/music"); 
-                        // We pass down the perfectly cleaned track text query to your audio player
+                        // Route clean query parameter forward into core audio stream player nodes
                         await musicCommand.replyWithSearch(interaction, cleanedTrackQuery);
                     } catch (err) {
                         console.error("Playback execution failure:", err);
