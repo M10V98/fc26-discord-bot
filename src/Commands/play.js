@@ -28,7 +28,7 @@ module.exports = {
         const query = interaction.options.getString("query", true);
 
         try {
-            // 1. Fetch search results array using your service
+            // 1. Fetch exactly the top 3 tracks to keep the menu minimalist
             const tracks = await spotify.searchTracks(query, 3); 
 
             if (!tracks || tracks.length === 0) {
@@ -37,15 +37,13 @@ module.exports = {
 
             // 2. Build the standalone String Select Menu
             const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('music_track_menu_selection') // Clean routing ID matching your index handler
+                .setCustomId('music_track_menu_selection') // Connects cleanly to your index.js handler
                 .setPlaceholder('Click here to choose your song...');
 
             // Loop through the tracks to construct the option blocks safely
             tracks.forEach((track, idx) => {
-                // Ensure text limits stay under Discord's 100 character window rules
                 const labelText = `${idx + 1}. ${track.name || 'Unknown Track'}`.slice(0, 95);
                 
-                // Safely extract artist details regardless of text string or array configuration layouts
                 let artistName = 'Unknown Artist';
                 if (track.artists) {
                     if (typeof track.artists === 'string') {
@@ -59,12 +57,18 @@ module.exports = {
                 
                 const descriptionText = `by ${artistName}`.slice(0, 95);
                 
+                // CRITICAL FIX 1: Hard slice the core text query string at 80 characters
+                const coreQueryText = `${track.name || ''} ${artistName}`.trim().slice(0, 80);
+                
+                // CRITICAL FIX 2: Append the unique index identifier suffix.
+                // This stays well below Discord's 100-character wall and completely fixes COMPONENT_OPTION_VALUE_DUPLICATED
+                const safeUniqueValue = `${coreQueryText}||_idx_${idx}`;
+                
                 selectMenu.addOptions(
                     new StringSelectMenuOptionBuilder()
                         .setLabel(labelText)
                         .setDescription(descriptionText)
-                        // Hidden search value sent directly to YouTube audio query stream
-                        .setValue(`${track.name || ''} ${artistName}`.trim()) 
+                        .setValue(safeUniqueValue) 
                 );
             });
 
