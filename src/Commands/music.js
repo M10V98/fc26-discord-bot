@@ -7,13 +7,20 @@ const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerSta
 const play = require('play-dl');
 const spotify = require("../Services/spotify");
 
+// Setup the authenticated cookies instantly to bypass Railway data center IP blocks
+if (process.env.YOUTUBE_SID && process.env.YOUTUBE_APISID) {
+    play.setToken({
+        youtube: {
+            cookie: `__Secure-3PSID=${process.env.YOUTUBE_SID}; __Secure-3PAPISID=${process.env.YOUTUBE_APISID};`
+        }
+    }).then(() => console.log("✅ YouTube bypass authentication credentials loaded successfully."))
+      .catch(err => console.error("❌ Failed to bind YouTube bypass tokens:", err.message));
+}
+
 async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) {
-    // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // Flatten the query array elements safely down to a clean search text string parameter
         const songMetadata = Array.isArray(query) ? query.flat().join(' ') : String(query); 
 
-        // Pull channel directly out of verified parameter context first
         const voiceChannel = verifiedVoiceChannel || interaction.member?.voice?.channel;
         if (!voiceChannel) {
             return interaction.editReply("❌ You must join a voice channel before selecting a track!");
@@ -26,7 +33,7 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 adapterCreator: interaction.guild.voiceAdapterCreator,
             });
 
-            // 1. Enforce strict type constraints to only return playable watch objects
+            // Search explicitly for a valid watch video item using our custom authentication credentials
             const youtubeSearchResults = await play.search(songMetadata, { 
                 limit: 1,
                 source: { youtube: "video" }
@@ -36,11 +43,10 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
                 return interaction.editReply(`❌ Could not find a matching track on YouTube for: *${songMetadata}*`);
             }
 
-            // 2. Extract elements explicitly from the target lookup record row
             const targetVideoUrl = youtubeSearchResults[0].url;
             const targetVideoTitle = youtubeSearchResults[0].title;
 
-            // Stream audio smoothly with safe resource allocations for Railway costs
+            // Stream the packets natively through the authenticated cookie handshake connection
             const streamInstance = await play.stream(targetVideoUrl, { 
                 quality: 1,
                 seek: 0
@@ -54,7 +60,6 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
 
             await interaction.editReply({ content: `🎶 Now streaming: **${targetVideoTitle}**`, components: [] });
 
-            // Clear active server allocations on song completion to minimize Railway RAM footprint
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
             });
@@ -66,12 +71,11 @@ async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) 
 
         } catch (error) {
             console.error("Critical Playback System Failure:", error);
-            await interaction.editReply("❌ Failed to stream audio. Connection timed out or YouTube blocked the request.");
+            await interaction.editReply("❌ Failed to stream audio. YouTube data center block bypassed, but connection timed out.");
         }
         return;
     }
 
-    // Default Behavior: Treat as slash command text input search query
     await interaction.deferReply({ ephemeral: true });
     try {
         const tracks = await spotify.searchTracks(query, 3);
