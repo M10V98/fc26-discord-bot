@@ -29,7 +29,7 @@ module.exports = {
 
         try {
             // 1. Fetch search results array using your service
-            const tracks = await spotify.searchTracks(query, 10); 
+            const tracks = await spotify.searchTracks(query, 3); 
 
             if (!tracks || tracks.length === 0) {
                 return interaction.editReply("❌ No tracks found for that search query.");
