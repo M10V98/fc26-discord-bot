@@ -118,7 +118,7 @@ function futSvg(player, stats) {
       <text x="425" y="785" text-anchor="middle" font-family="Arial" font-size="46" font-weight="900" fill="#1d1710">${esc(name).slice(0, 22)}</text>
       <text x="425" y="827" text-anchor="middle" font-family="Arial" font-size="25" font-weight="800" fill="#3c2911">${esc(archetype).toUpperCase()}</text>
       ${values.map((stat, i) => `<text x="${i % 2 ? 470 : 245}" y="${885 + Math.floor(i / 2) * 48}" font-family="Arial" font-size="31" font-weight="800" fill="#1d1710">${stat.value} ${stat.label}</text>`).join("")}
-      <text x="425" y="1030" text-anchor="middle" font-family="Arial" font-size="18" font-weight="700" fill="#51330d">FC27 · ESTIMATED FROM OVERALL & ARCHETYPE</text>
+      <text x="425" y="1030" text-anchor="middle" font-family="Arial" font-size="18" font-weight="700" fill="#51330d">FC27 · ESTIMATED FROM OVERALL &amp; ARCHETYPE</text>
     </svg>`;
 }
 
