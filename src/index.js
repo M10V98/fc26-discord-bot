@@ -279,7 +279,7 @@ client.on(
                         return interaction.editReply("❌ You must join a voice channel before selecting a track!");
                     }
                 
-                    const rawSelectionValue = interaction.values[0];
+                    const rawSelectionValue = String(interaction.values[0]);
                     const cleanedTrackQuery = rawSelectionValue.split("||_idx_")[0];
 
                     try {
