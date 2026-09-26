@@ -37,20 +37,34 @@ module.exports = {
 
             // 2. Build the standalone String Select Menu
             const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('music_select_track')
+                .setCustomId('music_track_menu_selection') // Clean routing ID matching your index handler
                 .setPlaceholder('Click here to choose your song...');
 
-            // Loop through the tracks to construct the option blocks
+            // Loop through the tracks to construct the option blocks safely
             tracks.forEach((track, idx) => {
                 // Ensure text limits stay under Discord's 100 character window rules
-                const labelText = `${idx + 1}. ${track.name}`.slice(0, 95);
-                const descriptionText = track.artists.name.slice(0, 95);
+                const labelText = `${idx + 1}. ${track.name || 'Unknown Track'}`.slice(0, 95);
+                
+                // Safely extract artist details regardless of text string or array configuration layouts
+                let artistName = 'Unknown Artist';
+                if (track.artists) {
+                    if (typeof track.artists === 'string') {
+                        artistName = track.artists;
+                    } else if (track.artists.name) {
+                        artistName = track.artists.name;
+                    } else if (Array.isArray(track.artists)) {
+                        artistName = track.artists.map(a => a.name || a).join(', ');
+                    }
+                }
+                
+                const descriptionText = `by ${artistName}`.slice(0, 95);
                 
                 selectMenu.addOptions(
                     new StringSelectMenuOptionBuilder()
                         .setLabel(labelText)
                         .setDescription(descriptionText)
-                        .setValue(`${track.name} ${track.artists.name}`) 
+                        // Hidden search value sent directly to YouTube audio query stream
+                        .setValue(`${track.name || ''} ${artistName}`.trim()) 
                 );
             });
 
