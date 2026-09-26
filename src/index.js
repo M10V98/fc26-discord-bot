@@ -77,7 +77,6 @@ const commandFiles =
     fs.readdirSync(commandsPath)
         .filter(file =>
             file.endsWith(".js") &&
-            file !== "playerbuilder.js" &&
             file !== "worldcup.js" &&
             file !== "legacy.js"
         );
@@ -249,7 +248,7 @@ client.on(
 
             if (interaction.isStringSelectMenu()) {
                 if (interaction.customId.startsWith("pb:")) {
-                    const command = client.commands.get("playerbuilder");
+                    const command = client.commands.get("playerbuilds");
                     await command?.handleComponent?.(interaction);
                     return;
                 }
@@ -403,7 +402,7 @@ if (isAdminClaimMenu) {
 
             if (interaction.isButton()) {
                 if (interaction.customId.startsWith("pb:")) {
-                    const command = client.commands.get("playerbuilder");
+                    const command = client.commands.get("playerbuilds");
                     await command?.handleComponent?.(interaction);
                     return;
                 }
@@ -616,7 +615,7 @@ if (isAdminClaimMenu) {
 
             if (interaction.isModalSubmit()) {
                 if (interaction.customId.startsWith("pb:")) {
-                    const command = client.commands.get("playerbuilder");
+                    const command = client.commands.get("playerbuilds");
                     await command?.handleModal?.(interaction);
                     return;
                 }

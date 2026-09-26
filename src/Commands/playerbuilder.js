@@ -38,13 +38,13 @@ function optionLabel(value) {
 function ownerGuard(interaction, state) {
     if (!state) {
         return interaction.reply({
-            content: "This Player Builder session expired. Run `/playerbuilder` again or import its PCW1 code.",
+            content: "This Player Builds session expired. Run `/playerbuilds` again or import its PCW1 code.",
             flags: MessageFlags.Ephemeral
         });
     }
     if (String(interaction.user.id) !== String(state.ownerId)) {
         return interaction.reply({
-            content: "Only the person who opened this builder can change it. Use `/playerbuilder` to create your own.",
+            content: "Only the person who opened this builder can change it. Use `/playerbuilds` to create your own.",
             flags: MessageFlags.Ephemeral
         });
     }
@@ -438,7 +438,7 @@ async function handleComponent(interaction) {
     if (action === "export") {
         const code = builder.encodeState(state);
         return interaction.reply(code.length <= 1900 ? {
-            content: `Import this with \`/playerbuilder code:\`\n\n\`${code}\``,
+            content: `Import this with \`/playerbuilds code:\`\n\n\`${code}\``,
             flags: MessageFlags.Ephemeral
         } : {
             content: "Your PCW1 build code is attached.",
@@ -552,12 +552,9 @@ async function handleModal(interaction) {
 }
 
 module.exports = {
-    // FC 26's static build rules must not be exposed in FC 27. The command
-    // is omitted from Discord registration until verified FC 27 data exists.
-    hidden: true,
     data: new SlashCommandBuilder()
-        .setName("playerbuilder")
-        .setDescription("Build and share a Pro Clubs player")
+        .setName("playerbuilds")
+        .setDescription("Build and share a Clubs player")
         .addStringOption(option =>
             option.setName("archetype").setDescription("Starting archetype").addChoices(
                 ...ARCHETYPES.map(name => ({ name, value: name }))

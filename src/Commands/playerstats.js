@@ -20,6 +20,7 @@ const {
 const {
     privateReply
 } = require("../Utils/privateReply");
+const archetypes = require("../Utils/archetypes");
 
 function n(value) {
     return Number(value || 0);
@@ -127,12 +128,13 @@ module.exports = {
                 playerName = linked.player_name;
             }
 
-            const [members, info, crestUrl, linkedRows] =
+            const [members, info, crestUrl, linkedRows, matches] =
                 await Promise.all([
                     eaApi.getMembersStats(club.club_id),
                     eaApi.getClubInfo(club.club_id),
                     getCrestUrl(club.club_id),
-                    getLinkedRows(db, interaction.guild.id)
+                    getLinkedRows(db, interaction.guild.id),
+                    eaApi.getMatches(club.club_id, "leagueMatch", { maxResultCount: 100 }).catch(() => [])
                 ]);
             const player =
                 (members?.members || [])
@@ -173,8 +175,14 @@ module.exports = {
                 player.proName ? ` - "${player.proName}"` : "";
             const games =
                 n(player.gamesPlayed);
+            const latestMatch = [...matches].sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))[0];
+            const latestApiPlayer = Object.values(latestMatch?.players?.[String(club.club_id)] || {}).find(row =>
+                String(row.playername || "").toLowerCase() === String(player.name || "").toLowerCase()
+            );
+            const archetype = archetypes[String(latestApiPlayer?.archetypeid)] || "Not found in latest match";
             const description = [
                 `\u{1F464} ${display}${proName}`,
+                `\u{1F9EC} Current Archetype: **${archetype}**`,
                 "",
                 `\u{1F455} Games Played: **${number(player.gamesPlayed)}**`,
                 `\u{1F3C5} Man of the Match: **${number(player.manOfTheMatch)}**`,

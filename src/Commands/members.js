@@ -26,6 +26,7 @@ const {
 
 const MAX_MEMBER_PAGES = 3;
 const MAX_MEMBERS_SHOWN = 75;
+const archetypes = require("../Utils/archetypes");
 
 function memberBlock(member, linkedMaps) {
     const position =
@@ -59,7 +60,7 @@ function memberBlock(member, linkedMaps) {
     return [
         `${EMOJI_USER} ${linkedName}`,
         linkedName !== playerName ? `EA ID: **${playerName}**` : null,
-        `${EMOJI_PIN} ${overall} ${position}`,
+        `${EMOJI_PIN} ${overall} ${position}${member.archetype ? ` · ${member.archetype}` : ""}`,
         `${EMOJI_SHIELD} GP: ${number(member.gamesPlayed)}`,
         `${EMOJI_STAR} AMR: ${amr}`,
         height
@@ -100,12 +101,13 @@ async function buildMembersPage(interaction, page = 0) {
         };
     }
 
-    const [members, info, crestUrl, linkedRows] =
+    const [members, info, crestUrl, linkedRows, matches] =
         await Promise.all([
             eaApi.getMembersStats(club.club_id),
             eaApi.getClubInfo(club.club_id),
             getCrestUrl(club.club_id),
-            getLinkedRows(db, interaction.guild.id)
+            getLinkedRows(db, interaction.guild.id),
+            eaApi.getMatches(club.club_id, "leagueMatch", { maxResultCount: 100 }).catch(() => [])
         ]);
 
     const list =
@@ -122,8 +124,14 @@ async function buildMembersPage(interaction, page = 0) {
     const clubName =
         info?.[String(club.club_id)]?.name || "Club";
 
-    const shown =
-        list.slice(0, MAX_MEMBERS_SHOWN);
+    const latest = [...matches].sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))[0];
+    const latestPlayers = latest?.players?.[String(club.club_id)] || {};
+    const shown = list.slice(0, MAX_MEMBERS_SHOWN).map(member => {
+        const row = Object.values(latestPlayers).find(player =>
+            String(player.playername || "").toLowerCase() === String(member.name || "").toLowerCase()
+        );
+        return { ...member, archetype: archetypes[String(row?.archetypeid)] || null };
+    });
 
     const totalPages =
         Math.min(MAX_MEMBER_PAGES, shown.length);

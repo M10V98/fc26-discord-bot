@@ -55,7 +55,6 @@ async function deployCommands() {
         fs.readdirSync(commandsPath)
             .filter(file =>
                 file.endsWith(".js") &&
-                file !== "playerbuilder.js" &&
                 file !== "worldcup.js" &&
                 file !== "legacy.js"
             );
