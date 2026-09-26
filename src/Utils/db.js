@@ -355,6 +355,34 @@ const initStatements = [
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS spotify_accounts (
+        discord_id TEXT PRIMARY KEY,
+        spotify_user_id TEXT NOT NULL,
+        spotify_display_name TEXT,
+        refresh_token TEXT NOT NULL,
+        linked_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS spotify_link_states (
+        state TEXT PRIMARY KEY,
+        discord_id TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS spotify_selected_playlists (
+        discord_id TEXT,
+        playlist_id TEXT,
+        playlist_name TEXT NOT NULL,
+        playlist_image_url TEXT,
+        selected_at INTEGER NOT NULL,
+        PRIMARY KEY (discord_id, playlist_id)
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS schema_meta (
         key TEXT PRIMARY KEY,
         value TEXT

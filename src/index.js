@@ -14,6 +14,7 @@ const db = require("./Utils/db");
 const { startFc27Season } = require("./Services/fc27Cutover");
 const { canUseAdminCommands } = require("./Utils/permissions");
 const eaApi = require("./Services/eaApi");
+const { startSpotifyCallbackServer } = require("./Services/spotify");
 const {
     repairStoredClubIds
 } = require("./Services/clubLinks");
@@ -112,6 +113,7 @@ client.once(
         console.log(`Logged in as ${readyClient.user.tag}`);
 
         await db.init();
+        startSpotifyCallbackServer();
         await startFc27Season();
         await repairStoredClubIds();
 
@@ -269,6 +271,12 @@ client.on(
             }
 
             if (interaction.isStringSelectMenu()) {
+                if (interaction.customId === "music_playlist_select") {
+                    const command = client.commands.get("music");
+                    await command?.handlePlaylistSelect?.(interaction);
+                    return;
+                }
+
                 if (interaction.customId.startsWith("pb:")) {
                     const command = client.commands.get("playerbuilds");
                     await command?.handleComponent?.(interaction);
