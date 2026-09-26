@@ -10,10 +10,10 @@ const spotify = require("../Services/spotify");
 async function replyWithSearch(interaction, query, verifiedVoiceChannel = null) {
     // If it's a select menu interaction, execute actual voice playback
     if (interaction.isStringSelectMenu()) {
-        // Safely extract the raw search terms text out of the array layout configuration
+        // Flatten incoming queries safely down to a clean search string text parameter
         const songMetadata = Array.isArray(query) ? query.flat().join(' ') : query; 
 
-        // CRITICAL FIX: Use the stable voice channel passed directly from index.js
+        // CRITICAL FIX: Pull channel directly out of verified parameter context first
         const voiceChannel = verifiedVoiceChannel || interaction.member?.voice?.channel;
         if (!voiceChannel) {
             return interaction.editReply("❌ You must join a voice channel before selecting a track!");
