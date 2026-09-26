@@ -110,15 +110,37 @@ function estimatedStats(overall, archetype, position) {
 function futSvg(player, stats) {
     const { overall, position, archetype, name } = cardInfo(player, stats);
     const values = estimatedStats(overall, archetype, position);
+    const statRows = values.map((stat, i) => {
+        const column = i % 2;
+        const row = Math.floor(i / 2);
+        const x = column ? 476 : 254;
+        const y = 898 + row * 54;
+        return `<text x="${x}" y="${y}" text-anchor="end" font-family="Arial" font-size="31" font-weight="900" fill="#23190b">${stat.value}</text>` +
+            `<text x="${x + 12}" y="${y}" font-family="Arial" font-size="28" font-weight="800" fill="#3e2a0d">${stat.label}</text>`;
+    }).join("");
     return `<svg width="850" height="1100" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#fff4a5"/><stop offset=".45" stop-color="#c9912a"/><stop offset="1" stop-color="#6a3d0a"/></linearGradient></defs>
-      <rect width="850" height="1100" fill="#111"/><path d="M425 22 L745 165 L790 720 L650 1040 L200 1040 L60 720 L105 165 Z" fill="url(#gold)" stroke="#fff2a0" stroke-width="8"/>
-      <text x="145" y="205" font-family="Arial" font-size="96" font-weight="900" fill="#1d1710">${overall}</text><text x="155" y="270" font-family="Arial" font-size="38" font-weight="800" fill="#1d1710">${position}</text>
-      <rect x="235" y="335" width="380" height="360" rx="18" fill="#2c1d0d" opacity=".45"/>
-      <text x="425" y="785" text-anchor="middle" font-family="Arial" font-size="46" font-weight="900" fill="#1d1710">${esc(name).slice(0, 22)}</text>
-      <text x="425" y="827" text-anchor="middle" font-family="Arial" font-size="25" font-weight="800" fill="#3c2911">${esc(archetype).toUpperCase()}</text>
-      ${values.map((stat, i) => `<text x="${i % 2 ? 470 : 245}" y="${885 + Math.floor(i / 2) * 48}" font-family="Arial" font-size="31" font-weight="800" fill="#1d1710">${stat.value} ${stat.label}</text>`).join("")}
-      <text x="425" y="1030" text-anchor="middle" font-family="Arial" font-size="18" font-weight="700" fill="#51330d">FC27 · ESTIMATED FROM OVERALL &amp; ARCHETYPE</text>
+      <defs>
+        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9b0"/><stop offset=".22" stop-color="#e9c65d"/><stop offset=".58" stop-color="#b9821e"/><stop offset="1" stop-color="#70430a"/></linearGradient>
+        <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f4d76e" stop-opacity=".9"/><stop offset="1" stop-color="#d8ad42" stop-opacity=".96"/></linearGradient>
+        <pattern id="shine" width="42" height="42" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)"><rect width="9" height="42" fill="#fff8bb" opacity=".19"/></pattern>
+        <clipPath id="card"><path d="M425 25 L720 125 Q760 140 770 185 L795 700 Q798 735 778 770 L635 1035 Q620 1060 585 1068 L265 1068 Q230 1060 215 1035 L72 770 Q52 735 55 700 L80 185 Q90 140 130 125 Z"/></clipPath>
+      </defs>
+      <rect width="850" height="1100" fill="#111"/>
+      <path d="M425 25 L720 125 Q760 140 770 185 L795 700 Q798 735 778 770 L635 1035 Q620 1060 585 1068 L265 1068 Q230 1060 215 1035 L72 770 Q52 735 55 700 L80 185 Q90 140 130 125 Z" fill="url(#gold)" stroke="#fff0a0" stroke-width="8"/>
+      <g clip-path="url(#card)">
+        <rect x="55" y="25" width="740" height="1045" fill="url(#shine)"/>
+        <path d="M90 430 Q425 270 770 420 L770 710 Q425 620 70 730 Z" fill="#5d3909" opacity=".25"/>
+        <rect x="175" y="175" width="500" height="555" rx="12" fill="#38230a" opacity=".23"/>
+        <path d="M100 745 Q425 705 750 745 L690 1045 L160 1045 Z" fill="url(#panel)"/>
+        <path d="M120 760 Q425 720 730 760" fill="none" stroke="#6e470f" stroke-opacity=".42" stroke-width="3"/>
+      </g>
+      <text x="132" y="188" font-family="Arial" font-size="90" font-weight="900" fill="#251b0d">${overall}</text>
+      <text x="145" y="238" font-family="Arial" font-size="33" font-weight="900" fill="#251b0d">${position}</text>
+      <text x="425" y="790" text-anchor="middle" font-family="Arial" font-size="42" font-weight="900" fill="#24190b">${esc(name).slice(0, 20)}</text>
+      <text x="425" y="829" text-anchor="middle" font-family="Arial" font-size="22" font-weight="900" fill="#5f3c0a">${esc(archetype).toUpperCase()}</text>
+      <line x1="185" y1="850" x2="665" y2="850" stroke="#8b611c" stroke-width="2"/>
+      ${statRows}
+      <text x="425" y="1024" text-anchor="middle" font-family="Arial" font-size="15" font-weight="800" fill="#68450d">FC27 · ESTIMATED FROM OVERALL &amp; ARCHETYPE</text>
     </svg>`;
 }
 
@@ -157,11 +179,11 @@ module.exports = {
         if (image) {
             output = output.composite([{
                 input: await sharp(image)
-                    .resize(style === "fut" ? 380 : 370, style === "fut" ? 360 : 550, { fit: "cover" })
+                    .resize(style === "fut" ? 500 : 370, style === "fut" ? 555 : 550, { fit: "cover" })
                     .png()
                     .toBuffer(),
-                left: style === "fut" ? 235 : 540,
-                top: style === "fut" ? 335 : 130
+                left: style === "fut" ? 175 : 540,
+                top: style === "fut" ? 175 : 130
             }]);
         }
         const png = await output.png().toBuffer();
