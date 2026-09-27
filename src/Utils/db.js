@@ -74,6 +74,13 @@ const initStatements = [
         PRIMARY KEY (guild_id, discord_id)
     )
     `,
+`
+CREATE TABLE IF NOT EXISTS active_check_states (
+    guild_id TEXT PRIMARY KEY,
+    last_message_id TEXT,
+    missed_checks_json TEXT DEFAULT '{}'
+)
+`,
     `
     CREATE TABLE IF NOT EXISTS players (
         player_id TEXT,

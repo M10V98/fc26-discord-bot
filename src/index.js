@@ -18,6 +18,7 @@ const { startSpotifyCallbackServer } = require("./Services/spotify");
 const {
     repairStoredClubIds
 } = require("./Services/clubLinks");
+const { startActiveCheckScheduler } = require("./Services/activeCheck"); 
 
 const discordToken =
     process.env.TOKEN ||
@@ -116,6 +117,7 @@ client.once(
         startSpotifyCallbackServer();
         await startFc27Season();
         await repairStoredClubIds();
+        startActiveCheckScheduler(readyClient);
 
         try {
             const linkedClubs =
