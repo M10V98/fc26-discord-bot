@@ -2,8 +2,8 @@ const cron = require('node-cron');
 const db = require('../Utils/db');
 
 // --- Central Configuration Parameters ---
-const CHANNEL_ID = '123456789012345678';  // 👈 Paste your exact #Active-check Channel ID here
-const ROLE_ID = '876543210987654321';     // 👈 Paste your target Base Member Role ID here
+const CHANNEL_ID = '1541025110004338810';  // ✅ Configured with your Active-check channel
+const ROLE_ID = '876543210987654321';     // 👈 Make sure to replace this with your actual member role ID!
 
 /**
  * Initializes the automated recurring active check system
