@@ -793,74 +793,188 @@ async function notifyMemberOfActiveSessions(member) {
     ));
     return sent;
 }
+function formatUserList(members, emptyText = "— None —") {
+    if (!members.length) return emptyText;
 
+    const lines = members.map(member => `<@${member.id}>`);
+
+    // Discord embed fields have a 1024-character limit.
+    // Keep the list safely below that limit.
+    const text = lines.join("\n");
+
+    return text.length > 1000
+        ? `${text.slice(0, 997)}...`
+        : text;
+}
 async function updateSessionAdminStatus(client, session) {
     if (!client || !session?.guild_id) return;
+
     const guild = client.guilds.cache.get(session.guild_id);
-    const adminChannel = await client.channels.fetch(BOT_ADMIN_CHANNEL_ID).catch(() => null);
-    if (!guild || !adminChannel?.send || adminChannel.guild?.id !== guild.id) return;
+    const adminChannel = await client.channels
+        .fetch(BOT_ADMIN_CHANNEL_ID)
+        .catch(() => null);
+
+    if (!guild || !adminChannel?.send || adminChannel.guild?.id !== guild.id) {
+        return;
+    }
 
     const members = await guild.members.fetch().catch(() => null);
     if (!members) return;
-    const eligible = [...members.values()].filter(member => !member.user.bot);
+
+    const eligible = [...members.values()]
+        .filter(member => !member.user.bot);
+
     const responded = new Set([
         ...readList(session.can_play),
         ...readList(session.cannot_play),
         ...readList(session.maybe_play)
     ]);
-    const unanswered = eligible.filter(member => !responded.has(member.id));
+
+    const unanswered = eligible.filter(
+        member => !responded.has(member.id)
+    );
+
     const firstTeamUnanswered = unanswered.filter(member =>
-        member.roles.cache.some(role => /\bfirst\s*team\b/i.test(role.name))
+        member.roles.cache.some(role =>
+            /\bfirst\s*team\b/i.test(role.name)
+        )
     );
-    const delivered = await db.get(
-        `SELECT COUNT(*) AS total FROM scheduled_session_notices
-         WHERE session_id = ? AND notice_type = 'invite'`,
+
+    const otherUnanswered = unanswered.filter(
+        member => !firstTeamUnanswered.some(
+            firstTeam => firstTeam.id === member.id
+        )
+    );
+
+    // Get every delivery notice for this event.
+    const notices = await db.all(
+        `SELECT user_id, notice_type
+         FROM scheduled_session_notices
+         WHERE session_id = ?`,
         [session.session_id]
     );
-    const fallbacks = await db.get(
-        `SELECT COUNT(*) AS total FROM scheduled_session_notices
-         WHERE session_id = ? AND notice_type LIKE '%_fallback'`,
-        [session.session_id]
+
+    const confirmedDmIds = new Set(
+        notices
+            .filter(row => row.notice_type === "invite")
+            .map(row => row.user_id)
     );
-    const firstTeamReminderDms = await db.get(
-        `SELECT COUNT(*) AS total FROM scheduled_session_notices
-         WHERE session_id = ? AND notice_type = 'first_team_unanswered_reminder'`,
-        [session.session_id]
+
+    const fallbackIds = new Set(
+        notices
+            .filter(row => row.notice_type.endsWith("_fallback"))
+            .map(row => row.user_id)
     );
+
+    const firstTeamReminderIds = new Set(
+        notices
+            .filter(row => row.notice_type === "first_team_unanswered_reminder")
+            .map(row => row.user_id)
+    );
+
+    const confirmedDmUsers = eligible.filter(member =>
+        confirmedDmIds.has(member.id)
+    );
+
+    const fallbackUsers = eligible.filter(member =>
+        fallbackIds.has(member.id)
+    );
+
+    const firstTeamReminderUsers = eligible.filter(member =>
+        firstTeamReminderIds.has(member.id)
+    );
+
+    const respondedUsers = eligible.filter(member =>
+        responded.has(member.id)
+    );
+
     const status = new EmbedBuilder()
         .setColor("#5865F2")
         .setTitle("Event delivery status")
-        .setDescription(`**${escapeMarkdown(session.title || session.league || "Scheduled session")}**\n${sessionUrl(session)}`)
-        .addFields(
-            { name: "Confirmed event DMs", value: `${Number(delivered?.total || 0)} / ${eligible.length}`, inline: true },
-            { name: "Channel fallback tags", value: String(Number(fallbacks?.total || 0)), inline: true },
-            { name: "Responses", value: `${responded.size} / ${eligible.length}`, inline: true },
-            { name: "Still unanswered", value: String(unanswered.length), inline: true },
-            { name: "First Team reminder DMs", value: `${Number(firstTeamReminderDms?.total || 0)} / ${firstTeamUnanswered.length}`, inline: true },
-            { name: "Other unanswered", value: `${unanswered.length - firstTeamUnanswered.length} · tagged in event channel at 8 hours`, inline: true }
+        .setDescription(
+            `**${escapeMarkdown(
+                session.title ||
+                session.league ||
+                "Scheduled session"
+            )}**\n${sessionUrl(session)}`
         )
-        .setFooter({ text: "Updates every minute while the event is active." })
+        .addFields(
+            {
+                name: "📨 Confirmed event DMs",
+                value:
+                    `${confirmedDmUsers.length} / ${eligible.length}\n` +
+                    formatUserList(confirmedDmUsers),
+                inline: true
+            },
+            {
+                name: "🏷️ Channel fallback tags",
+                value:
+                    `${fallbackUsers.length}\n` +
+                    formatUserList(fallbackUsers),
+                inline: true
+            },
+            {
+                name: "💬 Responses",
+                value:
+                    `${respondedUsers.length} / ${eligible.length}\n` +
+                    formatUserList(respondedUsers),
+                inline: true
+            },
+            {
+                name: "⏳ Still unanswered",
+                value:
+                    `${unanswered.length}\n` +
+                    formatUserList(unanswered),
+                inline: true
+            },
+            {
+                name: "📨 First Team reminder DMs",
+                value:
+                    `${firstTeamReminderUsers.length} / ` +
+                    `${firstTeamUnanswered.length}\n` +
+                    formatUserList(firstTeamReminderUsers),
+                inline: true
+            },
+            {
+                name: "❓ Other unanswered",
+                value:
+                    `${otherUnanswered.length}\n` +
+                    formatUserList(otherUnanswered),
+                inline: true
+            }
+        )
+        .setFooter({
+            text: "Updates when delivery activity occurs."
+        })
         .setTimestamp();
 
     const saved = await db.get(
-        `SELECT * FROM scheduled_session_admin_status WHERE session_id = ?`,
+        `SELECT * FROM scheduled_session_admin_status
+         WHERE session_id = ?`,
         [session.session_id]
     );
+
     const existing = saved
-        ? await adminChannel.messages.fetch(saved.message_id).catch(() => null)
+        ? await adminChannel.messages
+            .fetch(saved.message_id)
+            .catch(() => null)
         : null;
+
     if (existing) {
         await existing.edit({ embeds: [status] }).catch(() => null);
-    } else {
-        const message = await adminChannel.send({ embeds: [status] }).catch(() => null);
-        if (!message) return;
-        await db.run(
-            `INSERT INTO scheduled_session_admin_status (session_id, channel_id, message_id, updated_at)
-             VALUES (?, ?, ?, ?)
-             ON CONFLICT(session_id) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id, updated_at = excluded.updated_at`,
-            [session.session_id, adminChannel.id, message.id, Date.now()]
-        );
+        return;
     }
+
+    const message = await adminChannel.send({
+        embeds: [status]
+    });
+
+    await db.run(
+        `INSERT OR REPLACE INTO scheduled_session_admin_status
+         (session_id, message_id)
+         VALUES (?, ?)`,
+        [session.session_id, message.id]
+    );
 }
 
 async function handleSessionButton(interaction) {
@@ -1510,13 +1624,6 @@ async function cleanupExpiredSessions(client = clientRef) {
     await sendDuePreTags(client);
     await sendAvailabilityReminders(client);
 
-    const activeForStatus = await db.all(
-        `SELECT * FROM scheduled_sessions WHERE COALESCE(ends_at, starts_at) > ?`,
-        [Date.now()]
-    );
-    await Promise.allSettled(activeForStatus.map(session =>
-        updateSessionAdminStatus(client, session)
-    ));
 
     const recurring = await db.all(`SELECT * FROM scheduled_sessions WHERE recurrence_days IS NOT NULL AND next_recurrence_at - recurrence_post_minutes * 60000 <= ?`, [Date.now()]);
     for (const session of recurring) {
