@@ -1420,13 +1420,25 @@ async function sendAvailabilityReminders(client) {
             const unanswered = members
                 ? [...members.values()]
                     .filter(member => !member.user.bot && !responded.has(member.id))
-                    .map(member => `<@${member.id}>`)
                 : [];
 
-            if (unanswered.length) {
+            const firstTeamMembers = unanswered.filter(member =>
+                member.roles.cache.some(role => /\bfirst\s*team\b/i.test(role.name))
+            );
+            const channelMentions = unanswered
+                .filter(member => !firstTeamMembers.some(firstTeam => firstTeam.id === member.id))
+                .map(member => `<@${member.id}>`);
+
+            await Promise.allSettled(firstTeamMembers.map(member =>
+                member.send(
+                    `Hi! Please update your availability for **${session.title || session.league || "the upcoming session"}**: ${sessionUrl(session)}`
+                )
+            ));
+
+            if (channelMentions.length) {
                 const chunks = [];
-                for (let index = 0; index < unanswered.length; index += 80) {
-                    chunks.push(unanswered.slice(index, index + 80));
+                for (let index = 0; index < channelMentions.length; index += 80) {
+                    chunks.push(channelMentions.slice(index, index + 80));
                 }
                 await Promise.all(chunks.map(chunk =>
                     channel.send(
