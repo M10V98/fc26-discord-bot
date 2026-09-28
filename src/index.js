@@ -32,6 +32,9 @@ const {
 const {
     startAutoStatsSync
 } = require("./Services/autoStatsSync");
+const {
+    startActiveCheckScheduler
+} = require("./Services/activeCheck");
 
 const {
     handleDeleteSessionButton,
@@ -140,6 +143,7 @@ client.once(
         }
 
         startAutoStatsSync();
+        startActiveCheckScheduler(readyClient);
         startScheduleSessionCleanup(readyClient);
         await client.commands
             .get("quiz")

@@ -362,6 +362,14 @@ CREATE TABLE IF NOT EXISTS active_check_states (
     )
     `,
     `
+    CREATE TABLE IF NOT EXISTS scheduled_session_admin_status (
+        session_id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        message_id TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+    )
+    `,
+    `
     CREATE TABLE IF NOT EXISTS spotify_accounts (
         discord_id TEXT PRIMARY KEY,
         spotify_user_id TEXT NOT NULL,
@@ -605,6 +613,7 @@ async function init() {
     await ensureColumn("scheduled_sessions", "next_recurrence_at", "INTEGER");
     await ensureColumn("scheduled_sessions", "response_reminder_sent_at", "INTEGER");
     await ensureColumn("scheduled_sessions", "maybe_reminder_sent_at", "INTEGER");
+    await ensureColumn("active_check_states", "admin_message_id", "TEXT");
 
     await ensureColumn(
         "players",
