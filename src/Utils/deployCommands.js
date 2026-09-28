@@ -54,10 +54,13 @@ async function deployCommands() {
     const commandFiles =
         fs.readdirSync(commandsPath)
             .filter(file =>
-                file.endsWith(".js") &&
-                file !== "worldcup.js" &&
-                file !== "legacy.js"
-            );
+            file.endsWith(".js") &&
+            file !== "worldcup.js" &&
+            file !== "legacy.js" &&
+            // Disabled pending completion; do not expose unavailable commands.
+            file !== "music.js" &&
+            file !== "play.js"
+        );
 
     console.log(
         `Found ${commandFiles.length} command files.`
