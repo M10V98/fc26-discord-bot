@@ -1430,7 +1430,7 @@ async function sendAvailabilityReminders(client) {
                 }
                 await Promise.all(chunks.map(chunk =>
                     channel.send(
-                        `${chunk.join(" ")} please check your availability for **${escapeMarkdown(session.title || session.league || "the upcoming session")}**: ${sessionUrl(session)}`
+                        `${chunk.join(" ")} Please update your availability for **${escapeMarkdown(session.title || session.league || "the upcoming session")}**: ${sessionUrl(session)}`
                     ).catch(() => null)
                 ));
             }
