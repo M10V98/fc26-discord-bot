@@ -36,7 +36,7 @@ async function footballerPhoto(name) {
         encodeURIComponent(footballerSearchName(name)) +
         "&gsrnamespace=0&gsrlimit=1&prop=pageimages&pithumbsize=900&format=json";
     const response = await fetch(url, {
-        headers: { "User-Agent": "NXT-eSports-Bot/1.0 (player cards)" },
+        headers: { "User-Agent": "FCValenza-App/1.0 (player cards)" },
         signal: AbortSignal.timeout(8000)
     }).catch(() => null);
     const json = response?.ok ? await response.json().catch(() => null) : null;
@@ -79,7 +79,7 @@ function cardSvg(player, stats) {
       <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#03162b"/><stop offset=".5" stop-color="#092b51"/><stop offset="1" stop-color="#05070f"/></linearGradient><linearGradient id="line" x2="1"><stop stop-color="#63f7d6"/><stop offset="1" stop-color="#527fff"/></linearGradient></defs>
       <rect width="1000" height="850" fill="url(#bg)"/><rect x="24" y="24" width="952" height="802" rx="28" fill="none" stroke="url(#line)" stroke-width="4"/>
       <rect x="540" y="130" width="370" height="550" rx="18" fill="#071525"/>
-      <text x="70" y="120" fill="#63f7d6" font-family="Arial" font-size="30" font-weight="800">NXT ESPORTS</text>
+      <text x="70" y="120" fill="#63f7d6" font-family="Arial" font-size="30" font-weight="800">FC VALENZA</text>
       <text x="70" y="235" fill="white" font-family="Arial" font-size="130" font-weight="900">${overall}</text>
       <text x="80" y="290" fill="#9fb9d8" font-family="Arial" font-size="34" font-weight="700">${esc(String(position).toUpperCase())}</text>
       <text x="70" y="370" fill="white" font-family="Arial" font-size="48" font-weight="900">${esc(name).slice(0, 16)}</text>
@@ -137,7 +137,7 @@ module.exports = {
         .addStringOption(option => option.setName("player").setDescription("EA player name"))
         .addStringOption(option => option.setName("footballer").setDescription("Professional footballer photo to use"))
         .addStringOption(option => option.setName("style").setDescription("Card design").addChoices(
-            { name: "Style 1 · NXT esports", value: "nxt" },
+            { name: "Style 1 · FC Valenza", value: "nxt" },
             { name: "Style 2 · FUT inspired", value: "fut" }
         ))
         .addAttachmentOption(option => option.setName("image").setDescription("Your own card image")),

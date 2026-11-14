@@ -21,7 +21,7 @@ module.exports = {
         new SlashCommandBuilder()
             .setName("staff")
             .setDescription(
-                "View NXT eSports staff"
+                "View FC Valenza staff"
             ),
 
     async execute(interaction) {
@@ -34,7 +34,7 @@ module.exports = {
                 new EmbedBuilder()
                     .setColor("#ffffff")
                     .setTitle(
-                        "🏢 NXT eSports Staff"
+                        "🏢 FC Valenza Staff"
                     )
                     .setFooter({
                         text: FOOTER.text,

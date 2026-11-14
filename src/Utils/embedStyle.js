@@ -1,5 +1,5 @@
 const FOOTER = {
-    text: "NXTeSports.App"
+    text: "FCValenza.App"
 };
 
 function underline(value) {
